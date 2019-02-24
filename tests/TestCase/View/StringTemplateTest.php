@@ -1,16 +1,16 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\View;
 
@@ -158,12 +158,12 @@ class StringTemplateTest extends TestCase
     /**
      * Test formatting a missing template.
      *
-     * @expectedException \RuntimeException
-     * @expectedExceptionMessage Cannot find template named 'missing'
      * @return void
      */
     public function testFormatMissingTemplate()
     {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Cannot find template named \'missing\'');
         $templates = [
             'text' => '{{text}}',
         ];
@@ -192,19 +192,20 @@ class StringTemplateTest extends TestCase
      */
     public function testLoadPlugin()
     {
-        Plugin::load('TestPlugin');
+        $this->loadPlugins(['TestPlugin']);
         $this->assertNull($this->template->load('TestPlugin.test_templates'));
         $this->assertEquals('<em>{{text}}</em>', $this->template->get('italic'));
+        $this->clearPlugins();
     }
 
     /**
      * Test that loading non-existing templates causes errors.
      *
-     * @expectedException \Cake\Core\Exception\Exception
-     * @expectedExceptionMessage Could not load configuration file
      */
     public function testLoadErrorNoFile()
     {
+        $this->expectException(\Cake\Core\Exception\Exception::class);
+        $this->expectExceptionMessage('Could not load configuration file');
         $this->template->load('no_such_file');
     }
 
@@ -262,6 +263,15 @@ class StringTemplateTest extends TestCase
         $result = $this->template->formatAttributes($attrs, ['name']);
         $this->assertEquals(
             ' data-hero="&lt;batman&gt;"',
+            $result
+        );
+
+        $evilKey = "><script>alert(1)</script>";
+        $attrs = [$evilKey => 'some value'];
+
+        $result = $this->template->formatAttributes($attrs);
+        $this->assertEquals(
+            ' &gt;&lt;script&gt;alert(1)&lt;/script&gt;="some value"',
             $result
         );
     }

@@ -1,16 +1,16 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         1.2.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Cache\Engine;
 
@@ -65,7 +65,7 @@ class FileEngineTest extends TestCase
             'path' => TMP . 'tests',
         ];
         Cache::drop('file_test');
-        Cache::config('file_test', array_merge($defaults, $config));
+        Cache::setConfig('file_test', array_merge($defaults, $config));
     }
 
     /**
@@ -331,11 +331,11 @@ class FileEngineTest extends TestCase
      */
     public function testRemoveWindowsSlashesFromCache()
     {
-        Cache::config('windows_test', [
+        Cache::setConfig('windows_test', [
             'engine' => 'File',
             'isWindows' => true,
             'prefix' => null,
-            'path' => TMP
+            'path' => CACHE
         ]);
 
         $expected = [
@@ -388,7 +388,7 @@ class FileEngineTest extends TestCase
         $this->assertSame(Cache::read('App.singleQuoteTest', 'file_test'), "'this is a quoted string'");
 
         Cache::drop('file_test');
-        Cache::config('file_test', [
+        Cache::setConfig('file_test', [
             'className' => 'File',
             'isWindows' => true,
             'path' => TMP . 'tests'
@@ -412,13 +412,13 @@ class FileEngineTest extends TestCase
         $dir = TMP . 'tests/autocreate-' . microtime(true);
 
         Cache::drop('file_test');
-        Cache::config('file_test', [
+        Cache::setConfig('file_test', [
             'engine' => 'File',
             'path' => $dir
         ]);
 
         Cache::read('Test', 'file_test');
-        $this->assertTrue(file_exists($dir), 'Dir should exist.');
+        $this->assertFileExists($dir, 'Dir should exist.');
 
         // Cleanup
         rmdir($dir);
@@ -435,13 +435,13 @@ class FileEngineTest extends TestCase
         $dir = TMP . 'tests/autocreate-' . microtime(true);
 
         Cache::drop('file_test');
-        Cache::config('file_test', [
+        Cache::setConfig('file_test', [
             'engine' => 'File',
             'path' => $dir
         ]);
 
         Cache::read('Test', 'file_test');
-        $this->assertTrue(file_exists($dir), 'Dir should exist.');
+        $this->assertFileExists($dir, 'Dir should exist.');
 
         // Cleanup
         rmdir($dir);
@@ -457,7 +457,7 @@ class FileEngineTest extends TestCase
         if (DS === '\\') {
             $this->markTestSkipped('File permission testing does not work on Windows.');
         }
-        Cache::config('mask_test', ['engine' => 'File', 'path' => TMP . 'tests']);
+        Cache::setConfig('mask_test', ['engine' => 'File', 'path' => TMP . 'tests']);
         $data = 'This is some test content';
         $write = Cache::write('masking_test', $data, 'mask_test');
         $result = substr(sprintf('%o', fileperms(TMP . 'tests/cake_masking_test')), -4);
@@ -466,7 +466,7 @@ class FileEngineTest extends TestCase
         Cache::delete('masking_test', 'mask_test');
         Cache::drop('mask_test');
 
-        Cache::config('mask_test', ['engine' => 'File', 'mask' => 0666, 'path' => TMP . 'tests']);
+        Cache::setConfig('mask_test', ['engine' => 'File', 'mask' => 0666, 'path' => TMP . 'tests']);
         Cache::write('masking_test', $data, 'mask_test');
         $result = substr(sprintf('%o', fileperms(TMP . 'tests/cake_masking_test')), -4);
         $expected = '0666';
@@ -474,7 +474,7 @@ class FileEngineTest extends TestCase
         Cache::delete('masking_test', 'mask_test');
         Cache::drop('mask_test');
 
-        Cache::config('mask_test', ['engine' => 'File', 'mask' => 0644, 'path' => TMP . 'tests']);
+        Cache::setConfig('mask_test', ['engine' => 'File', 'mask' => 0644, 'path' => TMP . 'tests']);
         Cache::write('masking_test', $data, 'mask_test');
         $result = substr(sprintf('%o', fileperms(TMP . 'tests/cake_masking_test')), -4);
         $expected = '0644';
@@ -482,7 +482,7 @@ class FileEngineTest extends TestCase
         Cache::delete('masking_test', 'mask_test');
         Cache::drop('mask_test');
 
-        Cache::config('mask_test', ['engine' => 'File', 'mask' => 0640, 'path' => TMP . 'tests']);
+        Cache::setConfig('mask_test', ['engine' => 'File', 'mask' => 0640, 'path' => TMP . 'tests']);
         Cache::write('masking_test', $data, 'mask_test');
         $result = substr(sprintf('%o', fileperms(TMP . 'tests/cake_masking_test')), -4);
         $expected = '0640';
@@ -498,7 +498,7 @@ class FileEngineTest extends TestCase
      */
     public function testGroupsReadWrite()
     {
-        Cache::config('file_groups', [
+        Cache::setConfig('file_groups', [
             'engine' => 'File',
             'duration' => 3600,
             'groups' => ['group_a', 'group_b']
@@ -517,7 +517,7 @@ class FileEngineTest extends TestCase
      */
     public function testClearingWithRepeatWrites()
     {
-        Cache::config('repeat', [
+        Cache::setConfig('repeat', [
             'engine' => 'File',
             'groups' => ['users']
         ]);
@@ -547,7 +547,7 @@ class FileEngineTest extends TestCase
      */
     public function testGroupDelete()
     {
-        Cache::config('file_groups', [
+        Cache::setConfig('file_groups', [
             'engine' => 'File',
             'duration' => 3600,
             'groups' => ['group_a', 'group_b']
@@ -566,17 +566,17 @@ class FileEngineTest extends TestCase
      */
     public function testGroupClear()
     {
-        Cache::config('file_groups', [
+        Cache::setConfig('file_groups', [
             'engine' => 'File',
             'duration' => 3600,
             'groups' => ['group_a', 'group_b']
         ]);
-        Cache::config('file_groups2', [
+        Cache::setConfig('file_groups2', [
             'engine' => 'File',
             'duration' => 3600,
             'groups' => ['group_b']
         ]);
-        Cache::config('file_groups3', [
+        Cache::setConfig('file_groups3', [
             'engine' => 'File',
             'duration' => 3600,
             'groups' => ['group_b'],
@@ -609,7 +609,7 @@ class FileEngineTest extends TestCase
      */
     public function testGroupClearNoPrefix()
     {
-        Cache::config('file_groups', [
+        Cache::setConfig('file_groups', [
             'className' => 'File',
             'duration' => 3600,
             'prefix' => '',
@@ -640,5 +640,32 @@ class FileEngineTest extends TestCase
 
         $result = Cache::add('test_add_key', 'test data 2', 'file_test');
         $this->assertFalse($result);
+    }
+
+    /**
+     * Tests that only files inside of the configured path are being deleted.
+     *
+     * @return void
+     */
+    public function testClearIsRestrictedToConfiguredPath()
+    {
+        $this->_configCache([
+            'prefix' => '',
+            'path' => TMP . 'tests',
+        ]);
+
+        $unrelatedFile = tempnam(TMP, 'file_test');
+        file_put_contents($unrelatedFile, 'data');
+        $this->assertFileExists($unrelatedFile);
+
+        Cache::write('key', 'data', 'file_test');
+        $this->assertFileExists(TMP . 'tests/key');
+
+        $result = Cache::clear(false, 'file_test');
+        $this->assertTrue($result);
+        $this->assertFileNotExists(TMP . 'tests/key');
+
+        $this->assertFileExists($unrelatedFile);
+        $this->assertTrue(unlink($unrelatedFile));
     }
 }

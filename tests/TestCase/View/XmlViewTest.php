@@ -2,17 +2,17 @@
 /**
  * XmlViewTest file
  *
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         2.1.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\View;
 
@@ -47,12 +47,12 @@ class XmlViewTest extends TestCase
         $Controller = new Controller($Request, $Response);
         $data = ['users' => ['user' => ['user1', 'user2']]];
         $Controller->set(['users' => $data, '_serialize' => 'users']);
-        $Controller->viewClass = 'Xml';
+        $Controller->viewBuilder()->setClassName('Xml');
         $View = $Controller->createView();
         $output = $View->render(false);
 
         $this->assertSame(Xml::build($data)->asXML(), $output);
-        $this->assertSame('application/xml', $Response->type());
+        $this->assertSame('application/xml', $View->getResponse()->getType());
 
         $data = [
             [
@@ -67,7 +67,7 @@ class XmlViewTest extends TestCase
             ]
         ];
         $Controller->set(['users' => $data, '_serialize' => 'users']);
-        $Controller->viewClass = 'Xml';
+        $Controller->viewBuilder()->setClassName('Xml');
         $View = $Controller->createView();
         $output = $View->render(false);
 
@@ -75,7 +75,7 @@ class XmlViewTest extends TestCase
         $this->assertSame($expected, $output);
 
         $Controller->set('_rootNode', 'custom_name');
-        $Controller->viewClass = 'Xml';
+        $Controller->viewBuilder()->setClassName('Xml');
         $View = $Controller->createView();
         $output = $View->render(false);
 
@@ -98,7 +98,7 @@ class XmlViewTest extends TestCase
             '_serialize' => 'tags',
             'tags' => ['cakephp', 'framework']
         ]);
-        $Controller->viewClass = 'Xml';
+        $Controller->viewBuilder()->setClassName('Xml');
         $View = $Controller->createView();
         $View->render();
         $this->assertFalse(isset($View->Html), 'No helper loaded.');
@@ -131,7 +131,7 @@ class XmlViewTest extends TestCase
             ]
         ];
         $Controller->set($data);
-        $Controller->viewClass = 'Xml';
+        $Controller->viewBuilder()->setClassName('Xml');
         $View = $Controller->createView();
         $result = $View->render();
 
@@ -168,7 +168,7 @@ class XmlViewTest extends TestCase
             ]
         ];
         $Controller->set($data);
-        $Controller->viewClass = 'Xml';
+        $Controller->viewBuilder()->setClassName('Xml');
         $View = $Controller->createView();
         $result = $View->render();
 
@@ -189,9 +189,9 @@ class XmlViewTest extends TestCase
         $data = ['no' => 'nope', 'user' => 'fake', 'list' => ['item1', 'item2']];
         $Controller->set($data);
         $Controller->set('_serialize', ['no', 'user']);
-        $Controller->viewClass = 'Xml';
+        $Controller->viewBuilder()->setClassName('Xml');
         $View = $Controller->createView();
-        $this->assertSame('application/xml', $Response->type());
+        $this->assertSame('application/xml', $View->getResponse()->getType());
         $output = $View->render(false);
         $expected = [
             'response' => ['no' => $data['no'], 'user' => $data['user']]
@@ -199,7 +199,7 @@ class XmlViewTest extends TestCase
         $this->assertSame(Xml::build($expected)->asXML(), $output);
 
         $Controller->set('_rootNode', 'custom_name');
-        $Controller->viewClass = 'Xml';
+        $Controller->viewBuilder()->setClassName('Xml');
         $View = $Controller->createView();
         $output = $View->render(false);
         $expected = [
@@ -221,9 +221,9 @@ class XmlViewTest extends TestCase
         $data = ['original_name' => 'my epic name', 'user' => 'fake', 'list' => ['item1', 'item2']];
         $Controller->set($data);
         $Controller->set('_serialize', ['new_name' => 'original_name', 'user']);
-        $Controller->viewClass = 'Xml';
+        $Controller->viewBuilder()->setClassName('Xml');
         $View = $Controller->createView();
-        $this->assertSame('application/xml', $Response->type());
+        $this->assertSame('application/xml', $View->getResponse()->getType());
         $output = $View->render(false);
         $expected = [
             'response' => ['new_name' => $data['original_name'], 'user' => $data['user']]
@@ -231,7 +231,7 @@ class XmlViewTest extends TestCase
         $this->assertSame(Xml::build($expected)->asXML(), $output);
 
         $Controller->set('_rootNode', 'custom_name');
-        $Controller->viewClass = 'Xml';
+        $Controller->viewBuilder()->setClassName('Xml');
         $View = $Controller->createView();
         $output = $View->render(false);
         $expected = [
@@ -252,12 +252,12 @@ class XmlViewTest extends TestCase
         $Controller = new Controller($Request, $Response);
         $data = ['users' => ['user' => ['user1', 'user2']]];
         $Controller->set(['users' => $data, '_serialize' => true]);
-        $Controller->viewClass = 'Xml';
+        $Controller->viewBuilder()->setClassName('Xml');
         $View = $Controller->createView();
         $output = $View->render();
 
         $this->assertSame(Xml::build($data)->asXML(), $output);
-        $this->assertSame('application/xml', $Response->type());
+        $this->assertSame('application/xml', $View->getResponse()->getType());
 
         $data = ['no' => 'nope', 'user' => 'fake', 'list' => ['item1', 'item2']];
         $Controller->viewVars = [];
@@ -281,7 +281,7 @@ class XmlViewTest extends TestCase
         $Request = new ServerRequest();
         $Response = new Response();
         $Controller = new Controller($Request, $Response);
-        $Controller->name = 'Posts';
+        $Controller->setName('Posts');
 
         $data = [
             [
@@ -296,9 +296,9 @@ class XmlViewTest extends TestCase
             ]
         ];
         $Controller->set('users', $data);
-        $Controller->viewClass = 'Xml';
+        $Controller->viewBuilder()->setClassName('Xml');
         $View = $Controller->createView();
-        $View->viewPath = 'Posts';
+        $View->setTemplatePath('Posts');
         $output = $View->render('index');
 
         $expected = [
@@ -306,7 +306,7 @@ class XmlViewTest extends TestCase
         ];
         $expected = Xml::build($expected)->asXML();
         $this->assertSame($expected, $output);
-        $this->assertSame('application/xml', $Response->type());
+        $this->assertSame('application/xml', $View->getResponse()->getType());
         $this->assertInstanceOf('Cake\View\HelperRegistry', $View->helpers());
     }
 }

@@ -1,18 +1,19 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         1.2.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Utility;
 
+use Cake\I18n\Time;
 use Cake\TestSuite\TestCase;
 use Cake\Utility\Text;
 
@@ -44,7 +45,7 @@ class TextTest extends TestCase
     public function testUuidGeneration()
     {
         $result = Text::uuid();
-        $pattern = "/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/";
+        $pattern = '/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/';
         $match = (bool)preg_match($pattern, $result);
         $this->assertTrue($match);
     }
@@ -58,13 +59,13 @@ class TextTest extends TestCase
     {
         $check = [];
         $count = mt_rand(10, 1000);
-        $pattern = "/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/";
+        $pattern = '/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/';
 
         for ($i = 0; $i < $count; $i++) {
             $result = Text::uuid();
             $match = (bool)preg_match($pattern, $result);
             $this->assertTrue($match);
-            $this->assertFalse(in_array($result, $check));
+            $this->assertNotContains($result, $check);
             $check[] = $result;
         }
     }
@@ -174,28 +175,28 @@ class TextTest extends TestCase
         $result = Text::insert($string, ['src' => 'foo', 'extra' => 'bar'], ['clean' => 'html']);
         $this->assertEquals($expected, $result);
 
-        $result = Text::insert("this is a ? string", "test");
-        $expected = "this is a test string";
+        $result = Text::insert('this is a ? string', 'test');
+        $expected = 'this is a test string';
         $this->assertEquals($expected, $result);
 
-        $result = Text::insert("this is a ? string with a ? ? ?", ['long', 'few?', 'params', 'you know']);
-        $expected = "this is a long string with a few? params you know";
+        $result = Text::insert('this is a ? string with a ? ? ?', ['long', 'few?', 'params', 'you know']);
+        $expected = 'this is a long string with a few? params you know';
         $this->assertEquals($expected, $result);
 
         $result = Text::insert('update saved_urls set url = :url where id = :id', ['url' => 'http://www.testurl.com/param1:url/param2:id', 'id' => 1]);
-        $expected = "update saved_urls set url = http://www.testurl.com/param1:url/param2:id where id = 1";
+        $expected = 'update saved_urls set url = http://www.testurl.com/param1:url/param2:id where id = 1';
         $this->assertEquals($expected, $result);
 
         $result = Text::insert('update saved_urls set url = :url where id = :id', ['id' => 1, 'url' => 'http://www.testurl.com/param1:url/param2:id']);
-        $expected = "update saved_urls set url = http://www.testurl.com/param1:url/param2:id where id = 1";
+        $expected = 'update saved_urls set url = http://www.testurl.com/param1:url/param2:id where id = 1';
         $this->assertEquals($expected, $result);
 
         $result = Text::insert(':me cake. :subject :verb fantastic.', ['me' => 'I :verb', 'subject' => 'cake', 'verb' => 'is']);
-        $expected = "I :verb cake. cake is fantastic.";
+        $expected = 'I :verb cake. cake is fantastic.';
         $this->assertEquals($expected, $result);
 
         $result = Text::insert(':I.am: :not.yet: passing.', ['I.am' => 'We are'], ['before' => ':', 'after' => ':', 'clean' => ['replacement' => ' of course', 'method' => 'text']]);
-        $expected = "We are of course passing.";
+        $expected = 'We are of course passing.';
         $this->assertEquals($expected, $result);
 
         $result = Text::insert(
@@ -203,11 +204,11 @@ class TextTest extends TestCase
             ['I.am' => 'We are'],
             ['before' => ':', 'after' => ':', 'clean' => true]
         );
-        $expected = "We are passing.";
+        $expected = 'We are passing.';
         $this->assertEquals($expected, $result);
 
         $result = Text::insert('?-pended result', ['Pre']);
-        $expected = "Pre-pended result";
+        $expected = 'Pre-pended result';
         $this->assertEquals($expected, $result);
 
         $string = 'switching :timeout / :timeout_count';
@@ -228,6 +229,14 @@ class TextTest extends TestCase
         $string = 'switching :timeout_count by :timeout';
         $expected = 'switching 10 by 5';
         $result = Text::insert($string, ['timeout_count' => 10, 'timeout' => 5]);
+        $this->assertEquals($expected, $result);
+        $string = 'inserting a :user.email';
+        $expected = 'inserting a security@example.com';
+        $result = Text::insert($string, [
+            'user.email' => 'security@example.com',
+            'user.id' => 2,
+            'user.created' => Time::parse('2016-01-01')
+        ]);
         $this->assertEquals($expected, $result);
     }
 
@@ -459,7 +468,7 @@ TEXT;
     }
 
     /**
-     * test wrapBlock() indentical to wrap()
+     * test wrapBlock() identical to wrap()
      *
      * @return void
      */
@@ -519,13 +528,29 @@ TEXT;
     public function testWrapBlockIndentWithMultibyte()
     {
         $text = 'This is the song that never ends. 这是永远不会结束的歌曲。 This is the song that never ends.';
-        $result = Text::wrapBlock($text, ['width' => 33, 'indent' => " → ", 'indentAt' => 1]);
+        $result = Text::wrapBlock($text, ['width' => 33, 'indent' => ' → ', 'indentAt' => 1]);
         $expected = <<<TEXT
 This is the song that never ends.
  → 这是永远不会结束的歌曲。 This is the song
  → that never ends.
 TEXT;
         $this->assertTextEquals($expected, $result);
+    }
+
+    /**
+     * test isMultibyte() checking multibyte characters
+     *
+     * @return void
+     */
+    public function testIsMultibyteString()
+    {
+        $text = 'This is a test string without multi-bytes';
+        $result = Text::isMultibyte($text);
+        $this->assertFalse($result);
+
+        $text = 'This is a test string with multi-bytes 这是永远不会结束的歌曲';
+        $result = Text::isMultibyte($text);
+        $this->assertTrue($result);
     }
 
     /**
@@ -583,6 +608,11 @@ TEXT;
         ]);
         $expected = '<p><span style="font-size: medium;"><a>Iamatestwi...</a></span></p>';
         $this->assertEquals($expected, $result);
+
+        $text = '<style>text-align: center;</style><script>console.log(\'test\');</script><p>The quick brown fox jumps over the lazy dog</p>';
+        $expected = '<style>text-align: center;</style><script>console.log(\'test\');</script><p>The qu...</p>';
+        $result = $this->Text->truncate($text, 9, ['html' => true, 'ellipsis' => '...']);
+        $this->assertSame($expected, $result);
     }
 
     /**
@@ -663,7 +693,7 @@ TEXT;
 素晴らしい、でしょ?
 HTML;
         $this->assertEquals("<IMG src=\"mypic.jpg\">このimageタグはXHTMLに準拠していない！<br>\n<hr/><b>でも次の…</b>", Text::truncate($text, 30, ['html' => true]));
-        $this->assertEquals("<IMG src=\"mypic.jpg\">このimageタグはXHTMLに準拠し…", Text::truncate($text, 30, ['html' => true, 'trimWidth' => true]));
+        $this->assertEquals('<IMG src="mypic.jpg">このimageタグはXHTMLに準拠し…', Text::truncate($text, 30, ['html' => true, 'trimWidth' => true]));
     }
 
     /**
@@ -807,38 +837,46 @@ HTML;
     /**
      * testStripLinks method
      *
+     * @group deprecated
      * @return void
      */
     public function testStripLinks()
     {
-        $text = 'This is a test text';
-        $expected = 'This is a test text';
-        $result = $this->Text->stripLinks($text);
-        $this->assertEquals($expected, $result);
+        $this->deprecated(function () {
+            $text = 'This is a test text';
+            $expected = 'This is a test text';
+            $result = $this->Text->stripLinks($text);
+            $this->assertEquals($expected, $result);
 
-        $text = 'This is a <a href="#">test</a> text';
-        $expected = 'This is a test text';
-        $result = $this->Text->stripLinks($text);
-        $this->assertEquals($expected, $result);
+            $text = 'This is a <a href="#">test</a> text';
+            $expected = 'This is a test text';
+            $result = $this->Text->stripLinks($text);
+            $this->assertEquals($expected, $result);
 
-        $text = 'This <strong>is</strong> a <a href="#">test</a> <a href="#">text</a>';
-        $expected = 'This <strong>is</strong> a test text';
-        $result = $this->Text->stripLinks($text);
-        $this->assertEquals($expected, $result);
+            $text = 'This <strong>is</strong> a <a href="#">test</a> <a href="#">text</a>';
+            $expected = 'This <strong>is</strong> a test text';
+            $result = $this->Text->stripLinks($text);
+            $this->assertEquals($expected, $result);
 
-        $text = 'This <strong>is</strong> a <a href="#">test</a> and <abbr>some</abbr> other <a href="#">text</a>';
-        $expected = 'This <strong>is</strong> a test and <abbr>some</abbr> other text';
-        $result = $this->Text->stripLinks($text);
-        $this->assertEquals($expected, $result);
+            $text = 'This <strong>is</strong> a <a href="#">test</a> and <abbr>some</abbr> other <a href="#">text</a>';
+            $expected = 'This <strong>is</strong> a test and <abbr>some</abbr> other text';
+            $result = $this->Text->stripLinks($text);
+            $this->assertEquals($expected, $result);
 
-        $text = '<a<a h> href=\'bla\'>test</a</a>>';
-        $this->assertEquals('test', $this->Text->stripLinks($text));
+            $text = 'This <strong><a href="#">is</a></strong> a <a href="javascript:void(0)">test</a> text';
+            $expected = 'This <strong>is</strong> a test text';
+            $result = $this->Text->stripLinks($text);
+            $this->assertEquals($expected, $result);
 
-        $text = '<a/href="#">test</a/>';
-        $this->assertEquals('test', $this->Text->stripLinks($text));
+            $text = '<a<a h> href=\'bla\'>test</a</a>>';
+            $this->assertEquals('test', $this->Text->stripLinks($text));
 
-        $text = '<a href="#"';
-        $this->assertEquals('', $this->Text->stripLinks($text));
+            $text = '<a/href="#">test</a/>';
+            $this->assertEquals('test', $this->Text->stripLinks($text));
+
+            $text = '<a href="#"';
+            $this->assertEquals('', $this->Text->stripLinks($text));
+        });
     }
 
     /**
@@ -1606,11 +1644,11 @@ HTML;
     /**
      * testparseFileSizeException
      *
-     * @expectedException \InvalidArgumentException
      * @return void
      */
     public function testparseFileSizeException()
     {
+        $this->expectException(\InvalidArgumentException::class);
         Text::parseFileSize('bogus', false);
     }
 
@@ -1643,6 +1681,25 @@ HTML;
     }
 
     /**
+     * Test getting/setting default transliterator.
+     *
+     * @return void
+     */
+    public function testGetSetTransliterator()
+    {
+        $this->assertNull(Text::getTransliterator());
+
+        $transliterator = \Transliterator::createFromRules('
+            $nonletter = [:^Letter:];
+            $nonletter → \'*\';
+            ::Latin-ASCII;
+        ');
+        $this->assertInstanceOf(\Transliterator::class, $transliterator);
+        Text::setTransliterator($transliterator);
+        $this->assertSame($transliterator, Text::getTransliterator());
+    }
+
+    /**
      * Test getting/setting default transliterator id.
      *
      * @return void
@@ -1652,9 +1709,12 @@ HTML;
         $defaultTransliteratorId = 'Any-Latin; Latin-ASCII; [\u0080-\u7fff] remove';
         $this->assertEquals($defaultTransliteratorId, Text::getTransliteratorId());
 
-        $expected = 'Latin-ASCII; [\u0080-\u7fff] remove';
+        $expected = 'Latin-ASCII;[\u0080-\u7fff] remove';
         Text::setTransliteratorId($expected);
         $this->assertEquals($expected, Text::getTransliteratorId());
+
+        $this->assertInstanceOf(\Transliterator::class, Text::getTransliterator());
+        $this->assertEquals($expected, Text::getTransliterator()->id);
 
         Text::setTransliteratorId($defaultTransliteratorId);
     }
@@ -1676,8 +1736,23 @@ HTML;
                 'A ae Ubermensch pa hoyeste niva! I a lublu PHP! est. fi '
             ],
             [
-                'Äpfel Über Öl grün ärgert groß öko', null,
-                'Apfel Uber Ol grun argert gross oko'
+                'Äpfel Über Öl grün ärgert groß öko',
+                transliterator_create_from_rules('
+                    $AE = [Ä {A \u0308}];
+                    $OE = [Ö {O \u0308}];
+                    $UE = [Ü {U \u0308}];
+                    [ä {a \u0308}] → ae;
+                    [ö {o \u0308}] → oe;
+                    [ü {u \u0308}] → ue;
+                    {$AE} [:Lowercase:] → Ae;
+                    {$OE} [:Lowercase:] → Oe;
+                    {$UE} [:Lowercase:] → Ue;
+                    $AE → AE;
+                    $OE → OE;
+                    $UE → UE;
+                    ::Latin-ASCII;
+                '),
+                'Aepfel Ueber Oel gruen aergert gross oeko'
             ],
             [
                 'La langue française est un attribut de souveraineté en France', null,
@@ -1710,14 +1785,14 @@ HTML;
      * testTransliterate method
      *
      * @param string $string String
-     * @param string $transliteratorId Transliterator Id
-     * @param String $expected Exepected string
+     * @param \Transliterator|string|null $transliterator Transliterator
+     * @param String $expected Expected string
      * @return void
      * @dataProvider transliterateInputProvider
      */
-    public function testTransliterate($string, $transliteratorId, $expected)
+    public function testTransliterate($string, $transliterator, $expected)
     {
-        $result = Text::transliterate($string, $transliteratorId);
+        $result = Text::transliterate($string, $transliterator);
         $this->assertEquals($expected, $result);
     }
 
@@ -1795,7 +1870,15 @@ HTML;
             [
                 'clean!_me.tar.gz', ['preserve' => '.'],
                 'clean-me.tar.gz'
-            ]
+            ],
+            [
+                'cl#ean(me', [],
+                'cl-ean-me'
+            ],
+            [
+                'cl#e|an(me.jpg', ['preserve' => '.'],
+                'cl-e-an-me.jpg'
+            ],
         ];
     }
 
@@ -1804,7 +1887,7 @@ HTML;
      *
      * @param string $string String
      * @param array $options Options
-     * @param String $expected Exepected string
+     * @param String $expected Expected string
      * @return void
      * @dataProvider slugInputProvider
      */

@@ -1,15 +1,15 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Http\Client\Auth;
 
@@ -60,10 +60,11 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
 -----END RSA PRIVATE KEY-----';
 
     /**
-     * @expectedException \Cake\Core\Exception\Exception
+     * @return void
      */
     public function testExceptionUnknownSigningMethod()
     {
+        $this->expectException(\Cake\Core\Exception\Exception::class);
         $auth = new Oauth();
         $creds = [
             'consumerSecret' => 'it is secret',
@@ -112,8 +113,7 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
      */
     public function testBaseStringNormalizeUrl()
     {
-        $request = new Request();
-        $request->url('HTTP://exAmple.com:80/parts/foo');
+        $request = new Request('HTTP://exAmple.com:80/parts/foo');
 
         $auth = new Oauth();
         $creds = [];
@@ -129,8 +129,7 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
      */
     public function testBaseStringWithQueryString()
     {
-        $request = new Request();
-        $request->url('http://example.com/search?q=pogo&cat=2');
+        $request = new Request('http://example.com/search?q=pogo&cat=2');
 
         $auth = new Oauth();
         $values = [
@@ -167,20 +166,79 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
      * is not part of the Oauth spec.
      *
      * See Normalize Request Parameters (section 9.1.1)
+     *
+     * @return void
+     */
+    public function testBaseStringWithPostDataNestedArrays()
+    {
+        $request = new Request(
+            'http://example.com/search?q=pogo',
+            Request::METHOD_POST,
+            [],
+            [
+                'search' => [
+                    'filters' => [
+                        'field' => 'date',
+                        'value' => 'one two'
+                    ]
+                ]
+            ]
+        );
+
+        $auth = new Oauth();
+        $values = [
+            'oauth_version' => '1.0',
+            'oauth_nonce' => uniqid(),
+            'oauth_timestamp' => time(),
+            'oauth_signature_method' => 'HMAC-SHA1',
+            'oauth_token' => 'token',
+            'oauth_consumer_key' => 'consumer-key',
+        ];
+        $result = $auth->baseString($request, $values);
+
+        $this->assertContains('POST&', $result, 'method was missing.');
+        $this->assertContains(
+            'http%3A%2F%2Fexample.com%2Fsearch&',
+            $result
+        );
+        $this->assertContains(
+            '&oauth_consumer_key%3Dconsumer-key' .
+            '%26oauth_nonce%3D' . $values['oauth_nonce'] .
+            '%26oauth_signature_method%3DHMAC-SHA1' .
+            '%26oauth_timestamp%3D' . $values['oauth_timestamp'] .
+            '%26oauth_token%3Dtoken' .
+            '%26oauth_version%3D1.0' .
+            '%26q%3Dpogo' .
+            '%26search%5Bfilters%5D%5Bfield%5D%3Ddate' .
+            '%26search%5Bfilters%5D%5Bvalue%5D%3Done%20two',
+            $result
+        );
+    }
+
+    /**
+     * Ensure that post data is sorted and encoded.
+     *
+     * Keys with array values have to be serialized using
+     * a more standard HTTP approach. PHP flavoured HTTP
+     * is not part of the Oauth spec.
+     *
+     * See Normalize Request Parameters (section 9.1.1)
      * http://wiki.oauth.net/w/page/12238556/TestCases
      *
      * @return void
      */
     public function testBaseStringWithPostData()
     {
-        $request = new Request();
-        $request->url('http://example.com/search?q=pogo')
-            ->method(Request::METHOD_POST)
-            ->body([
+        $request = new Request(
+            'http://example.com/search?q=pogo',
+            Request::METHOD_POST,
+            [],
+            [
                 'address' => 'post',
-                'tags' => ['oauth', 'cake'],
-                'zed' => 'last'
-            ]);
+                'zed' => 'last',
+                'tags' => ['oauth', 'cake']
+            ]
+        );
 
         $auth = new Oauth();
         $values = [
@@ -224,12 +282,12 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
      */
     public function testHmacSigning()
     {
-        $request = new Request();
-        $request->url('http://photos.example.net/photos')
-            ->body([
-                'file' => 'vacation.jpg',
-                'size' => 'original'
-            ]);
+        $request = new Request(
+            'http://photos.example.net/photos',
+            'GET',
+            [],
+            ['file' => 'vacation.jpg', 'size' => 'original']
+        );
 
         $options = [
             'consumerKey' => 'dpf43f3p2l4k3l03',
@@ -260,12 +318,12 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
      */
     public function testRsaSigningString()
     {
-        $request = new Request();
-        $request->url('http://photos.example.net/photos')
-            ->body([
-                       'file' => 'vacaction.jpg',
-                       'size' => 'original'
-                   ]);
+        $request = new Request(
+            'http://photos.example.net/photos',
+            'GET',
+            [],
+            ['file' => 'vacaction.jpg', 'size' => 'original']
+        );
         $privateKey = $this->privateKeyString;
 
         $options = [
@@ -278,7 +336,7 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
         $auth = new Oauth();
         $request = $auth->authentication($request, $options);
 
-        $result = $request->header('Authorization');
+        $result = $request->getHeaderLine('Authorization');
         $expected = 'jvTp/wX1TYtByB1m+Pbyo0lnCOLIsyGCH7wke8AUs3BpnwZJtAuEJkvQL2/9n4s5wUmUl4aCI4BwpraNx4RtEXMe5qg5T1LVTGliMRpKasKsW//e+RinhejgCuzoH26dyF8iY2ZZ/5D1ilgeijhV/vBka5twt399mXwaYdCwFYE=';
         $this->assertContains(
             'oauth_signature="' . $expected . '"',
@@ -296,12 +354,12 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
      */
     public function testRsaSigningFile()
     {
-        $request = new Request();
-        $request->url('http://photos.example.net/photos')
-            ->body([
-                       'file' => 'vacaction.jpg',
-                       'size' => 'original'
-                   ]);
+        $request = new Request(
+            'http://photos.example.net/photos',
+            'GET',
+            [],
+            ['file' => 'vacaction.jpg', 'size' => 'original']
+        );
         $privateKey = fopen(TEST_APP . DS . 'config' . DS . 'key.pem', 'r');
 
         $options = [
@@ -314,7 +372,7 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
         $auth = new Oauth();
         $request = $auth->authentication($request, $options);
 
-        $result = $request->header('Authorization');
+        $result = $request->getHeaderLine('Authorization');
         $expected = 'jvTp/wX1TYtByB1m+Pbyo0lnCOLIsyGCH7wke8AUs3BpnwZJtAuEJkvQL2/9n4s5wUmUl4aCI4BwpraNx4RtEXMe5qg5T1LVTGliMRpKasKsW//e+RinhejgCuzoH26dyF8iY2ZZ/5D1ilgeijhV/vBka5twt399mXwaYdCwFYE=';
         $this->assertContains(
             'oauth_signature="' . $expected . '"',
@@ -332,12 +390,12 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
      */
     public function testRsaSigningWithPassphraseString()
     {
-        $request = new Request();
-        $request->url('http://photos.example.net/photos')
-            ->body([
-                       'file' => 'vacaction.jpg',
-                       'size' => 'original'
-                   ]);
+        $request = new Request(
+            'http://photos.example.net/photos',
+            'GET',
+            [],
+            ['file' => 'vacaction.jpg', 'size' => 'original']
+        );
         $privateKey = fopen(TEST_APP . DS . 'config' . DS . 'key_with_passphrase.pem', 'r');
         $passphrase = 'fancy-cakephp-passphrase';
 
@@ -352,7 +410,7 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
         $auth = new Oauth();
         $request = $auth->authentication($request, $options);
 
-        $result = $request->header('Authorization');
+        $result = $request->getHeaderLine('Authorization');
         $expected = 'jvTp/wX1TYtByB1m+Pbyo0lnCOLIsyGCH7wke8AUs3BpnwZJtAuEJkvQL2/9n4s5wUmUl4aCI4BwpraNx4RtEXMe5qg5T1LVTGliMRpKasKsW//e+RinhejgCuzoH26dyF8iY2ZZ/5D1ilgeijhV/vBka5twt399mXwaYdCwFYE=';
         $this->assertContains(
             'oauth_signature="' . $expected . '"',
@@ -370,12 +428,12 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
      */
     public function testRsaSigningStringWithPassphraseString()
     {
-        $request = new Request();
-        $request->url('http://photos.example.net/photos')
-            ->body([
-                       'file' => 'vacaction.jpg',
-                       'size' => 'original'
-                   ]);
+        $request = new Request(
+            'http://photos.example.net/photos',
+            'GET',
+            [],
+            ['file' => 'vacaction.jpg', 'size' => 'original']
+        );
         $privateKey = $this->privateKeyStringEnc;
         $passphrase = 'fancy-cakephp-passphrase';
 
@@ -390,7 +448,7 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
         $auth = new Oauth();
         $request = $auth->authentication($request, $options);
 
-        $result = $request->header('Authorization');
+        $result = $request->getHeaderLine('Authorization');
         $expected = 'jvTp/wX1TYtByB1m+Pbyo0lnCOLIsyGCH7wke8AUs3BpnwZJtAuEJkvQL2/9n4s5wUmUl4aCI4BwpraNx4RtEXMe5qg5T1LVTGliMRpKasKsW//e+RinhejgCuzoH26dyF8iY2ZZ/5D1ilgeijhV/vBka5twt399mXwaYdCwFYE=';
         $this->assertContains(
             'oauth_signature="' . $expected . '"',
@@ -410,12 +468,12 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
     {
         $this->skipIf(PHP_EOL != "\n", 'Just the line ending "\n" is supported. You can run the test again e.g. on a linux system.');
 
-        $request = new Request();
-        $request->url('http://photos.example.net/photos')
-            ->body([
-                       'file' => 'vacaction.jpg',
-                       'size' => 'original'
-                   ]);
+        $request = new Request(
+            'http://photos.example.net/photos',
+            'GET',
+            [],
+            ['file' => 'vacaction.jpg', 'size' => 'original']
+        );
         $privateKey = fopen(TEST_APP . DS . 'config' . DS . 'key_with_passphrase.pem', 'r');
         $passphrase = fopen(TEST_APP . DS . 'config' . DS . 'key_passphrase_lf', 'r');
 
@@ -430,7 +488,7 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
         $auth = new Oauth();
         $request = $auth->authentication($request, $options);
 
-        $result = $request->header('Authorization');
+        $result = $request->getHeaderLine('Authorization');
         $expected = 'jvTp/wX1TYtByB1m+Pbyo0lnCOLIsyGCH7wke8AUs3BpnwZJtAuEJkvQL2/9n4s5wUmUl4aCI4BwpraNx4RtEXMe5qg5T1LVTGliMRpKasKsW//e+RinhejgCuzoH26dyF8iY2ZZ/5D1ilgeijhV/vBka5twt399mXwaYdCwFYE=';
         $this->assertContains(
             'oauth_signature="' . $expected . '"',
@@ -452,12 +510,12 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
     {
         $this->skipIf(PHP_EOL != "\n", 'Just the line ending "\n" is supported. You can run the test again e.g. on a linux system.');
 
-        $request = new Request();
-        $request->url('http://photos.example.net/photos')
-            ->body([
-                       'file' => 'vacaction.jpg',
-                       'size' => 'original'
-                   ]);
+        $request = new Request(
+            'http://photos.example.net/photos',
+            'GET',
+            [],
+            ['file' => 'vacaction.jpg', 'size' => 'original']
+        );
         $privateKey = $this->privateKeyStringEnc;
         $passphrase = fopen(TEST_APP . DS . 'config' . DS . 'key_passphrase_lf', 'r');
 
@@ -472,7 +530,7 @@ shqoyFXJvizZzje7HaTQv/eJTuA6rUOzu/sAv/eBx2YAPkA8oa3qUw==
         $auth = new Oauth();
         $request = $auth->authentication($request, $options);
 
-        $result = $request->header('Authorization');
+        $result = $request->getHeaderLine('Authorization');
         $expected = 'jvTp/wX1TYtByB1m+Pbyo0lnCOLIsyGCH7wke8AUs3BpnwZJtAuEJkvQL2/9n4s5wUmUl4aCI4BwpraNx4RtEXMe5qg5T1LVTGliMRpKasKsW//e+RinhejgCuzoH26dyF8iY2ZZ/5D1ilgeijhV/vBka5twt399mXwaYdCwFYE=';
         $this->assertContains(
             'oauth_signature="' . $expected . '"',

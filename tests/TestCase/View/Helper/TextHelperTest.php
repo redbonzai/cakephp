@@ -1,16 +1,16 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         1.2.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\View\Helper;
 
@@ -67,7 +67,7 @@ class TextHelperTest extends TestCase
         $this->Text = new TextHelper($this->View);
 
         $this->_appNamespace = Configure::read('App.namespace');
-        Configure::write('App.namespace', 'TestApp');
+        static::setAppNamespace();
     }
 
     /**
@@ -78,7 +78,7 @@ class TextHelperTest extends TestCase
     public function tearDown()
     {
         unset($this->Text, $this->View);
-        Configure::write('App.namespace', $this->_appNamespace);
+        static::setAppNamespace($this->_appNamespace);
         parent::tearDown();
     }
 
@@ -139,10 +139,10 @@ class TextHelperTest extends TestCase
         $Text = new TextHelperTestObject($this->View, ['engine' => 'TestAppEngine']);
         $this->assertInstanceOf('TestApp\Utility\TestAppEngine', $Text->engine());
 
-        Plugin::load('TestPlugin');
+        $this->loadPlugins(['TestPlugin']);
         $Text = new TextHelperTestObject($this->View, ['engine' => 'TestPlugin.TestPluginEngine']);
         $this->assertInstanceOf('TestPlugin\Utility\TestPluginEngine', $Text->engine());
-        Plugin::unload('TestPlugin');
+        $this->clearPlugins();
     }
 
     /**
@@ -368,6 +368,22 @@ class TextHelperTest extends TestCase
             [
                 'https://sevvlor.com/page%20not%20found',
                 '<a href="https://sevvlor.com/page%20not%20found">https://sevvlor.com/page%20not%20found</a>'
+            ],
+            [
+                'https://fakedomain.ext/path/#!topic/test',
+                '<a href="https://fakedomain.ext/path/#!topic/test">https://fakedomain.ext/path/#!topic/test</a>'
+            ],
+            [
+                'https://fakedomain.ext/path/#!topic/test;other;tag',
+                '<a href="https://fakedomain.ext/path/#!topic/test;other;tag">https://fakedomain.ext/path/#!topic/test;other;tag</a>'
+            ],
+            [
+                'This is text,https://fakedomain.ext/path/#!topic/test,tag, with a comma',
+                'This is text,<a href="https://fakedomain.ext/path/#!topic/test,tag">https://fakedomain.ext/path/#!topic/test,tag</a>, with a comma'
+            ],
+            [
+                'This is text https://fakedomain.ext/path/#!topic/path!',
+                'This is text <a href="https://fakedomain.ext/path/#!topic/path">https://fakedomain.ext/path/#!topic/path</a>!'
             ]
         ];
     }

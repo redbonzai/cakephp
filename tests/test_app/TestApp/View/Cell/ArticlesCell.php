@@ -1,15 +1,15 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace TestApp\View\Cell;
 
@@ -76,9 +76,8 @@ class ArticlesCell extends \Cake\View\Cell
      */
     public function customTemplateViewBuilder()
     {
-        $this->template = 'derp';
         $this->counter++;
-        $this->viewBuilder()->template('alternate_teaser_list');
+        $this->viewBuilder()->setTemplate('alternate_teaser_list');
     }
 
     /**
@@ -89,7 +88,7 @@ class ArticlesCell extends \Cake\View\Cell
      */
     public function customTemplatePath()
     {
-        $this->viewBuilder()->templatePath('Cell/Articles/Subdir');
+        $this->viewBuilder()->setTemplatePath('Cell/Articles/Subdir');
     }
 
     /**

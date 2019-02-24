@@ -1,21 +1,22 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.3.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Http;
 
 use Cake\Core\Configure;
 use Cake\Http\ServerRequestFactory;
+use Cake\Http\Session;
 use Cake\TestSuite\TestCase;
 
 /**
@@ -122,6 +123,8 @@ class ServerRequestFactoryTest extends TestCase
     /**
      * Test fromGlobals includes the session
      *
+     * @preserveGlobalState disabled
+     * @runInSeparateProcess
      * @return void
      */
     public function testFromGlobalsUrlSession()
@@ -134,7 +137,7 @@ class ServerRequestFactoryTest extends TestCase
         ];
         $res = ServerRequestFactory::fromGlobals($server);
         $session = $res->getAttribute('session');
-        $this->assertInstanceOf('Cake\Network\Session', $session);
+        $this->assertInstanceOf(Session::class, $session);
         $this->assertEquals('/basedir/', ini_get('session.cookie_path'), 'Needs trailing / for cookie to work');
     }
 
@@ -207,19 +210,19 @@ class ServerRequestFactoryTest extends TestCase
     {
         Configure::write('App', [
             'dir' => 'app',
-            'webroot' => 'webroot',
+            'webroot' => 'www',
             'base' => false,
             'baseUrl' => '/cake/index.php'
         ]);
         $server = [
             'DOCUMENT_ROOT' => '/Users/markstory/Sites',
-            'SCRIPT_FILENAME' => '/Users/markstory/Sites/cake/webroot/index.php',
-            'PHP_SELF' => '/cake/webroot/index.php/posts/index',
-            'REQUEST_URI' => '/cake/webroot/index.php',
+            'SCRIPT_FILENAME' => '/Users/markstory/Sites/cake/www/index.php',
+            'PHP_SELF' => '/cake/www/index.php/posts/index',
+            'REQUEST_URI' => '/cake/www/index.php',
         ];
         $res = ServerRequestFactory::fromGlobals($server);
 
-        $this->assertSame('/cake/webroot/', $res->getAttribute('webroot'));
+        $this->assertSame('/cake/www/', $res->getAttribute('webroot'));
         $this->assertSame('/cake/index.php', $res->getAttribute('base'));
         $this->assertSame('/', $res->getUri()->getPath());
     }

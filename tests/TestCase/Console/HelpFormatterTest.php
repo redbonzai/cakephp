@@ -2,17 +2,17 @@
 /**
  * HelpFormatterTest file
  *
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         2.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Console;
 
@@ -34,7 +34,7 @@ class HelpFormatterTest extends TestCase
     public function testWidthFormatting()
     {
         $parser = new ConsoleOptionParser('test', false);
-        $parser->description('This is fifteen This is fifteen This is fifteen')
+        $parser->setDescription('This is fifteen This is fifteen This is fifteen')
             ->addOption('four', ['help' => 'this is help text this is help text'])
             ->addArgument('four', ['help' => 'this is help text this is help text'])
             ->addSubcommand('four', ['help' => 'this is help text this is help text']);
@@ -115,8 +115,8 @@ txt;
     public function testHelpDescriptionAndEpilog()
     {
         $parser = new ConsoleOptionParser('mycommand', false);
-        $parser->description('Description text')
-            ->epilog('epilog text')
+        $parser->setDescription('Description text')
+            ->setEpilog('epilog text')
             ->addOption('test', ['help' => 'A test option.'])
             ->addArgument('model', ['help' => 'The model to make.', 'required' => true]);
 
@@ -294,6 +294,35 @@ xml;
     }
 
     /**
+     * Test setting a help alias
+     *
+     * @return void
+     */
+    public function testWithHelpAlias()
+    {
+        $parser = new ConsoleOptionParser('mycommand', false);
+        $formatter = new HelpFormatter($parser);
+        $formatter->setAlias('foo');
+        $result = $formatter->text();
+        $expected = 'foo mycommand [-h]';
+        $this->assertContains($expected, $result);
+    }
+
+    /**
+     * Tests that setting a none string help alias triggers an exception
+     *
+     * @return void
+     */
+    public function testWithNoneStringHelpAlias()
+    {
+        $this->expectException(\Cake\Console\Exception\ConsoleException::class);
+        $this->expectExceptionMessage('Alias must be of type string.');
+        $parser = new ConsoleOptionParser('mycommand', false);
+        $formatter = new HelpFormatter($parser);
+        $formatter->setAlias(['foo']);
+    }
+
+    /**
      * test help() with options and arguments that have choices.
      *
      * @return void
@@ -355,8 +384,8 @@ xml;
     public function testXmlHelpDescriptionAndEpilog()
     {
         $parser = new ConsoleOptionParser('mycommand', false);
-        $parser->description('Description text')
-            ->epilog('epilog text')
+        $parser->setDescription('Description text')
+            ->setEpilog('epilog text')
             ->addOption('test', ['help' => 'A test option.'])
             ->addArgument('model', ['help' => 'The model to make.', 'required' => true]);
 

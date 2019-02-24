@@ -1,15 +1,15 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.3.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Datasource;
 
@@ -35,11 +35,11 @@ class FactoryLocatorTest extends TestCase
      * Test get non existing factory
      *
      * @return void
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Unknown repository type "Test". Make sure you register a type before trying to use it.
      */
     public function testGetNonExisting()
     {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Unknown repository type "Test". Make sure you register a type before trying to use it.');
         FactoryLocator::get('Test');
     }
 
@@ -64,11 +64,11 @@ class FactoryLocatorTest extends TestCase
      * test drop()
      *
      * @return void
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Unknown repository type "Test". Make sure you register a type before trying to use it.
      */
     public function testDrop()
     {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Unknown repository type "Test". Make sure you register a type before trying to use it.');
         FactoryLocator::drop('Test');
 
         FactoryLocator::get('Test');
@@ -86,7 +86,7 @@ class FactoryLocatorTest extends TestCase
     {
         $stub = new Stub();
         $stub->setProps('Articles');
-        $stub->modelType('Table');
+        $stub->setModelType('Table');
 
         $result = $stub->loadModel('TestPlugin.Comments');
         $this->assertInstanceOf('TestPlugin\Model\Table\CommentsTable', $result);
@@ -136,7 +136,7 @@ class FactoryLocatorTest extends TestCase
 
             return $mock;
         });
-        $stub->modelType('Test');
+        $stub->setModelType('Test');
 
         $result = $stub->loadModel('Magic');
         $this->assertInstanceOf('\StdClass', $result);
@@ -148,11 +148,11 @@ class FactoryLocatorTest extends TestCase
      * test MissingModelException being thrown
      *
      * @return void
-     * @expectedException \Cake\Datasource\Exception\MissingModelException
-     * @expectedExceptionMessage Model class "Magic" of type "Test" could not be found.
      */
     public function testMissingModelException()
     {
+        $this->expectException(\Cake\Datasource\Exception\MissingModelException::class);
+        $this->expectExceptionMessage('Model class "Magic" of type "Test" could not be found.');
         $stub = new Stub();
 
         FactoryLocator::add('Test', function ($name) {

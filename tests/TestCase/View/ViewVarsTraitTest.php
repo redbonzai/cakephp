@@ -1,15 +1,15 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\View;
 
@@ -101,10 +101,12 @@ class ViewVarsTraitTest extends TestCase
      */
     public function testAddOneViewOption()
     {
-        $option = 'newOption';
-        $this->subject->viewOptions($option);
+        $this->deprecated(function () {
+            $option = 'newOption';
+            $this->subject->viewOptions($option);
 
-        $this->assertContains($option, $this->subject->viewOptions());
+            $this->assertContains($option, $this->subject->viewOptions());
+        });
     }
 
     /**
@@ -114,13 +116,15 @@ class ViewVarsTraitTest extends TestCase
      */
     public function testAddTwoViewOption()
     {
-        $this->subject->viewOptions(['oldOption'], false);
-        $option = ['newOption', 'anotherOption'];
-        $result = $this->subject->viewOptions($option);
-        $expects = ['oldOption', 'newOption', 'anotherOption'];
+        $this->deprecated(function () {
+            $this->subject->viewOptions(['oldOption'], false);
+            $option = ['newOption', 'anotherOption'];
+            $result = $this->subject->viewOptions($option);
+            $expects = ['oldOption', 'newOption', 'anotherOption'];
 
-        $this->assertContainsOnly('string', $result);
-        $this->assertEquals($expects, $result);
+            $this->assertContainsOnly('string', $result);
+            $this->assertEquals($expects, $result);
+        });
     }
 
     /**
@@ -130,10 +134,12 @@ class ViewVarsTraitTest extends TestCase
      */
     public function testReadingViewOptions()
     {
-        $expected = $this->subject->viewOptions(['one', 'two', 'three'], false);
-        $result = $this->subject->viewOptions();
+        $this->deprecated(function () {
+            $expected = $this->subject->viewOptions(['one', 'two', 'three'], false);
+            $result = $this->subject->viewOptions();
 
-        $this->assertEquals($expected, $result);
+            $this->assertEquals($expected, $result);
+        });
     }
 
     /**
@@ -143,11 +149,13 @@ class ViewVarsTraitTest extends TestCase
      */
     public function testMergeFalseViewOptions()
     {
-        $this->subject->viewOptions(['one', 'two', 'three'], false);
-        $expected = ['four', 'five', 'six'];
-        $result = $this->subject->viewOptions($expected, false);
+        $this->deprecated(function () {
+            $this->subject->viewOptions(['one', 'two', 'three'], false);
+            $expected = ['four', 'five', 'six'];
+            $result = $this->subject->viewOptions($expected, false);
 
-        $this->assertEquals($expected, $result);
+            $this->assertEquals($expected, $result);
+        });
     }
 
     /**
@@ -157,10 +165,11 @@ class ViewVarsTraitTest extends TestCase
      */
     public function testUndefinedValidViewOptions()
     {
-        $result = $this->subject->viewOptions([], false);
-
-        $this->assertTrue(is_array($result));
-        $this->assertEmpty($result);
+        $this->deprecated(function () {
+            $result = $this->subject->viewOptions([], false);
+            $this->assertInternalType('array', $result);
+            $this->assertEmpty($result);
+        });
     }
 
     /**
@@ -195,13 +204,16 @@ class ViewVarsTraitTest extends TestCase
     /**
      * test that viewClass is used to create the view
      *
+     * @deprecated
      * @return void
      */
     public function testCreateViewViewClass()
     {
-        $this->subject->viewClass = 'Json';
-        $view = $this->subject->createView();
-        $this->assertInstanceOf('Cake\View\JsonView', $view);
+        $this->deprecated(function () {
+            $this->subject->viewClass = 'Json';
+            $view = $this->subject->createView();
+            $this->assertInstanceOf('Cake\View\JsonView', $view);
+        });
     }
 
     /**
@@ -233,12 +245,12 @@ class ViewVarsTraitTest extends TestCase
     /**
      * test createView() throws exception if view class cannot be found
      *
-     * @expectedException \Cake\View\Exception\MissingViewException
-     * @expectedExceptionMessage View class "Foo" is missing.
      * @return void
      */
     public function testCreateViewException()
     {
+        $this->expectException(\Cake\View\Exception\MissingViewException::class);
+        $this->expectExceptionMessage('View class "Foo" is missing.');
         $this->subject->createView('Foo');
     }
 }

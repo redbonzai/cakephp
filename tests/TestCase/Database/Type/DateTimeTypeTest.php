@@ -1,16 +1,16 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Database\Type;
 
@@ -18,6 +18,7 @@ use Cake\Database\Type\DateTimeType;
 use Cake\I18n\FrozenTime;
 use Cake\I18n\Time;
 use Cake\TestSuite\TestCase;
+use DateTimeZone;
 
 /**
  * Test for the DateTime type.
@@ -95,6 +96,27 @@ class DateTimeTypeTest extends TestCase
     }
 
     /**
+     * Test converting string datetimes to PHP values.
+     *
+     * @return void
+     */
+    public function testManyToPHP()
+    {
+        $values = [
+            'a' => null,
+            'b' => '2001-01-04 12:13:14',
+        ];
+        $expected = [
+            'a' => null,
+            'b' => new Time('2001-01-04 12:13:14'),
+        ];
+        $this->assertEquals(
+            $expected,
+            $this->type->manyToPHP($values, array_keys($values), $this->driver)
+        );
+    }
+
+    /**
      * Test datetime parsing when value include milliseconds.
      *
      * Postgres includes milliseconds in timestamp columns,
@@ -124,6 +146,26 @@ class DateTimeTypeTest extends TestCase
         $result = $this->type->toDatabase($date, $this->driver);
         $this->assertEquals('2013-08-12 15:16:17', $result);
 
+        $tz = $date->getTimezone();
+        $this->type->setTimezone('Asia/Kolkata'); // UTC+5:30
+        $result = $this->type->toDatabase($date, $this->driver);
+        $this->assertEquals('2013-08-12 20:46:17', $result);
+        $this->assertEquals($tz, $date->getTimezone());
+
+        $this->type->setTimezone(new DateTimeZone('Asia/Kolkata'));
+        $result = $this->type->toDatabase($date, $this->driver);
+        $this->assertEquals('2013-08-12 20:46:17', $result);
+        $this->type->setTimezone(null);
+
+        $date = new FrozenTime('2013-08-12 15:16:17');
+        $result = $this->type->toDatabase($date, $this->driver);
+        $this->assertEquals('2013-08-12 15:16:17', $result);
+
+        $this->type->setTimezone('Asia/Kolkata'); // UTC+5:30
+        $result = $this->type->toDatabase($date, $this->driver);
+        $this->assertEquals('2013-08-12 20:46:17', $result);
+        $this->type->setTimezone(null);
+
         $date = 1401906995;
         $result = $this->type->toDatabase($date, $this->driver);
         $this->assertEquals('2014-06-04 18:36:35', $result);
@@ -151,6 +193,7 @@ class DateTimeTypeTest extends TestCase
             [1392387900, new Time('@1392387900')],
             ['2014-02-14 00:00:00', new Time('2014-02-14 00:00:00')],
             ['2014-02-14 13:14:15', new Time('2014-02-14 13:14:15')],
+            ['2017-04-05T17:18:00+00:00', new Time('2017-04-05T17:18:00+00:00')],
 
             // valid array types
             [

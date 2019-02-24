@@ -1,22 +1,21 @@
 <?php
 /**
- * CakePHP(tm) Tests <http://book.cakephp.org/view/1196/Testing>
- * Copyright 2005-2011, Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) Tests <https://book.cakephp.org/view/1196/Testing>
+ * Copyright 2005-2011, Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice
  *
- * @copyright     Copyright 2005-2011, Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://book.cakephp.org/view/1196/Testing CakePHP(tm) Tests
+ * @copyright     Copyright 2005-2011, Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://book.cakephp.org/view/1196/Testing CakePHP(tm) Tests
  * @since         1.2.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Controller;
 
 use Cake\Controller\ComponentRegistry;
 use Cake\Controller\Component\CookieComponent;
 use Cake\Controller\Controller;
-use Cake\Core\Configure;
 use Cake\Event\EventManager;
 use Cake\TestSuite\TestCase;
 use TestApp\Controller\ComponentTestController;
@@ -40,7 +39,7 @@ class ComponentTest extends TestCase
     public function setUp()
     {
         parent::setUp();
-        Configure::write('App.namespace', 'TestApp');
+        static::setAppNamespace();
     }
 
     /**
@@ -81,7 +80,7 @@ class ComponentTest extends TestCase
     {
         $mock = $this->getMockBuilder(EventManager::class)->getMock();
         $controller = new Controller();
-        $controller->eventManager($mock);
+        $controller->setEventManager($mock);
 
         $mock->expects($this->once())
             ->method('on')
@@ -113,12 +112,12 @@ class ComponentTest extends TestCase
     /**
      * Test a duplicate component being loaded more than once with same and differing configurations.
      *
-     * @expectedException \RuntimeException
-     * @expectedExceptionMessage The "Banana" alias has already been loaded with the following config:
      * @return void
      */
     public function testDuplicateComponentInitialize()
     {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('The "Banana" alias has already been loaded with the following config:');
         $Collection = new ComponentRegistry();
         $Collection->load('Banana', ['property' => ['closure' => function () {
         }]]);
@@ -188,7 +187,7 @@ class ComponentTest extends TestCase
     {
         $Component = new ConfiguredComponent(new ComponentRegistry(), ['chicken' => 'soup']);
         $this->assertEquals(['chicken' => 'soup'], $Component->configCopy);
-        $this->assertEquals(['chicken' => 'soup'], $Component->config());
+        $this->assertEquals(['chicken' => 'soup'], $Component->getConfig());
     }
 
     /**
@@ -207,12 +206,12 @@ class ComponentTest extends TestCase
     /**
      * Lazy load a component that does not exist.
      *
-     * @expectedException \Cake\Controller\Exception\MissingComponentException
-     * @expectedExceptionMessage Component class YouHaveNoBananasComponent could not be found.
      * @return void
      */
     public function testLazyLoadingDoesNotExists()
     {
+        $this->expectException(\Cake\Controller\Exception\MissingComponentException::class);
+        $this->expectExceptionMessage('Component class YouHaveNoBananasComponent could not be found.');
         $Component = new ConfiguredComponent(new ComponentRegistry(), [], ['YouHaveNoBananas']);
         $bananas = $Component->YouHaveNoBananas;
     }
@@ -227,7 +226,7 @@ class ComponentTest extends TestCase
         $Component = new ConfiguredComponent(new ComponentRegistry(), [], ['Configured' => ['foo' => 'bar']]);
         $this->assertInstanceOf(ConfiguredComponent::class, $Component->Configured, 'class is wrong');
         $this->assertNotSame($Component, $Component->Configured, 'Component instance was reused');
-        $this->assertEquals(['foo' => 'bar', 'enabled' => false], $Component->Configured->config());
+        $this->assertEquals(['foo' => 'bar', 'enabled' => false], $Component->Configured->getConfig());
     }
 
     /**
@@ -243,7 +242,7 @@ class ComponentTest extends TestCase
             ->with($this->isInstanceOf(AppleComponent::class));
 
         $controller = new Controller();
-        $controller->eventManager($eventManager);
+        $controller->setEventManager($eventManager);
 
         $Collection = new ComponentRegistry($controller);
 
@@ -262,7 +261,7 @@ class ComponentTest extends TestCase
         $eventManager->expects($this->never())->method('on');
 
         $controller = new Controller();
-        $controller->eventManager($eventManager);
+        $controller->setEventManager($eventManager);
 
         $Collection = new ComponentRegistry($controller);
 

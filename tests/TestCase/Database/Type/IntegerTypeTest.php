@@ -1,16 +1,16 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Database\Type;
 
@@ -54,20 +54,74 @@ class IntegerTypeTest extends TestCase
     {
         $this->assertNull($this->type->toPHP(null, $this->driver));
 
-        $result = $this->type->toPHP('some data', $this->driver);
-        $this->assertSame(0, $result);
-
         $result = $this->type->toPHP('2', $this->driver);
         $this->assertSame(2, $result);
 
-        $result = $this->type->toPHP('2 bears', $this->driver);
+        $result = $this->type->toPHP('2.3', $this->driver);
         $this->assertSame(2, $result);
 
         $result = $this->type->toPHP('-2', $this->driver);
         $this->assertSame(-2, $result);
 
-        $result = $this->type->toPHP(['3', '4'], $this->driver);
-        $this->assertSame(1, $result);
+        $result = $this->type->toPHP(10, $this->driver);
+        $this->assertSame(10, $result);
+    }
+
+    /**
+     * Test converting string float to PHP values.
+     *
+     * @return void
+     */
+    public function testManyToPHP()
+    {
+        $values = [
+            'a' => null,
+            'b' => '2.3',
+            'c' => '15',
+            'd' => '0.0',
+            'e' => 10
+        ];
+        $expected = [
+            'a' => null,
+            'b' => 2,
+            'c' => 15,
+            'd' => 0,
+            'e' => 10
+        ];
+        $this->assertEquals(
+            $expected,
+            $this->type->manyToPHP($values, array_keys($values), $this->driver)
+        );
+    }
+
+    /**
+     * Test to make sure the method throws an exception for invalid integer values.
+     *
+     * @return void
+     */
+    public function testInvalidManyToPHP()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $values = [
+            'a' => null,
+            'b' => '2.3',
+            'c' => '15',
+            'd' => '0.0',
+            'e' => 10,
+            'f' => '6a88accf-a34e-4dd9-ade0-8d255ccaecbe'
+        ];
+        $expected = [
+            'a' => null,
+            'b' => 2,
+            'c' => 15,
+            'd' => 0,
+            'e' => 10,
+            'f' => '6a88accf-a34e-4dd9-ade0-8d255ccaecbe'
+        ];
+        $this->assertEquals(
+            $expected,
+            $this->type->manyToPHP($values, array_keys($values), $this->driver)
+        );
     }
 
     /**
@@ -79,9 +133,6 @@ class IntegerTypeTest extends TestCase
     {
         $this->assertNull($this->type->toDatabase(null, $this->driver));
 
-        $result = $this->type->toDatabase('some data', $this->driver);
-        $this->assertSame(0, $result);
-
         $result = $this->type->toDatabase(2, $this->driver);
         $this->assertSame(2, $result);
 
@@ -90,14 +141,30 @@ class IntegerTypeTest extends TestCase
     }
 
     /**
-     * Tests that passing an invalid value will throw an exception
+     * Invalid Integer Data Provider
      *
-     * @expectedException \InvalidArgumentException
      * @return void
      */
-    public function testToDatabaseInvalid()
+    public function invalidIntegerProvider()
     {
-        $this->type->toDatabase(['3', '4'], $this->driver);
+        return [
+            'array' => [['3', '4']],
+            'non-numeric-string' => ['some-data'],
+            'uuid' => ['6a88accf-a34e-4dd9-ade0-8d255ccaecbe'],
+        ];
+    }
+
+    /**
+     * Tests that passing an invalid value will throw an exception
+     *
+     * @dataProvider invalidIntegerProvider
+     * @param  mixed $value Invalid value to test against the database type.
+     * @return void
+     */
+    public function testToDatabaseInvalid($value)
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->type->toDatabase($value, $this->driver);
     }
 
     /**
@@ -135,7 +202,14 @@ class IntegerTypeTest extends TestCase
         $this->assertNull($result);
 
         $result = $this->type->marshal(['3', '4']);
-        $this->assertSame(1, $result);
+        $this->assertNull($result);
+
+        $result = $this->type->marshal('+0123.45e2');
+        if (version_compare(PHP_VERSION, '7.1', '<')) {
+            $this->assertSame(123, $result);
+        } else {
+            $this->assertSame(12345, $result);
+        }
     }
 
     /**

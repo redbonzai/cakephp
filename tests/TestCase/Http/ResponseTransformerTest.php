@@ -1,16 +1,16 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.3.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Http;
 
@@ -22,6 +22,8 @@ use Zend\Diactoros\Stream;
 
 /**
  * Test case for the response transformer.
+ *
+ * @group deprecated
  */
 class ResponseTransformerTest extends TestCase
 {
@@ -33,6 +35,13 @@ class ResponseTransformerTest extends TestCase
     protected $server;
 
     /**
+     * Old error level
+     *
+     * @var int
+     */
+    protected $errorLevel;
+
+    /**
      * setup
      *
      * @return void
@@ -41,6 +50,7 @@ class ResponseTransformerTest extends TestCase
     {
         parent::setUp();
         $this->server = $_SERVER;
+        $this->errorLevel = error_reporting(E_ALL ^ E_USER_DEPRECATED);
     }
 
     /**
@@ -52,6 +62,8 @@ class ResponseTransformerTest extends TestCase
     {
         parent::tearDown();
         $_SERVER = $this->server;
+        error_reporting($this->errorLevel);
+        unset($this->errorLevel);
     }
 
     /**
@@ -156,13 +168,13 @@ class ResponseTransformerTest extends TestCase
     public function testToCakeCookies()
     {
         $cookies = [
-            'remember me=1";"1',
+            'remember_me=1";"1',
             'forever=yes; Expires=Wed, 13 Jan 2021 12:30:40 GMT; Path=/some/path; Domain=example.com; HttpOnly; Secure'
         ];
         $psr = new PsrResponse('php://memory', 200, ['Set-Cookie' => $cookies]);
         $result = ResponseTransformer::toCake($psr);
         $expected = [
-            'name' => 'remember me',
+            'name' => 'remember_me',
             'value' => '1";"1',
             'path' => '/',
             'domain' => '',
@@ -170,7 +182,7 @@ class ResponseTransformerTest extends TestCase
             'secure' => false,
             'httpOnly' => false,
         ];
-        $this->assertEquals($expected, $result->cookie('remember me'));
+        $this->assertEquals($expected, $result->cookie('remember_me'));
 
         $expected = [
             'name' => 'forever',
@@ -242,7 +254,7 @@ class ResponseTransformerTest extends TestCase
     {
         $cake = new CakeResponse(['status' => 200]);
         $cake->cookie([
-            'name' => 'remember me',
+            'name' => 'remember_me',
             'value' => '1 1',
             'path' => '/some/path',
             'domain' => 'example.com',
@@ -252,7 +264,7 @@ class ResponseTransformerTest extends TestCase
         ]);
         $result = ResponseTransformer::toPsr($cake);
         $this->assertEquals(
-            'remember+me=1+1; Expires=Wed, 13 Jan 2021 12:30:40 GMT; Path=/some/path; Domain=example.com; HttpOnly; Secure',
+            'remember_me=1+1; Expires=Wed, 13 Jan 2021 12:30:40 GMT; Path=/some/path; Domain=example.com; HttpOnly; Secure',
             $result->getHeader('Set-Cookie')[0],
             'Cookie attributes should exist, and name/value should be encoded'
         );
@@ -387,7 +399,7 @@ class ResponseTransformerTest extends TestCase
 
         $result = ResponseTransformer::toPsr($cake);
         $this->assertEquals(
-            'bytes 10-20/15640',
+            'bytes 10-20/15641',
             $result->getHeaderLine('Content-Range'),
             'Content-Range header missing'
         );

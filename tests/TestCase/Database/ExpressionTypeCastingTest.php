@@ -1,15 +1,15 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The Open Group Test Suite License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.3.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Database;
 
@@ -49,7 +49,7 @@ class ExpressionTypeCastingTest extends TestCase
     public function setUp()
     {
         parent::setUp();
-        Type::map('test', new TestType);
+        Type::set('test', new TestType);
     }
 
     /**
@@ -158,7 +158,7 @@ class ExpressionTypeCastingTest extends TestCase
         $function = new FunctionExpression('DATE', ['2016-01'], ['test']);
         $binder = new ValueBinder;
         $sql = $function->sql($binder);
-        $this->assertEquals('DATE((CONCAT(:param0, :param1)))', $sql);
+        $this->assertEquals('DATE(CONCAT(:param0, :param1))', $sql);
         $this->assertEquals('2016-01', $binder->bindings()[':param0']['value']);
 
         $expressions = [];

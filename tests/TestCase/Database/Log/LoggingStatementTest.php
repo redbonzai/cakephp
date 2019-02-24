@@ -1,16 +1,16 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Database\Log;
 
@@ -44,7 +44,7 @@ class LoggingStatementTest extends TestCase
             ));
         $st = new LoggingStatement($inner);
         $st->queryString = 'SELECT bar FROM foo';
-        $st->logger($logger);
+        $st->setLogger($logger);
         $st->execute();
     }
 
@@ -69,7 +69,7 @@ class LoggingStatementTest extends TestCase
             ));
         $st = new LoggingStatement($inner);
         $st->queryString = 'SELECT bar FROM foo';
-        $st->logger($logger);
+        $st->setLogger($logger);
         $st->execute(['a' => 1, 'b' => 2]);
     }
 
@@ -107,7 +107,7 @@ class LoggingStatementTest extends TestCase
         $driver = $this->getMockBuilder('\Cake\Database\Driver')->getMock();
         $st = new LoggingStatement($inner, $driver);
         $st->queryString = 'SELECT bar FROM foo';
-        $st->logger($logger);
+        $st->setLogger($logger);
         $st->bindValue('a', 1);
         $st->bindValue('b', $date, 'date');
         $st->execute();
@@ -118,12 +118,12 @@ class LoggingStatementTest extends TestCase
     /**
      * Tests that queries are logged despite database errors
      *
-     * @expectedException \LogicException
-     * @expectedExceptionMessage This is bad
      * @return void
      */
     public function testExecuteWithError()
     {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('This is bad');
         $exception = new \LogicException('This is bad');
         $inner = $this->getMockBuilder('PDOStatement')->getMock();
         $inner->expects($this->once())->method('execute')
@@ -140,7 +140,40 @@ class LoggingStatementTest extends TestCase
             ));
         $st = new LoggingStatement($inner);
         $st->queryString = 'SELECT bar FROM foo';
-        $st->logger($logger);
+        $st->setLogger($logger);
         $st->execute();
+    }
+
+    /**
+     * Tests setting and getting the logger
+     *
+     * @group deprecated
+     * @return void
+     */
+    public function testLoggerCompat()
+    {
+        $this->deprecated(function () {
+            $logger = $this->getMockBuilder('\Cake\Database\Log\QueryLogger')->getMock();
+            $st = new LoggingStatement();
+
+            $this->assertNull($st->logger());
+
+            $st->logger($logger);
+            $this->assertSame($logger, $st->logger());
+        });
+    }
+
+    /**
+     * Tests setting and getting the logger
+     *
+     * @return void
+     */
+    public function testSetAndGetLogger()
+    {
+        $logger = $this->getMockBuilder('\Cake\Database\Log\QueryLogger')->getMock();
+        $st = new LoggingStatement();
+        $this->assertNull($st->getLogger());
+        $st->setLogger($logger);
+        $this->assertSame($logger, $st->getLogger());
     }
 }

@@ -1,15 +1,15 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Http\Client;
 
@@ -60,12 +60,34 @@ class FormDataTest extends TestCase
         $data->add('test', 'value')
             ->add('empty', '')
             ->add('int', 1)
-            ->add('float', 2.3);
+            ->add('float', 2.3)
+            ->add('password', '@secret');
 
-        $this->assertCount(4, $data);
+        $this->assertCount(5, $data);
         $boundary = $data->boundary();
         $result = (string)$data;
-        $expected = 'test=value&empty=&int=1&float=2.3';
+        $expected = 'test=value&empty=&int=1&float=2.3&password=%40secret';
+        $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * Test addMany method.
+     *
+     * @return void
+     */
+    public function testAddMany()
+    {
+        $data = new FormData();
+        $array = [
+            'key' => 'value',
+            'empty' => '',
+            'int' => '1',
+            'float' => '2.3'
+        ];
+        $data->addMany($array);
+        $this->assertCount(4, $data);
+        $result = (string)$data;
+        $expected = 'key=value&empty=&int=1&float=2.3';
         $this->assertEquals($expected, $result);
     }
 
@@ -123,53 +145,13 @@ class FormDataTest extends TestCase
      *
      * @return void
      */
-    public function testAddArrayWithFile()
-    {
-        $errorLevel = error_reporting();
-        error_reporting($errorLevel & ~E_USER_DEPRECATED);
-
-        $file = CORE_PATH . 'VERSION.txt';
-        $contents = file_get_contents($file);
-
-        $data = new FormData();
-        $data->add('Article', [
-            'title' => 'first post',
-            'thumbnail' => '@' . $file
-        ]);
-        $boundary = $data->boundary();
-        $result = (string)$data;
-
-        $expected = [
-            '--' . $boundary,
-            'Content-Disposition: form-data; name="Article[title]"',
-            '',
-            'first post',
-            '--' . $boundary,
-            'Content-Disposition: form-data; name="Article[thumbnail]"; filename="VERSION.txt"',
-            'Content-Type: text/plain; charset=us-ascii',
-            '',
-            $contents,
-            '--' . $boundary . '--',
-            '',
-            '',
-        ];
-        $this->assertEquals(implode("\r\n", $expected), $result);
-
-        error_reporting($errorLevel);
-    }
-
-    /**
-     * Test adding a part with a file in it.
-     *
-     * @return void
-     */
     public function testAddFile()
     {
         $file = CORE_PATH . 'VERSION.txt';
         $contents = file_get_contents($file);
 
         $data = new FormData();
-        $data->add('upload', fopen($file, 'r'));
+        $data->addFile('upload', fopen($file, 'r'));
         $boundary = $data->boundary();
         $result = (string)$data;
 
@@ -215,5 +197,27 @@ class FormDataTest extends TestCase
             ''
         ];
         $this->assertEquals(implode("\r\n", $expected), $result);
+    }
+
+    /**
+     * Test contentType method.
+     *
+     * @return void
+     */
+    public function testContentType()
+    {
+        $data = new FormData();
+        $data->add('key', 'value');
+        $result = $data->contentType();
+        $expected = 'application/x-www-form-urlencoded';
+        $this->assertEquals($expected, $result);
+
+        $file = CORE_PATH . 'VERSION.txt';
+        $data = new FormData();
+        $data->addFile('upload', fopen($file, 'r'));
+        $boundary = $data->boundary();
+        $result = $data->contentType();
+        $expected = 'multipart/form-data; boundary="' . $boundary . '"';
+        $this->assertEquals($expected, $result);
     }
 }

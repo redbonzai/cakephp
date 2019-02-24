@@ -1,16 +1,16 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Routing;
 
@@ -34,7 +34,7 @@ class DispatcherFilterTest extends TestCase
     public function testConstructConfig()
     {
         $filter = new DispatcherFilter(['one' => 'value', 'on' => '/blog']);
-        $this->assertEquals('value', $filter->config('one'));
+        $this->assertEquals('value', $filter->getConfig('one'));
     }
 
     /**
@@ -45,10 +45,10 @@ class DispatcherFilterTest extends TestCase
     public function testConstructPriority()
     {
         $filter = new DispatcherFilter();
-        $this->assertEquals(10, $filter->config('priority'));
+        $this->assertEquals(10, $filter->getConfig('priority'));
 
         $filter = new DispatcherFilter(['priority' => 100]);
-        $this->assertEquals(100, $filter->config('priority'));
+        $this->assertEquals(100, $filter->getConfig('priority'));
     }
 
     /**
@@ -67,12 +67,12 @@ class DispatcherFilterTest extends TestCase
     /**
      * Test constructor error invalid when
      *
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage "when" conditions must be a callable.
      * @return void
      */
     public function testConstructorInvalidWhen()
     {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('"when" conditions must be a callable.');
         new DispatcherFilter(['when' => 'nope']);
     }
 

@@ -1,16 +1,16 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Database\Schema;
 
@@ -33,7 +33,7 @@ class CollectionTest extends TestCase
      * @var array
      */
     public $fixtures = [
-        'core.users'
+        'core.Users'
     ];
 
     /**
@@ -66,11 +66,11 @@ class CollectionTest extends TestCase
      * Tests for positive describe() calls are in each platformSchema
      * test case.
      *
-     * @expectedException \Cake\Database\Exception
      * @return void
      */
     public function testDescribeIncorrectTable()
     {
+        $this->expectException(\Cake\Database\Exception::class);
         $schema = new Collection($this->connection);
         $this->assertNull($schema->describe('derp'));
     }
@@ -82,12 +82,12 @@ class CollectionTest extends TestCase
      */
     public function testDescribeCache()
     {
-        $schema = $this->connection->schemaCollection();
+        $schema = $this->connection->getSchemaCollection();
         $table = $schema->describe('users');
 
         Cache::delete('test_users', '_cake_model_');
         $this->connection->cacheMetadata(true);
-        $schema = $this->connection->schemaCollection();
+        $schema = $this->connection->getSchemaCollection();
 
         $result = $schema->describe('users');
         $this->assertEquals($table, $result);

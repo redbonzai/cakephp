@@ -1,15 +1,15 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The Open Group Test Suite License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.3.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Database;
 
@@ -73,13 +73,13 @@ class OrderedUuidType extends Type implements ExpressionTypeInterface
 class ExpressionTypeCastingIntegrationTest extends TestCase
 {
 
-    public $fixtures = ['core.ordered_uuid_items'];
+    public $fixtures = ['core.OrderedUuidItems'];
 
     public function setUp()
     {
         parent::setUp();
         $this->connection = ConnectionManager::get('test');
-        $this->skipIf($this->connection->driver() instanceof Sqlserver, 'This tests uses functions specific to other drivers');
+        $this->skipIf($this->connection->getDriver() instanceof Sqlserver, 'This tests uses functions specific to other drivers');
         Type::map('ordered_uuid', OrderedUuidType::class);
     }
 
@@ -109,9 +109,9 @@ class ExpressionTypeCastingIntegrationTest extends TestCase
             ->select('id')
             ->from('ordered_uuid_items')
             ->order('id')
-            ->defaultTypes(['id' => 'ordered_uuid']);
+            ->setDefaultTypes(['id' => 'ordered_uuid']);
 
-        $query->selectTypeMap($query->typeMap());
+        $query->setSelectTypeMap($query->getTypeMap());
         $results = $query->execute()->fetchAll('assoc');
 
         $this->assertEquals(new UuidValue('419a8da0482b7756b21f27da40cf8569'), $results[0]['id']);

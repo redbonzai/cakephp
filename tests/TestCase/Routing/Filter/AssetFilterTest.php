@@ -1,15 +1,15 @@
 <?php
 /**
- * CakePHP(tm) Tests <http://book.cakephp.org/view/1196/Testing>
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) Tests <https://book.cakephp.org/view/1196/Testing>
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The Open Group Test Suite License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://book.cakephp.org/view/1196/Testing CakePHP(tm) Tests
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://book.cakephp.org/view/1196/Testing CakePHP(tm) Tests
  * @since         2.2.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Routing\Filter;
 
@@ -33,7 +33,7 @@ class AssetFilterTest extends TestCase
     public function setUp()
     {
         parent::setUp();
-        Plugin::load(['TestTheme']);
+        $this->loadPlugins(['TestTheme']);
     }
 
     /**
@@ -44,7 +44,7 @@ class AssetFilterTest extends TestCase
     public function tearDown()
     {
         parent::tearDown();
-        Plugin::unload();
+        $this->clearPlugins();
     }
 
     /**
@@ -72,10 +72,10 @@ class AssetFilterTest extends TestCase
         $event = new Event('DispatcherTest', $this, compact('request', 'response'));
 
         ob_start();
-        $this->assertSame($response, $filter->beforeDispatch($event));
+        $response = $filter->beforeDispatch($event);
         ob_end_clean();
-        $this->assertEquals(200, $response->statusCode());
-        $this->assertEquals($time->format('D, j M Y H:i:s') . ' GMT', $response->modified());
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($time->format('D, j M Y H:i:s') . ' GMT', $response->getHeaderLine('Last-Modified'));
 
         $response = $this->getMockBuilder('Cake\Http\Response')
             ->setMethods(['_sendHeader', 'checkNotModified', 'send'])
@@ -88,8 +88,8 @@ class AssetFilterTest extends TestCase
         $response->expects($this->never())->method('send');
         $event = new Event('DispatcherTest', $this, compact('request', 'response'));
 
-        $this->assertSame($response, $filter->beforeDispatch($event));
-        $this->assertEquals($time->format('D, j M Y H:i:s') . ' GMT', $response->modified());
+        $response = $filter->beforeDispatch($event);
+        $this->assertEquals($time->format('D, j M Y H:i:s') . ' GMT', $response->getHeaderLine('Last-Modified'));
     }
 
     /**
@@ -236,7 +236,7 @@ class AssetFilterTest extends TestCase
      */
     public function testAsset($url, $file)
     {
-        Plugin::load(['Company/TestPluginThree', 'TestPlugin', 'PluginJs']);
+        $this->loadPlugins(['Company/TestPluginThree', 'TestPlugin', 'PluginJs']);
 
         $filter = new AssetFilter();
         $response = $this->getMockBuilder('Cake\Http\Response')
@@ -253,7 +253,6 @@ class AssetFilterTest extends TestCase
         $this->assertEquals($file, $result->read());
 
         $expected = filesize($path);
-        $headers = $response->header();
-        $this->assertEquals($expected, $headers['Content-Length']);
+        $this->assertEquals($expected, $response->getHeaderLine('Content-Length'));
     }
 }

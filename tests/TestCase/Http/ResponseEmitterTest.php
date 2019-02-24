@@ -1,20 +1,21 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.3.5
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase;
 
 use Cake\Http\CallbackStream;
+use Cake\Http\Cookie\Cookie;
 use Cake\Http\Response;
 use Cake\Http\ResponseEmitter;
 use Cake\TestSuite\TestCase;
@@ -28,11 +29,28 @@ class ResponseEmitterTest extends TestCase
 {
     protected $emitter;
 
+    /**
+     * setup
+     *
+     * @return void
+     */
     public function setUp()
     {
         parent::setUp();
+        $GLOBALS['mockedHeadersSent'] = false;
         $GLOBALS['mockedHeaders'] = $GLOBALS['mockedCookies'] = [];
         $this->emitter = new ResponseEmitter();
+    }
+
+    /**
+     * teardown
+     *
+     * @return void
+     */
+    public function tearDown()
+    {
+        parent::tearDown();
+        unset($GLOBALS['mockedHeadersSent']);
     }
 
     /**
@@ -93,7 +111,7 @@ class ResponseEmitterTest extends TestCase
     public function testEmitResponseArrayCookies()
     {
         $response = (new Response())
-            ->withCookie('simple', ['value' => 'val', 'secure' => true])
+            ->withCookie(new Cookie('simple', 'val', null, '/', '', true))
             ->withAddedHeader('Set-Cookie', 'google=not=nice;Path=/accounts; HttpOnly')
             ->withHeader('Content-Type', 'text/plain');
         $response->getBody()->write('ok');

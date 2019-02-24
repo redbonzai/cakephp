@@ -1,28 +1,27 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.3.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Error\Middleware;
 
-use Cake\Core\Configure;
 use Cake\Error\Middleware\ErrorHandlerMiddleware;
 use Cake\Http\Response;
 use Cake\Http\ServerRequestFactory;
 use Cake\Log\Log;
 use Cake\TestSuite\TestCase;
+use Error;
 use LogicException;
 use Psr\Log\LoggerInterface;
-use Zend\Diactoros\Request;
 
 /**
  * Test for ErrorHandlerMiddleware
@@ -40,11 +39,11 @@ class ErrorHandlerMiddlewareTest extends TestCase
     {
         parent::setUp();
 
-        Configure::write('App.namespace', 'TestApp');
+        static::setAppNamespace();
         $this->logger = $this->getMockBuilder(LoggerInterface::class)->getMock();
 
         Log::reset();
-        Log::config('error_test', [
+        Log::setConfig('error_test', [
             'engine' => $this->logger
         ]);
     }
@@ -83,11 +82,11 @@ class ErrorHandlerMiddlewareTest extends TestCase
     /**
      * Test an invalid rendering class.
      *
-     * @expectedException \Exception
-     * @expectedExceptionMessage The 'TotallyInvalid' renderer class could not be found
      */
     public function testInvalidRenderer()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('The \'TotallyInvalid\' renderer class could not be found');
         $request = ServerRequestFactory::fromGlobals();
         $response = new Response();
 
@@ -138,14 +137,55 @@ class ErrorHandlerMiddlewareTest extends TestCase
         $response = new Response();
         $middleware = new ErrorHandlerMiddleware();
         $next = function ($req, $res) {
-            throw new \Cake\Network\Exception\NotFoundException('whoops');
+            throw new \Cake\Http\Exception\NotFoundException('whoops');
         };
         $result = $middleware($request, $response, $next);
         $this->assertInstanceOf('Psr\Http\Message\ResponseInterface', $result);
         $this->assertInstanceOf('Cake\Http\Response', $result);
         $this->assertNotSame($result, $response);
         $this->assertEquals(404, $result->getStatusCode());
-        $this->assertContains("was not found", '' . $result->getBody());
+        $this->assertContains('was not found', '' . $result->getBody());
+    }
+
+    /**
+     * Test rendering an error page holds onto the original request.
+     *
+     * @return void
+     */
+    public function testHandleExceptionPreserveRequest()
+    {
+        $request = ServerRequestFactory::fromGlobals();
+        $request = $request->withHeader('Accept', 'application/json');
+
+        $response = new Response();
+        $middleware = new ErrorHandlerMiddleware();
+        $next = function ($req, $res) {
+            throw new \Cake\Http\Exception\NotFoundException('whoops');
+        };
+        $result = $middleware($request, $response, $next);
+        $this->assertInstanceOf('Cake\Http\Response', $result);
+        $this->assertNotSame($result, $response);
+        $this->assertEquals(404, $result->getStatusCode());
+        $this->assertContains('"message": "whoops"', '' . $result->getBody());
+        $this->assertEquals('application/json; charset=UTF-8', $result->getHeaderLine('Content-type'));
+    }
+
+    /**
+     * Test handling PHP 7's Error instance.
+     *
+     * @return void
+     */
+    public function testHandlePHP7Error()
+    {
+        $this->skipIf(version_compare(PHP_VERSION, '7.0.0', '<'), 'Error class only exists since PHP 7.');
+
+        $middleware = new ErrorHandlerMiddleware();
+        $request = ServerRequestFactory::fromGlobals();
+        $response = new Response();
+        $error = new Error();
+
+        $result = $middleware->handleException($error, $request, $response);
+        $this->assertInstanceOf(Response::class, $result);
     }
 
     /**
@@ -158,8 +198,43 @@ class ErrorHandlerMiddlewareTest extends TestCase
         $this->logger->expects($this->at(0))
             ->method('log')
             ->with('error', $this->logicalAnd(
-                $this->stringContains('[Cake\Network\Exception\NotFoundException] Kaboom!'),
+                $this->stringContains('[Cake\Http\Exception\NotFoundException] Kaboom!'),
                 $this->stringContains('ErrorHandlerMiddlewareTest->testHandleException'),
+                $this->stringContains('Request URL: /target/url'),
+                $this->stringContains('Referer URL: /other/path'),
+                $this->logicalNot(
+                    $this->stringContains('Previous: ')
+                )
+            ));
+
+        $request = ServerRequestFactory::fromGlobals([
+            'REQUEST_URI' => '/target/url',
+            'HTTP_REFERER' => '/other/path'
+        ]);
+        $response = new Response();
+        $middleware = new ErrorHandlerMiddleware(null, ['log' => true, 'trace' => true]);
+        $next = function ($req, $res) {
+            throw new \Cake\Http\Exception\NotFoundException('Kaboom!');
+        };
+        $result = $middleware($request, $response, $next);
+        $this->assertNotSame($result, $response);
+        $this->assertEquals(404, $result->getStatusCode());
+        $this->assertContains('was not found', '' . $result->getBody());
+    }
+
+    /**
+     * Test rendering an error page logs errors with previous
+     *
+     * @return void
+     */
+    public function testHandleExceptionLogAndTraceWithPrevious()
+    {
+        $this->logger->expects($this->at(0))
+            ->method('log')
+            ->with('error', $this->logicalAnd(
+                $this->stringContains('[Cake\Http\Exception\NotFoundException] Kaboom!'),
+                $this->stringContains('Caused by: [Cake\Datasource\Exception\RecordNotFoundException] Previous logged'),
+                $this->stringContains('ErrorHandlerMiddlewareTest->testHandleExceptionLogAndTraceWithPrevious'),
                 $this->stringContains('Request URL: /target/url'),
                 $this->stringContains('Referer URL: /other/path')
             ));
@@ -171,12 +246,13 @@ class ErrorHandlerMiddlewareTest extends TestCase
         $response = new Response();
         $middleware = new ErrorHandlerMiddleware(null, ['log' => true, 'trace' => true]);
         $next = function ($req, $res) {
-            throw new \Cake\Network\Exception\NotFoundException('Kaboom!');
+            $previous = new \Cake\Datasource\Exception\RecordNotFoundException('Previous logged');
+            throw new \Cake\Http\Exception\NotFoundException('Kaboom!', null, $previous);
         };
         $result = $middleware($request, $response, $next);
         $this->assertNotSame($result, $response);
         $this->assertEquals(404, $result->getStatusCode());
-        $this->assertContains("was not found", '' . $result->getBody());
+        $this->assertContains('was not found', '' . $result->getBody());
     }
 
     /**
@@ -192,15 +268,15 @@ class ErrorHandlerMiddlewareTest extends TestCase
         $response = new Response();
         $middleware = new ErrorHandlerMiddleware(null, [
             'log' => true,
-            'skipLog' => ['Cake\Network\Exception\NotFoundException']
+            'skipLog' => ['Cake\Http\Exception\NotFoundException']
         ]);
         $next = function ($req, $res) {
-            throw new \Cake\Network\Exception\NotFoundException('Kaboom!');
+            throw new \Cake\Http\Exception\NotFoundException('Kaboom!');
         };
         $result = $middleware($request, $response, $next);
         $this->assertNotSame($result, $response);
         $this->assertEquals(404, $result->getStatusCode());
-        $this->assertContains("was not found", '' . $result->getBody());
+        $this->assertContains('was not found', '' . $result->getBody());
     }
 
     /**
@@ -255,7 +331,7 @@ class ErrorHandlerMiddlewareTest extends TestCase
         };
         $middleware = new ErrorHandlerMiddleware($factory);
         $next = function ($req, $res) {
-            throw new \Cake\Network\Exception\ServiceUnavailableException('whoops');
+            throw new \Cake\Http\Exception\ServiceUnavailableException('whoops');
         };
         $response = $middleware($request, $response, $next);
         $this->assertEquals(500, $response->getStatusCode());

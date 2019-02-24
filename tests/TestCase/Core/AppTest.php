@@ -1,20 +1,19 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         2.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Core;
 
 use Cake\Core\App;
-use Cake\Core\Configure;
 use Cake\Core\Plugin;
 use Cake\TestSuite\TestCase;
 use TestApp\Core\TestApp;
@@ -33,7 +32,7 @@ class AppTest extends TestCase
     public function tearDown()
     {
         parent::tearDown();
-        Plugin::unload();
+        $this->clearPlugins();
     }
 
     /**
@@ -51,7 +50,7 @@ class AppTest extends TestCase
      */
     public function testClassname($class, $type, $suffix = '', $existsInBase = false, $expected = false)
     {
-        Configure::write('App.namespace', 'TestApp');
+        static::setAppNamespace();
         $i = 0;
         TestApp::$existsInBaseCallback = function ($name, $namespace) use ($existsInBase, $class, $expected, &$i) {
             if ($i++ === 0) {
@@ -80,7 +79,7 @@ class AppTest extends TestCase
      */
     public function testShortName($class, $type, $suffix = '', $expected = false)
     {
-        Configure::write('App.namespace', 'TestApp');
+        static::setAppNamespace();
 
         $return = TestApp::shortName($class, $type, $suffix);
         $this->assertSame($expected, $return);
@@ -93,7 +92,7 @@ class AppTest extends TestCase
      */
     public function testShortNameWithNestedAppNamespace()
     {
-        Configure::write('App.namespace', 'TestApp/Nested');
+        static::setAppNamespace('TestApp/Nested');
 
         $return = TestApp::shortName(
             'TestApp/Nested/Controller/PagesController',
@@ -102,7 +101,7 @@ class AppTest extends TestCase
         );
         $this->assertSame('Pages', $return);
 
-        Configure::write('App.namespace', 'TestApp');
+        static::setAppNamespace();
     }
 
     /**
@@ -115,7 +114,7 @@ class AppTest extends TestCase
      *  existsInBase (Base meaning App or plugin namespace)
      *  expected return value
      *
-     * @return void
+     * @return array
      */
     public function classnameProvider()
     {
@@ -170,7 +169,7 @@ class AppTest extends TestCase
      *  suffix
      *  expected return value
      *
-     * @return void
+     * @return array
      */
     public function shortNameProvider()
     {
@@ -219,12 +218,11 @@ class AppTest extends TestCase
     public function testPathWithPlugins()
     {
         $basepath = TEST_APP . 'Plugin' . DS;
-        Plugin::load('TestPlugin');
+        $this->loadPlugins(['TestPlugin', 'Company/TestPluginThree']);
 
         $result = App::path('Controller', 'TestPlugin');
         $this->assertPathEquals($basepath . 'TestPlugin' . DS . 'src' . DS . 'Controller' . DS, $result[0]);
 
-        Plugin::load('Company/TestPluginThree');
         $result = App::path('Controller', 'Company/TestPluginThree');
         $expected = $basepath . 'Company' . DS . 'TestPluginThree' . DS . 'src' . DS . 'Controller' . DS;
         $this->assertPathEquals($expected, $result[0]);

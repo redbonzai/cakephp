@@ -1,16 +1,16 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.3.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\I18n\Middleware;
 
@@ -64,13 +64,13 @@ class LocaleSelectorMiddlewareTest extends TestCase
         $response = new Response();
         $middleware = new LocaleSelectorMiddleware([]);
         $middleware($request, $response, $this->next);
-        $this->assertSame($this->locale, I18n::locale());
+        $this->assertSame($this->locale, I18n::getLocale());
 
         $request = ServerRequestFactory::fromGlobals(['HTTP_ACCEPT_LANGUAGE' => 'garbage']);
         $response = new Response();
         $middleware = new LocaleSelectorMiddleware([]);
         $middleware($request, $response, $this->next);
-        $this->assertSame($this->locale, I18n::locale());
+        $this->assertSame($this->locale, I18n::getLocale());
     }
 
     /**
@@ -84,7 +84,7 @@ class LocaleSelectorMiddlewareTest extends TestCase
         $response = new Response();
         $middleware = new LocaleSelectorMiddleware(['en_CA', 'en_US', 'es']);
         $middleware($request, $response, $this->next);
-        $this->assertSame($this->locale, I18n::locale(), 'en-GB is not accepted');
+        $this->assertSame($this->locale, I18n::getLocale(), 'en-GB is not accepted');
     }
 
     /**
@@ -98,7 +98,21 @@ class LocaleSelectorMiddlewareTest extends TestCase
         $response = new Response();
         $middleware = new LocaleSelectorMiddleware(['en_CA', 'es']);
         $middleware($request, $response, $this->next);
-        $this->assertSame('es', I18n::locale(), 'es is accepted');
+        $this->assertSame('es', I18n::getLocale(), 'es is accepted');
+    }
+
+    /**
+     * The default locale should change when the request locale has an accepted fallback option
+     *
+     * @return void
+     */
+    public function testInvokeLocaleAcceptedFallback()
+    {
+        $request = ServerRequestFactory::fromGlobals(['HTTP_ACCEPT_LANGUAGE' => 'es-ES;q=0.8,da;q=0.4']);
+        $response = new Response();
+        $middleware = new LocaleSelectorMiddleware(['en_CA', 'es']);
+        $middleware($request, $response, $this->next);
+        $this->assertSame('es', I18n::getLocale(), 'es is accepted');
     }
 
     /**
@@ -113,10 +127,10 @@ class LocaleSelectorMiddlewareTest extends TestCase
 
         $request = ServerRequestFactory::fromGlobals(['HTTP_ACCEPT_LANGUAGE' => 'es,es-ES;q=0.8,da;q=0.4']);
         $middleware($request, $response, $this->next);
-        $this->assertSame('es', I18n::locale(), 'es is accepted');
+        $this->assertSame('es', I18n::getLocale(), 'es is accepted');
 
         $request = ServerRequestFactory::fromGlobals(['HTTP_ACCEPT_LANGUAGE' => 'en;q=0.4,es;q=0.6,da;q=0.8']);
         $middleware($request, $response, $this->next);
-        $this->assertSame('da', I18n::locale(), 'da is accepted');
+        $this->assertSame('da', I18n::getLocale(), 'da is accepted');
     }
 }

@@ -1,16 +1,16 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\View\Widget;
 
@@ -18,6 +18,7 @@ use Cake\TestSuite\TestCase;
 use Cake\View\StringTemplate;
 use Cake\View\Widget\LabelWidget;
 use Cake\View\Widget\MultiCheckboxWidget;
+use Cake\View\Widget\NestingLabelWidget;
 
 /**
  * MultiCheckbox test case.
@@ -36,6 +37,7 @@ class MultiCheckboxWidgetTest extends TestCase
         $templates = [
             'checkbox' => '<input type="checkbox" name="{{name}}" value="{{value}}"{{attrs}}>',
             'label' => '<label{{attrs}}>{{text}}</label>',
+            'nestingLabel' => '<label{{attrs}}>{{input}}{{text}}</label>',
             'checkboxWrapper' => '<div class="checkbox">{{input}}{{label}}</div>',
             'multicheckboxWrapper' => '<fieldset{{attrs}}>{{content}}</fieldset>',
             'multicheckboxTitle' => '<legend>{{text}}</legend>',
@@ -363,6 +365,113 @@ class MultiCheckboxWidgetTest extends TestCase
             ]],
             ['label' => ['for' => 'tags-id-1x']],
             'Development default',
+            '/label',
+            '/div',
+        ];
+        $this->assertHtml($expected, $result);
+    }
+
+    /**
+     * Test label = false with checkboxWrapper option.
+     *
+     * @return void
+     */
+    public function testNoLabelWithCheckboxWrapperOption()
+    {
+        $data = [
+            'label' => false,
+            'name' => 'test',
+            'options' => [
+                1 => 'A',
+                2 => 'B',
+            ],
+        ];
+
+        $label = new LabelWidget($this->templates);
+        $input = new MultiCheckboxWidget($this->templates, $label);
+        $result = $input->render($data, $this->context);
+        $expected = [
+            ['div' => ['class' => 'checkbox']],
+            ['input' => [
+                'type' => 'checkbox',
+                'name' => 'test[]',
+                'value' => 1,
+                'id' => 'test-1',
+            ]],
+            ['label' => ['for' => 'test-1']],
+            'A',
+            '/label',
+            '/div',
+            ['div' => ['class' => 'checkbox']],
+            ['input' => [
+                'type' => 'checkbox',
+                'name' => 'test[]',
+                'value' => '2',
+                'id' => 'test-2',
+            ]],
+            ['label' => ['for' => 'test-2']],
+            'B',
+            '/label',
+            '/div',
+        ];
+        $this->assertHtml($expected, $result);
+
+        $templates = [
+            'checkboxWrapper' => '<div class="checkbox">{{label}}</div>',
+        ];
+        $this->templates->add($templates);
+        $result = $input->render($data, $this->context);
+        $expected = [
+            ['div' => ['class' => 'checkbox']],
+            ['input' => [
+                'type' => 'checkbox',
+                'name' => 'test[]',
+                'value' => 1,
+                'id' => 'test-1',
+            ]],
+            '/div',
+            ['div' => ['class' => 'checkbox']],
+            ['input' => [
+                'type' => 'checkbox',
+                'name' => 'test[]',
+                'value' => '2',
+                'id' => 'test-2',
+            ]],
+            '/div',
+        ];
+        $this->assertHtml($expected, $result);
+    }
+
+    /**
+     * Test rendering without input nesting inspite of using NestingLabelWidget
+     *
+     * @return void
+     */
+    public function testRenderNestingLabelWidgetWithoutInputNesting()
+    {
+        $label = new NestingLabelWidget($this->templates);
+        $input = new MultiCheckboxWidget($this->templates, $label);
+        $data = [
+            'name' => 'tags',
+            'label' => [
+                'input' => false,
+            ],
+            'options' => [
+                1 => 'CakePHP',
+            ],
+        ];
+        $result = $input->render($data, $this->context);
+
+        $expected = [
+            ['div' => ['class' => 'checkbox']],
+            ['input' => [
+                'type' => 'checkbox',
+                'name' => 'tags[]',
+                'value' => 1,
+                'id' => 'tags-1',
+            ]],
+            ['label' => ['for' => 'tags-1']],
+            'CakePHP',
             '/label',
             '/div',
         ];

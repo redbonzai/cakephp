@@ -1,16 +1,16 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Database\Type;
 
@@ -55,10 +55,10 @@ class DecimalTypeTest extends TestCase
         parent::setUp();
         $this->type = Type::build('decimal');
         $this->driver = $this->getMockBuilder('Cake\Database\Driver')->getMock();
-        $this->localeString = I18n::locale();
+        $this->localeString = I18n::getLocale();
         $this->numberClass = DecimalType::$numberClass;
 
-        I18n::locale($this->localeString);
+        I18n::setLocale($this->localeString);
     }
 
     /**
@@ -69,7 +69,7 @@ class DecimalTypeTest extends TestCase
     public function tearDown()
     {
         parent::tearDown();
-        I18n::locale($this->localeString);
+        I18n::setLocale($this->localeString);
         DecimalType::$numberClass = $this->numberClass;
     }
 
@@ -82,17 +82,36 @@ class DecimalTypeTest extends TestCase
     {
         $this->assertNull($this->type->toPHP(null, $this->driver));
 
-        $result = $this->type->toPHP('some data', $this->driver);
-        $this->assertSame(0.0, $result);
-
         $result = $this->type->toPHP('2', $this->driver);
         $this->assertSame(2.0, $result);
 
-        $result = $this->type->toPHP('2 bears', $this->driver);
-        $this->assertSame(2.0, $result);
+        $result = $this->type->toPHP('15.3', $this->driver);
+        $this->assertSame(15.3, $result);
+    }
 
-        $result = $this->type->toPHP(['3', '4'], $this->driver);
-        $this->assertSame(1.0, $result);
+    /**
+     * Test converting string decimals to PHP values.
+     *
+     * @return void
+     */
+    public function testManyToPHP()
+    {
+        $values = [
+            'a' => null,
+            'b' => '2.3',
+            'c' => '15',
+            'd' => '0.0',
+        ];
+        $expected = [
+            'a' => null,
+            'b' => 2.3,
+            'c' => 15,
+            'd' => 0.0,
+        ];
+        $this->assertEquals(
+            $expected,
+            $this->type->manyToPHP($values, array_keys($values), $this->driver)
+        );
     }
 
     /**
@@ -124,11 +143,11 @@ class DecimalTypeTest extends TestCase
     /**
      * Arrays are invalid.
      *
-     * @expectedException \InvalidArgumentException
      * @return void
      */
     public function testToDatabaseInvalid()
     {
+        $this->expectException(\InvalidArgumentException::class);
         $this->type->toDatabase(['3', '4'], $this->driver);
     }
 
@@ -140,7 +159,7 @@ class DecimalTypeTest extends TestCase
     public function testMarshal()
     {
         $result = $this->type->marshal('some data');
-        $this->assertSame('some data', $result);
+        $this->assertNull($result);
 
         $result = $this->type->marshal('');
         $this->assertNull($result);
@@ -148,11 +167,15 @@ class DecimalTypeTest extends TestCase
         $result = $this->type->marshal('2.51');
         $this->assertSame(2.51, $result);
 
+        // allow custom decimal format (@see https://github.com/cakephp/cakephp/issues/12800)
+        $result = $this->type->marshal('1 230,73');
+        $this->assertSame('1 230,73', $result);
+
         $result = $this->type->marshal('3.5 bears');
-        $this->assertSame('3.5 bears', $result);
+        $this->assertNull($result);
 
         $result = $this->type->marshal(['3', '4']);
-        $this->assertSame(1, $result);
+        $this->assertNull($result);
     }
 
     /**
@@ -162,19 +185,19 @@ class DecimalTypeTest extends TestCase
      */
     public function testMarshalWithLocaleParsing()
     {
-        I18n::locale('de_DE');
+        I18n::setLocale('de_DE');
         $this->type->useLocaleParser();
         $expected = 1234.53;
         $result = $this->type->marshal('1.234,53');
         $this->assertEquals($expected, $result);
 
-        I18n::locale('en_US');
+        I18n::setLocale('en_US');
         $this->type->useLocaleParser();
         $expected = 1234;
         $result = $this->type->marshal('1,234');
         $this->assertEquals($expected, $result);
 
-        I18n::locale('pt_BR');
+        I18n::setLocale('pt_BR');
         $this->type->useLocaleParser();
         $expected = 5987123.231;
         $result = $this->type->marshal('5.987.123,231');
@@ -182,13 +205,28 @@ class DecimalTypeTest extends TestCase
     }
 
     /**
+     * test marshall() number in the danish locale which uses . for thousands separator.
+     *
+     * @return void
+     */
+    public function testMarshallWithLocaleParsingDanish()
+    {
+        I18n::setLocale('da_DK');
+
+        $this->type->useLocaleParser();
+        $expected = 47500.0;
+        $result = $this->type->marshal('47.500');
+        $this->assertSame($expected, $result);
+    }
+
+    /**
      * Test that exceptions are raised on invalid parsers.
      *
-     * @expectedException \RuntimeException
      * @return void
      */
     public function testUseLocaleParsingInvalid()
     {
+        $this->expectException(\RuntimeException::class);
         DecimalType::$numberClass = 'stdClass';
         $this->type->useLocaleParser();
     }

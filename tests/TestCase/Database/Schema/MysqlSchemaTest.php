@@ -1,16 +1,16 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Database\Schema;
 
@@ -35,7 +35,7 @@ class MysqlSchemaTest extends TestCase
      */
     protected function _needsConnection()
     {
-        $config = ConnectionManager::config('test');
+        $config = ConnectionManager::getConfig('test');
         $this->skipIf(strpos($config['driver'], 'Mysql') === false, 'Not using Mysql for test config');
     }
 
@@ -69,7 +69,23 @@ class MysqlSchemaTest extends TestCase
             ],
             [
                 'TINYINT(2)',
-                ['type' => 'integer', 'length' => 2, 'unsigned' => false]
+                ['type' => 'tinyinteger', 'length' => 2, 'unsigned' => false]
+            ],
+            [
+                'TINYINT(3)',
+                ['type' => 'tinyinteger', 'length' => 3, 'unsigned' => false]
+            ],
+            [
+                'TINYINT(3) UNSIGNED',
+                ['type' => 'tinyinteger', 'length' => 3, 'unsigned' => true]
+            ],
+            [
+                'SMALLINT(4)',
+                ['type' => 'smallinteger', 'length' => 4, 'unsigned' => false]
+            ],
+            [
+                'SMALLINT(4) UNSIGNED',
+                ['type' => 'smallinteger', 'length' => 4, 'unsigned' => true]
             ],
             [
                 'INTEGER(11)',
@@ -102,6 +118,14 @@ class MysqlSchemaTest extends TestCase
             [
                 'CHAR(36)',
                 ['type' => 'uuid', 'length' => null]
+            ],
+            [
+                'BINARY(16)',
+                ['type' => 'binaryuuid', 'length' => null]
+            ],
+            [
+                'BINARY(1)',
+                ['type' => 'binary', 'length' => 1]
             ],
             [
                 'TEXT',
@@ -251,7 +275,7 @@ SQL;
 SQL;
         $connection->execute($table);
 
-        if ($connection->driver()->supportsNativeJson()) {
+        if ($connection->getDriver()->supportsNativeJson()) {
             $table = <<<SQL
                 CREATE TABLE schema_json (
                     id INT(11) PRIMARY KEY AUTO_INCREMENT,
@@ -292,7 +316,7 @@ SQL;
 
         $schema = new SchemaCollection($connection);
         $result = $schema->describe('schema_articles');
-        $this->assertInstanceOf('Cake\Database\Schema\Table', $result);
+        $this->assertInstanceOf('Cake\Database\Schema\TableSchema', $result);
         $expected = [
             'id' => [
                 'type' => 'biginteger',
@@ -362,7 +386,7 @@ SQL;
         foreach ($expected as $field => $definition) {
             $this->assertEquals(
                 $definition,
-                $result->column($field),
+                $result->getColumn($field),
                 'Field definition does not match for ' . $field
             );
         }
@@ -380,7 +404,7 @@ SQL;
 
         $schema = new SchemaCollection($connection);
         $result = $schema->describe('schema_articles');
-        $this->assertInstanceOf('Cake\Database\Schema\Table', $result);
+        $this->assertInstanceOf('Cake\Database\Schema\TableSchema', $result);
 
         $this->assertCount(3, $result->constraints());
         $expected = [
@@ -405,9 +429,9 @@ SQL;
                 'delete' => 'restrict',
             ]
         ];
-        $this->assertEquals($expected['primary'], $result->constraint('primary'));
-        $this->assertEquals($expected['length_idx'], $result->constraint('length_idx'));
-        $this->assertEquals($expected['schema_articles_ibfk_1'], $result->constraint('schema_articles_ibfk_1'));
+        $this->assertEquals($expected['primary'], $result->getConstraint('primary'));
+        $this->assertEquals($expected['length_idx'], $result->getConstraint('length_idx'));
+        $this->assertEquals($expected['schema_articles_ibfk_1'], $result->getConstraint('schema_articles_ibfk_1'));
 
         $this->assertCount(1, $result->indexes());
         $expected = [
@@ -415,7 +439,7 @@ SQL;
             'columns' => ['author_id'],
             'length' => []
         ];
-        $this->assertEquals($expected, $result->index('author_idx'));
+        $this->assertEquals($expected, $result->getIndex('author_idx'));
     }
 
     /**
@@ -430,8 +454,8 @@ SQL;
 
         $schema = new SchemaCollection($connection);
         $result = $schema->describe('schema_articles');
-        $this->assertArrayHasKey('engine', $result->options());
-        $this->assertArrayHasKey('collation', $result->options());
+        $this->assertArrayHasKey('engine', $result->getOptions());
+        $this->assertArrayHasKey('collation', $result->getOptions());
     }
 
     public function testDescribeNonPrimaryAutoIncrement()
@@ -452,11 +476,11 @@ SQL;
         $table = $schema->describe('odd_primary_key');
         $connection->execute('DROP TABLE odd_primary_key');
 
-        $column = $table->column('id');
+        $column = $table->getColumn('id');
         $this->assertNull($column['autoIncrement'], 'should not autoincrement');
         $this->assertTrue($column['unsigned'], 'should be unsigned');
 
-        $column = $table->column('other_field');
+        $column = $table->getColumn('other_field');
         $this->assertTrue($column['autoIncrement'], 'should not autoincrement');
         $this->assertFalse($column['unsigned'], 'should not be unsigned');
 
@@ -515,6 +539,11 @@ SQL;
                 '`id` CHAR(36)'
             ],
             [
+                'id',
+                ['type' => 'binaryuuid'],
+                '`id` BINARY(16)'
+            ],
+            [
                 'title',
                 ['type' => 'string', 'length' => 255, 'null' => false, 'collate' => 'utf8_unicode_ci'],
                 '`title` VARCHAR(255) COLLATE utf8_unicode_ci NOT NULL'
@@ -566,7 +595,37 @@ SQL;
                 ['type' => 'binary', 'length' => TableSchema::LENGTH_LONG, 'null' => false],
                 '`body` LONGBLOB NOT NULL'
             ],
+            [
+                'bytes',
+                ['type' => 'binary', 'length' => 5],
+                '`bytes` VARBINARY(5)'
+            ],
+            [
+                'bit',
+                ['type' => 'binary', 'length' => 1],
+                '`bit` BINARY(1)'
+            ],
             // Integers
+            [
+                'post_id',
+                ['type' => 'tinyinteger', 'length' => 2],
+                '`post_id` TINYINT(2)'
+            ],
+            [
+                'post_id',
+                ['type' => 'tinyinteger', 'length' => 2, 'unsigned' => true],
+                '`post_id` TINYINT(2) UNSIGNED'
+            ],
+            [
+                'post_id',
+                ['type' => 'smallinteger', 'length' => 4],
+                '`post_id` SMALLINT(4)'
+            ],
+            [
+                'post_id',
+                ['type' => 'smallinteger', 'length' => 4, 'unsigned' => true],
+                '`post_id` SMALLINT(4) UNSIGNED'
+            ],
             [
                 'post_id',
                 ['type' => 'integer', 'length' => 11],
@@ -591,6 +650,11 @@ SQL;
                 'post_id',
                 ['type' => 'integer', 'length' => 20, 'autoIncrement' => true],
                 '`post_id` INTEGER(20) AUTO_INCREMENT'
+            ],
+            [
+                'post_id',
+                ['type' => 'integer', 'length' => 20, 'null' => false, 'autoIncrement' => false],
+                '`post_id` INTEGER(20) NOT NULL'
             ],
             [
                 'post_id',
@@ -686,6 +750,11 @@ SQL;
             [
                 'created',
                 ['type' => 'timestamp', 'null' => false, 'default' => 'current_timestamp'],
+                '`created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'
+            ],
+            [
+                'created',
+                ['type' => 'timestamp', 'null' => false, 'default' => 'current_timestamp()'],
                 '`created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'
             ],
             [
@@ -843,7 +912,7 @@ SQL;
         $connection = $this->getMockBuilder('Cake\Database\Connection')
             ->disableOriginalConstructor()
             ->getMock();
-        $connection->expects($this->any())->method('driver')
+        $connection->expects($this->any())->method('getDriver')
             ->will($this->returnValue($driver));
 
         $table = (new TableSchema('posts'))
@@ -894,7 +963,7 @@ SQL;
         $connection = $this->getMockBuilder('Cake\Database\Connection')
             ->disableOriginalConstructor()
             ->getMock();
-        $connection->expects($this->any())->method('driver')
+        $connection->expects($this->any())->method('getDriver')
             ->will($this->returnValue($driver));
 
         $table = (new TableSchema('posts'))
@@ -980,10 +1049,10 @@ SQL;
         $connection = $this->getMockBuilder('Cake\Database\Connection')
             ->disableOriginalConstructor()
             ->getMock();
-        $connection->expects($this->any())->method('driver')
+        $connection->expects($this->any())->method('getDriver')
             ->will($this->returnValue($driver));
 
-        $driver->connection()
+        $driver->getConnection()
             ->expects($this->any())
             ->method('getAttribute')
             ->will($this->returnValue('5.6.0'));
@@ -1016,7 +1085,7 @@ SQL;
                 'type' => 'primary',
                 'columns' => ['id']
             ])
-            ->options([
+            ->setOptions([
                 'engine' => 'InnoDB',
                 'charset' => 'utf8',
                 'collate' => 'utf8_general_ci',
@@ -1050,10 +1119,10 @@ SQL;
             ->disableOriginalConstructor()
             ->getMock();
         $connection->expects($this->any())
-            ->method('driver')
+            ->method('getDriver')
             ->will($this->returnValue($driver));
 
-        $driver->connection()
+        $driver->getConnection()
             ->expects($this->any())
             ->method('getAttribute')
             ->will($this->returnValue('5.7.0'));
@@ -1069,7 +1138,7 @@ SQL;
                 'type' => 'primary',
                 'columns' => ['id']
             ])
-            ->options([
+            ->setOptions([
                 'engine' => 'InnoDB',
                 'charset' => 'utf8',
                 'collate' => 'utf8_general_ci',
@@ -1098,13 +1167,13 @@ SQL;
         $connection = $this->getMockBuilder('Cake\Database\Connection')
             ->disableOriginalConstructor()
             ->getMock();
-        $connection->expects($this->any())->method('driver')
+        $connection->expects($this->any())->method('getDriver')
             ->will($this->returnValue($driver));
         $table = (new TableSchema('schema_articles'))->addColumn('id', [
             'type' => 'integer',
             'null' => false
         ]);
-        $table->temporary(true);
+        $table->setTemporary(true);
         $sql = $table->createSql($connection);
         $this->assertContains('CREATE TEMPORARY TABLE', $sql[0]);
     }
@@ -1120,7 +1189,7 @@ SQL;
         $connection = $this->getMockBuilder('Cake\Database\Connection')
             ->disableOriginalConstructor()
             ->getMock();
-        $connection->expects($this->any())->method('driver')
+        $connection->expects($this->any())->method('getDriver')
             ->will($this->returnValue($driver));
 
         $table = (new TableSchema('articles_tags'))
@@ -1186,7 +1255,7 @@ SQL;
         $connection = $this->getMockBuilder('Cake\Database\Connection')
             ->disableOriginalConstructor()
             ->getMock();
-        $connection->expects($this->any())->method('driver')
+        $connection->expects($this->any())->method('getDriver')
             ->will($this->returnValue($driver));
 
         $table = new TableSchema('articles');
@@ -1206,7 +1275,7 @@ SQL;
         $connection = $this->getMockBuilder('Cake\Database\Connection')
             ->disableOriginalConstructor()
             ->getMock();
-        $connection->expects($this->any())->method('driver')
+        $connection->expects($this->any())->method('getDriver')
             ->will($this->returnValue($driver));
 
         $table = new TableSchema('articles');
@@ -1237,11 +1306,11 @@ SQL;
     {
         $connection = ConnectionManager::get('test');
         $this->_createTables($connection);
-        $this->skipIf(!$connection->driver()->supportsNativeJson(), 'Does not support native json');
+        $this->skipIf(!$connection->getDriver()->supportsNativeJson(), 'Does not support native json');
 
         $schema = new SchemaCollection($connection);
         $result = $schema->describe('schema_json');
-        $this->assertInstanceOf('Cake\Database\Schema\Table', $result);
+        $this->assertInstanceOf('Cake\Database\Schema\TableSchema', $result);
         $expected = [
             'type' => 'json',
             'null' => false,
@@ -1252,7 +1321,7 @@ SQL;
         ];
         $this->assertEquals(
             $expected,
-            $result->column('data'),
+            $result->getColumn('data'),
             'Field definition does not match for data'
         );
     }
@@ -1274,7 +1343,7 @@ SQL;
             ->will($this->returnCallback(function ($value) {
                 return "'$value'";
             }));
-        $driver->connection($mock);
+        $driver->setConnection($mock);
 
         return $driver;
     }

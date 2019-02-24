@@ -2,17 +2,17 @@
 /**
  * HelperTest file
  *
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         1.2.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\View;
 
@@ -78,7 +78,7 @@ class HelperTest extends TestCase
         parent::tearDown();
         Configure::delete('Asset');
 
-        Plugin::unload();
+        $this->clearPlugins();
         unset($this->View);
     }
 
@@ -98,7 +98,7 @@ class HelperTest extends TestCase
             'key2' => ['key2.1' => 'val2.1', 'key2.2' => 'newval'],
             'key3' => 'val3'
         ];
-        $this->assertEquals($expected, $Helper->config());
+        $this->assertEquals($expected, $Helper->getConfig());
     }
 
     /**
@@ -108,7 +108,7 @@ class HelperTest extends TestCase
      */
     public function testLazyLoadingHelpers()
     {
-        Plugin::load(['TestPlugin']);
+        $this->loadPlugins(['TestPlugin']);
 
         $Helper = new TestHelper($this->View);
         $this->assertInstanceOf('TestPlugin\View\Helper\OtherHelperHelper', $Helper->OtherHelper);
@@ -122,10 +122,8 @@ class HelperTest extends TestCase
      */
     public function testThatHelperHelpersAreNotAttached()
     {
-        Plugin::loadAll();
-
         $events = $this->getMockBuilder('\Cake\Event\EventManager')->getMock();
-        $this->View->eventManager($events);
+        $this->View->setEventManager($events);
 
         $events->expects($this->never())
             ->method('attach');
@@ -174,10 +172,6 @@ class HelperTest extends TestCase
                 'Html',
                 'TestPlugin.OtherHelper'
             ],
-            'theme' => null,
-            'plugin' => null,
-            'fieldset' => [],
-            'tags' => [],
             'implementedEvents' => [
             ],
             '_config' => [
@@ -187,5 +181,66 @@ class HelperTest extends TestCase
         ];
         $result = $Helper->__debugInfo();
         $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * Test addClass() with 'class' => array
+     *
+     * @return void
+     */
+    public function testAddClassArray()
+    {
+        $helper = new TestHelper($this->View);
+        $input = ['class' => ['element1', 'element2']];
+        $expected = ['class' => [
+            'element1',
+            'element2',
+            'element3'
+        ]];
+
+        $this->assertEquals($expected, $helper->addClass($input, 'element3'));
+    }
+
+    /**
+     * Test addClass() with 'class' => string
+     *
+     * @return void
+     */
+    public function testAddClassString()
+    {
+        $helper = new TestHelper($this->View);
+
+        $input = ['class' => 'element1 element2'];
+        $expected = ['class' => 'element1 element2 element3'];
+
+        $this->assertEquals($expected, $helper->addClass($input, 'element3'));
+    }
+
+    /**
+     * Test addClass() with no class element
+     *
+     * @return void
+     */
+    public function testAddClassEmpty()
+    {
+        $helper = new TestHelper($this->View);
+
+        $input = [];
+        $expected = ['class' => 'element3'];
+
+        $this->assertEquals($expected, $helper->addClass($input, 'element3'));
+    }
+
+    /**
+     * Test addClass() with adding null class
+     */
+    public function testAddClassNull()
+    {
+        $helper = new TestHelper($this->View);
+
+        $input = [];
+        $expected = ['class' => ''];
+
+        $this->assertEquals($expected, $helper->addClass($input, null));
     }
 }

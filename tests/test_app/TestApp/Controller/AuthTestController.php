@@ -1,15 +1,15 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright 2005-2011, Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright 2005-2011, Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright 2005-2011, Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright 2005-2011, Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace TestApp\Controller;
 
@@ -45,9 +45,6 @@ class AuthTestController extends Controller
      */
     public function __construct($request = null, $response = null)
     {
-        $request->addParams(Router::parse('/auth_test'));
-        $request->here = '/auth_test';
-        $request->webroot = '/';
         Router::setRequestInfo($request);
         parent::__construct($request, $response);
     }
@@ -77,7 +74,7 @@ class AuthTestController extends Controller
      */
     public function add()
     {
-        echo "add";
+        echo 'add';
     }
 
     /**
@@ -87,7 +84,7 @@ class AuthTestController extends Controller
      */
     public function view()
     {
-        echo "view";
+        echo 'view';
     }
 
     /**
@@ -97,7 +94,7 @@ class AuthTestController extends Controller
      */
     public function camelCase()
     {
-        echo "camelCase";
+        echo 'camelCase';
     }
 
     /**

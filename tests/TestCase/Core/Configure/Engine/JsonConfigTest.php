@@ -1,16 +1,16 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Core\Configure\Engine;
 
@@ -71,11 +71,11 @@ class JsonConfigTest extends TestCase
     /**
      * Test an exception is thrown by reading files that exist without .php extension.
      *
-     * @expectedException \Cake\Core\Exception\Exception
      * @return void
      */
     public function testReadWithExistentFileWithoutExtension()
     {
+        $this->expectException(\Cake\Core\Exception\Exception::class);
         $engine = new JsonConfig($this->path);
         $engine->read('no_json_extension');
     }
@@ -83,11 +83,11 @@ class JsonConfigTest extends TestCase
     /**
      * Test an exception is thrown by reading files that don't exist.
      *
-     * @expectedException \Cake\Core\Exception\Exception
      * @return void
      */
     public function testReadWithNonExistentFile()
     {
+        $this->expectException(\Cake\Core\Exception\Exception::class);
         $engine = new JsonConfig($this->path);
         $engine->read('fake_values');
     }
@@ -95,12 +95,12 @@ class JsonConfigTest extends TestCase
     /**
      * Test reading an empty file.
      *
-     * @expectedException \Cake\Core\Exception\Exception
-     * @expectedExceptionMessage config file "empty.json"
      * @return void
      */
     public function testReadEmptyFile()
     {
+        $this->expectException(\Cake\Core\Exception\Exception::class);
+        $this->expectExceptionMessage('config file "empty.json"');
         $engine = new JsonConfig($this->path);
         $config = $engine->read('empty');
     }
@@ -108,12 +108,12 @@ class JsonConfigTest extends TestCase
     /**
      * Test an exception is thrown by reading files that contain invalid JSON.
      *
-     * @expectedException \Cake\Core\Exception\Exception
-     * @expectedExceptionMessage Error parsing JSON string fetched from config file "invalid.json"
      * @return void
      */
     public function testReadWithInvalidJson()
     {
+        $this->expectException(\Cake\Core\Exception\Exception::class);
+        $this->expectExceptionMessage('Error parsing JSON string fetched from config file "invalid.json"');
         $engine = new JsonConfig($this->path);
         $engine->read('invalid');
     }
@@ -121,11 +121,11 @@ class JsonConfigTest extends TestCase
     /**
      * Test reading keys with ../ doesn't work.
      *
-     * @expectedException \Cake\Core\Exception\Exception
      * @return void
      */
     public function testReadWithDots()
     {
+        $this->expectException(\Cake\Core\Exception\Exception::class);
         $engine = new JsonConfig($this->path);
         $engine->read('../empty');
     }
@@ -137,12 +137,12 @@ class JsonConfigTest extends TestCase
      */
     public function testReadPluginValue()
     {
-        Plugin::load('TestPlugin');
+        $this->loadPlugins(['TestPlugin']);
         $engine = new JsonConfig($this->path);
         $result = $engine->read('TestPlugin.load');
-        $this->assertTrue(isset($result['plugin_load']));
+        $this->assertArrayHasKey('plugin_load', $result);
 
-        Plugin::unload();
+        $this->clearPlugins();
     }
 
     /**

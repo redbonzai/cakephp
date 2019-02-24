@@ -1,22 +1,21 @@
 <?php
 /**
- * CakePHP :  Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP :  Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * For full copyright and license information, please see the LICENSE.txt
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP Project
  * @since         2.5.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Shell;
 
 use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOutput;
-use Cake\Core\Configure;
 use Cake\Core\Plugin;
 use Cake\TestSuite\TestCase;
 
@@ -48,8 +47,8 @@ class CompletionShellTest extends TestCase
     public function setUp()
     {
         parent::setUp();
-        Configure::write('App.namespace', 'TestApp');
-        Plugin::load(['TestPlugin', 'TestPluginTwo']);
+        static::setAppNamespace();
+        $this->loadPlugins(['TestPlugin', 'TestPluginTwo']);
 
         $this->out = new TestCompletionStringOutput();
         $io = new ConsoleIo($this->out);
@@ -74,8 +73,8 @@ class CompletionShellTest extends TestCase
     {
         parent::tearDown();
         unset($this->Shell);
-        Configure::write('App.namespace', 'App');
-        Plugin::unload();
+        static::setAppNamespace('App');
+        $this->clearPlugins();
     }
 
     /**
@@ -102,7 +101,7 @@ class CompletionShellTest extends TestCase
         $this->Shell->runCommand(['main']);
         $output = $this->out->output;
 
-        $expected = "/This command is not intended to be called manually/";
+        $expected = '/This command is not intended to be called manually/';
         $this->assertRegExp($expected, $output);
     }
 
@@ -116,8 +115,9 @@ class CompletionShellTest extends TestCase
         $this->Shell->runCommand(['commands']);
         $output = $this->out->output;
 
-        $expected = "TestPlugin.example TestPlugin.sample TestPluginTwo.example unique welcome " .
-            "cache i18n orm_cache plugin routes server i18m sample testing_dispatch\n";
+        $expected = 'TestPlugin.example TestPlugin.sample TestPluginTwo.example unique welcome ' .
+            'cache help i18n orm_cache plugin routes schema_cache server version ' .
+            "abort demo i18m integration merge sample shell_test testing_dispatch\n";
         $this->assertTextEquals($expected, $output);
     }
 
@@ -131,7 +131,7 @@ class CompletionShellTest extends TestCase
         $this->Shell->runCommand(['options']);
         $output = $this->out->output;
 
-        $expected = "";
+        $expected = '';
         $this->assertTextEquals($expected, $output);
     }
 
@@ -144,7 +144,7 @@ class CompletionShellTest extends TestCase
     {
         $this->Shell->runCommand(['options', 'foo']);
         $output = $this->out->output;
-        $expected = "";
+        $expected = '';
         $this->assertTextEquals($expected, $output);
     }
 
@@ -200,7 +200,7 @@ class CompletionShellTest extends TestCase
         $this->Shell->runCommand(['subcommands', 'app.sample']);
         $output = $this->out->output;
 
-        $expected = "derp load sample\n";
+        $expected = "derp load returnValue sample withAbort\n";
         $this->assertTextEquals($expected, $output);
     }
 
@@ -258,7 +258,7 @@ class CompletionShellTest extends TestCase
         $this->Shell->runCommand(['subcommands', 'sample']);
         $output = $this->out->output;
 
-        $expected = "derp load sample\n";
+        $expected = "derp load returnValue sample withAbort\n";
         $this->assertTextEquals($expected, $output);
     }
 

@@ -1,14 +1,14 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  * @since         3.1.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Mailer;
 
@@ -18,6 +18,11 @@ use TestApp\Mailer\TestMailer;
 
 class MailerTest extends TestCase
 {
+    /**
+     * @param array $methods
+     * @param array $args
+     * @return \Cake\Mailer\Email|\PHPUnit_Framework_MockObject_MockObject
+     */
     public function getMockForEmail($methods = [], $args = [])
     {
         return $this->getMockBuilder('Cake\Mailer\Email')
@@ -26,21 +31,30 @@ class MailerTest extends TestCase
             ->getMock();
     }
 
+    /**
+     * @return void
+     */
     public function testConstructor()
     {
         $mailer = new TestMailer();
         $this->assertInstanceOf('Cake\Mailer\Email', $mailer->getEmailForAssertion());
     }
 
+    /**
+     * @return void
+     */
     public function testReset()
     {
         $mailer = new TestMailer();
         $email = $mailer->getEmailForAssertion();
 
         $mailer->set(['foo' => 'bar']);
-        $this->assertNotEquals($email->viewVars(), $mailer->reset()->getEmailForAssertion()->viewVars());
+        $this->assertNotEquals($email->getViewVars(), $mailer->reset()->getEmailForAssertion()->getViewVars());
     }
 
+    /**
+     * @return void
+     */
     public function testGetName()
     {
         $result = (new TestMailer())->getName();
@@ -48,13 +62,9 @@ class MailerTest extends TestCase
         $this->assertEquals($expected, $result);
     }
 
-    public function testLayout()
-    {
-        $result = (new TestMailer())->layout('foo');
-        $this->assertInstanceOf('TestApp\Mailer\TestMailer', $result);
-        $this->assertEquals('foo', $result->viewBuilder()->layout());
-    }
-
+    /**
+     * @return void
+     */
     public function testProxies()
     {
         $email = $this->getMockForEmail('setHeaders');
@@ -71,16 +81,33 @@ class MailerTest extends TestCase
         $result = (new TestMailer($email))->addHeaders(['X-Something' => 'very nice', 'X-Other' => 'cool']);
         $this->assertInstanceOf('TestApp\Mailer\TestMailer', $result);
 
-        $email = $this->getMockForEmail('attachments');
+        $email = $this->getMockForEmail('setAttachments');
         $email->expects($this->once())
-            ->method('attachments')
+            ->method('setAttachments')
             ->with([
                 ['file' => CAKE . 'basics.php', 'mimetype' => 'text/plain']
             ]);
-        $result = (new TestMailer($email))->attachments([
+        $result = (new TestMailer($email))->setAttachments([
             ['file' => CAKE . 'basics.php', 'mimetype' => 'text/plain']
         ]);
         $this->assertInstanceOf('TestApp\Mailer\TestMailer', $result);
+    }
+
+    /**
+     * Test that get/set methods can be proxied.
+     *
+     * @return void
+     */
+    public function testGetSetProxies()
+    {
+        $mailer = new TestMailer();
+        $result = $mailer
+            ->setTo('test@example.com')
+            ->setCc('cc@example.com');
+        $this->assertSame($result, $mailer);
+
+        $this->assertSame(['test@example.com' => 'test@example.com'], $result->getTo());
+        $this->assertSame(['cc@example.com' => 'cc@example.com'], $result->getCc());
     }
 
     public function testSet()
@@ -115,9 +142,7 @@ class MailerTest extends TestCase
             ->method('test')
             ->with('foo', 'bar');
 
-        $mailer->template('foobar');
         $mailer->send('test', ['foo', 'bar']);
-        $this->assertEquals($mailer->template, 'foobar');
     }
 
     public function testSendWithUnsetTemplateDefaultsToActionName()
@@ -141,6 +166,8 @@ class MailerTest extends TestCase
 
     /**
      * Test that mailers call reset() when send fails
+     *
+     * @return void
      */
     public function testSendFailsEmailIsReset()
     {
@@ -169,7 +196,7 @@ class MailerTest extends TestCase
     /**
      * test that initial email instance config is restored after email is sent.
      *
-     * @return [type]
+     * @return void
      */
     public function testDefaultProfileRestoration()
     {
@@ -186,18 +213,17 @@ class MailerTest extends TestCase
             ->method('test')
             ->with('foo', 'bar');
 
-        $mailer->template('test');
         $mailer->send('test', ['foo', 'bar']);
-        $this->assertEquals($mailer->template, 'test');
-        $this->assertEquals('cakephp', $mailer->viewBuilder()->template());
+        $this->assertEquals('cakephp', $mailer->viewBuilder()->getTemplate());
     }
 
     /**
-     * @expectedException \Cake\Mailer\Exception\MissingActionException
-     * @expectedExceptionMessage Mail TestMailer::test() could not be found, or is not accessible.
+     * @return void
      */
     public function testMissingActionThrowsException()
     {
+        $this->expectException(\Cake\Mailer\Exception\MissingActionException::class);
+        $this->expectExceptionMessage('Mail TestMailer::test() could not be found, or is not accessible.');
         (new TestMailer())->send('test');
     }
 }

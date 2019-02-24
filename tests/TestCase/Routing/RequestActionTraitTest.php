@@ -1,27 +1,29 @@
 <?php
 /**
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.0.0
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Test\TestCase\Routing;
 
 use Cake\Core\Configure;
 use Cake\Core\Plugin;
 use Cake\Http\ServerRequest;
+use Cake\Http\Session;
 use Cake\Routing\DispatcherFactory;
 use Cake\Routing\Router;
 use Cake\TestSuite\TestCase;
 use Cake\Utility\Security;
 
 /**
+ * @group deprecated
  */
 class RequestActionTraitTest extends TestCase
 {
@@ -30,7 +32,7 @@ class RequestActionTraitTest extends TestCase
      *
      * @var string
      */
-    public $fixtures = ['core.comments', 'core.posts', 'core.test_plugin_comments'];
+    public $fixtures = ['core.Comments', 'core.Posts', 'core.TestPluginComments'];
 
     /**
      * Setup
@@ -40,13 +42,17 @@ class RequestActionTraitTest extends TestCase
     public function setUp()
     {
         parent::setUp();
-        Configure::write('App.namespace', 'TestApp');
-        Security::salt('not-the-default');
+        static::setAppNamespace();
+        Security::setSalt('not-the-default');
+        DispatcherFactory::clear();
         DispatcherFactory::add('Routing');
         DispatcherFactory::add('ControllerFactory');
         $this->object = $this->getObjectForTrait('Cake\Routing\RequestActionTrait');
         Router::connect('/request_action/:action/*', ['controller' => 'RequestAction']);
         Router::connect('/tests_apps/:action/*', ['controller' => 'TestsApps']);
+
+        $this->errorLevel = error_reporting();
+        error_reporting(E_ALL ^ E_USER_DEPRECATED);
     }
 
     /**
@@ -59,6 +65,9 @@ class RequestActionTraitTest extends TestCase
         parent::tearDown();
         DispatcherFactory::clear();
         Router::reload();
+        $this->clearPlugins();
+
+        error_reporting($this->errorLevel);
     }
 
     /**
@@ -117,7 +126,7 @@ class RequestActionTraitTest extends TestCase
      */
     public function testRequestActionPlugins()
     {
-        Plugin::load('TestPlugin');
+        $this->loadPlugins(['TestPlugin']);
         Router::reload();
         Router::connect('/test_plugin/tests/:action/*', ['controller' => 'Tests', 'plugin' => 'TestPlugin']);
 
@@ -154,7 +163,7 @@ class RequestActionTraitTest extends TestCase
      */
     public function testRequestActionArray()
     {
-        Plugin::load(['TestPlugin']);
+        $this->loadPlugins(['TestPlugin']);
 
         $result = $this->object->requestAction(
             ['controller' => 'RequestAction', 'action' => 'test_request_action']
@@ -237,7 +246,7 @@ class RequestActionTraitTest extends TestCase
     {
         $result = $this->object->requestAction('/request_action/params_pass');
         $result = json_decode($result, true);
-        $this->assertEquals('request_action/params_pass', $result['url']);
+        $this->assertEquals('/request_action/params_pass', $result['url']);
         $this->assertEquals('RequestAction', $result['params']['controller']);
         $this->assertEquals('params_pass', $result['params']['action']);
         $this->assertNull($result['params']['plugin']);
@@ -409,7 +418,7 @@ class RequestActionTraitTest extends TestCase
         $result = $this->object->requestAction('/request_action/session_test');
         $this->assertNull($result);
 
-        $session = $this->getMockBuilder('Cake\Network\Session')->getMock();
+        $session = $this->getMockBuilder(Session::class)->getMock();
         $session->expects($this->once())
             ->method('read')
             ->with('foo')
