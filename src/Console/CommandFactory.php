@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -22,15 +24,15 @@ use InvalidArgumentException;
  */
 class CommandFactory implements CommandFactoryInterface
 {
-
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function create($className)
+    public function create(string $className)
     {
         $command = new $className();
-        if (!($command instanceof Command) && !($command instanceof Shell)) {
-            $valid = implode('` or `', [Shell::class, Command::class]);
+        if (!($command instanceof CommandInterface) && !($command instanceof Shell)) {
+            /** @psalm-suppress DeprecatedClass */
+            $valid = implode('` or `', [Shell::class, CommandInterface::class]);
             $message = sprintf('Class `%s` must be an instance of `%s`.', $className, $valid);
             throw new InvalidArgumentException($message);
         }

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,7 +17,6 @@
 namespace Cake\Test\TestCase\Core\Configure\Engine;
 
 use Cake\Core\Configure\Engine\IniConfig;
-use Cake\Core\Plugin;
 use Cake\TestSuite\TestCase;
 
 /**
@@ -23,33 +24,37 @@ use Cake\TestSuite\TestCase;
  */
 class IniConfigTest extends TestCase
 {
-
     /**
      * Test data to serialize and unserialize.
      *
      * @var array
      */
-    public $testData = [
+    protected $testData = [
         'One' => [
             'two' => 'value',
             'three' => [
-                'four' => 'value four'
+                'four' => 'value four',
             ],
             'is_null' => null,
             'bool_false' => false,
             'bool_true' => true,
         ],
         'Asset' => [
-            'timestamp' => 'force'
+            'timestamp' => 'force',
         ],
     ];
+
+    /**
+     * @var string
+     */
+    protected $path;
 
     /**
      * setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->path = CONFIG;
@@ -67,7 +72,7 @@ class IniConfigTest extends TestCase
 
         $this->assertArrayHasKey('admin', $config);
         $this->assertTrue(isset($config['paul']['groups']));
-        $this->assertEquals('ads', $config['admin']['deny']);
+        $this->assertSame('ads', $config['admin']['deny']);
     }
 
     /**
@@ -96,7 +101,7 @@ class IniConfigTest extends TestCase
         $config = $engine->read('acl');
 
         $this->assertArrayHasKey('groups', $config);
-        $this->assertEquals('administrators', $config['groups']);
+        $this->assertSame('administrators', $config['groups']);
     }
 
     /**
@@ -111,7 +116,7 @@ class IniConfigTest extends TestCase
 
         $expected = [
             'some_key' => 'some_value',
-            'bool_key' => true
+            'bool_key' => true,
         ];
         $this->assertEquals($expected, $config);
     }
@@ -127,7 +132,7 @@ class IniConfigTest extends TestCase
         $config = $engine->read('nested');
 
         $this->assertTrue(isset($config['database']['db']['username']));
-        $this->assertEquals('mark', $config['database']['db']['username']);
+        $this->assertSame('mark', $config['database']['db']['username']);
         $this->assertEquals(3, $config['nesting']['one']['two']['three']);
         $this->assertFalse(isset($config['database.db.username']));
         $this->assertFalse(isset($config['database']['db.username']));
@@ -215,12 +220,12 @@ class IniConfigTest extends TestCase
         $result = $engine->read('TestPlugin.nested');
 
         $this->assertTrue(isset($result['database']['db']['username']));
-        $this->assertEquals('bar', $result['database']['db']['username']);
+        $this->assertSame('bar', $result['database']['db']['username']);
         $this->assertFalse(isset($result['database.db.username']));
         $this->assertFalse(isset($result['database']['db.username']));
 
         $result = $engine->read('TestPlugin.nested');
-        $this->assertEquals('foo', $result['database']['db']['password']);
+        $this->assertSame('foo', $result['database']['db']['password']);
         $this->clearPlugins();
     }
 

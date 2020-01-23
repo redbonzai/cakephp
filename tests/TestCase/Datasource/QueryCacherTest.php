@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -17,27 +19,28 @@ namespace Cake\Test\TestCase\Datasource;
 use Cake\Cache\Cache;
 use Cake\Datasource\QueryCacher;
 use Cake\TestSuite\TestCase;
+use stdClass;
 
 /**
  * Query cacher test
  */
 class QueryCacherTest extends TestCase
 {
+    /**
+     * @var \Cake\Cache\CacheEngineInterface
+     */
+    protected $engine;
 
     /**
      * Setup method
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
-        $this->engine = $this->getMockBuilder('Cake\Cache\CacheEngine')->getMock();
-        $this->engine->expects($this->any())
-            ->method('init')
-            ->will($this->returnValue(true));
-
-        Cache::setConfig('queryCache', $this->engine);
+        Cache::setConfig('queryCache', ['className' => 'Array']);
+        $this->engine = Cache::pool('queryCache');
         Cache::enable();
     }
 
@@ -46,7 +49,7 @@ class QueryCacherTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         Cache::drop('queryCache');
@@ -59,8 +62,8 @@ class QueryCacherTest extends TestCase
      */
     public function testFetchFunctionKey()
     {
-        $this->_mockRead('my_key', 'A winner');
-        $query = $this->getMockBuilder('stdClass')->getMock();
+        $this->engine->set('my_key', 'A winner');
+        $query = new stdClass();
 
         $cacher = new QueryCacher(function ($q) use ($query) {
             $this->assertSame($query, $q);
@@ -69,7 +72,7 @@ class QueryCacherTest extends TestCase
         }, 'queryCache');
 
         $result = $cacher->fetch($query);
-        $this->assertEquals('A winner', $result);
+        $this->assertSame('A winner', $result);
     }
 
     /**
@@ -81,8 +84,8 @@ class QueryCacherTest extends TestCase
     {
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Cache key functions must return a string. Got false.');
-        $this->_mockRead('my_key', 'A winner');
-        $query = $this->getMockBuilder('stdClass')->getMock();
+        $this->engine->set('my_key', 'A winner');
+        $query = new stdClass();
 
         $cacher = new QueryCacher(function ($q) {
             return false;
@@ -98,11 +101,11 @@ class QueryCacherTest extends TestCase
      */
     public function testFetchCacheHitStringEngine()
     {
-        $this->_mockRead('my_key', 'A winner');
+        $this->engine->set('my_key', 'A winner');
         $cacher = new QueryCacher('my_key', 'queryCache');
-        $query = $this->getMockBuilder('stdClass')->getMock();
+        $query = new stdClass();
         $result = $cacher->fetch($query);
-        $this->assertEquals('A winner', $result);
+        $this->assertSame('A winner', $result);
     }
 
     /**
@@ -112,11 +115,11 @@ class QueryCacherTest extends TestCase
      */
     public function testFetchCacheHit()
     {
-        $this->_mockRead('my_key', 'A winner');
+        $this->engine->set('my_key', 'A winner');
         $cacher = new QueryCacher('my_key', $this->engine);
-        $query = $this->getMockBuilder('stdClass')->getMock();
+        $query = new stdClass();
         $result = $cacher->fetch($query);
-        $this->assertEquals('A winner', $result);
+        $this->assertSame('A winner', $result);
     }
 
     /**
@@ -126,21 +129,10 @@ class QueryCacherTest extends TestCase
      */
     public function testFetchCacheMiss()
     {
-        $this->_mockRead('my_key', false);
+        $this->engine->set('my_key', false);
         $cacher = new QueryCacher('my_key', $this->engine);
-        $query = $this->getMockBuilder('stdClass')->getMock();
+        $query = new stdClass();
         $result = $cacher->fetch($query);
         $this->assertNull($result, 'Cache miss should not have an isset() return.');
-    }
-
-    /**
-     * Helper for building mocks.
-     */
-    protected function _mockRead($key, $value = false)
-    {
-        $this->engine->expects($this->any())
-            ->method('read')
-            ->with($key)
-            ->will($this->returnValue($value));
     }
 }

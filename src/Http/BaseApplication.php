@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,24 +16,28 @@
  */
 namespace Cake\Http;
 
-use Cake\Core\App;
-use Cake\Core\BasePlugin;
+use Cake\Console\CommandCollection;
+use Cake\Controller\ControllerFactory;
 use Cake\Core\ConsoleApplicationInterface;
 use Cake\Core\HttpApplicationInterface;
 use Cake\Core\Plugin;
 use Cake\Core\PluginApplicationInterface;
-use Cake\Core\PluginInterface;
+use Cake\Core\PluginCollection;
 use Cake\Event\EventDispatcherTrait;
 use Cake\Event\EventManager;
 use Cake\Event\EventManagerInterface;
-use Cake\Routing\DispatcherFactory;
+use Cake\Routing\RouteBuilder;
 use Cake\Routing\Router;
-use InvalidArgumentException;
+use Cake\Routing\RoutingApplicationInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * Base class for application classes.
+ * Base class for full-stack applications
+ *
+ * This class serves as a base class for applications that are using
+ * CakePHP as a full stack framework. If you are only using the Http or Console libraries
+ * you should implement the relevant interfaces directly.
  *
  * The application class is responsible for bootstrapping the application,
  * and ensuring that middleware is attached. It is also invoked as the last piece
@@ -40,9 +46,9 @@ use Psr\Http\Message\ServerRequestInterface;
 abstract class BaseApplication implements
     ConsoleApplicationInterface,
     HttpApplicationInterface,
-    PluginApplicationInterface
+    PluginApplicationInterface,
+    RoutingApplicationInterface
 {
-
     use EventDispatcherTrait;
 
     /**
@@ -58,28 +64,40 @@ abstract class BaseApplication implements
     protected $plugins;
 
     /**
+     * Controller factory
+     *
+     * @var \Cake\Http\ControllerFactoryInterface|null
+     */
+    protected $controllerFactory;
+
+    /**
      * Constructor
      *
      * @param string $configDir The directory the bootstrap configuration is held in.
      * @param \Cake\Event\EventManagerInterface $eventManager Application event manager instance.
+     * @param \Cake\Http\ControllerFactoryInterface $controllerFactory Controller factory.
      */
-    public function __construct($configDir, EventManagerInterface $eventManager = null)
-    {
-        $this->configDir = $configDir;
+    public function __construct(
+        string $configDir,
+        ?EventManagerInterface $eventManager = null,
+        ?ControllerFactoryInterface $controllerFactory = null
+    ) {
+        $this->configDir = rtrim($configDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
         $this->plugins = Plugin::getCollection();
         $this->_eventManager = $eventManager ?: EventManager::instance();
+        $this->controllerFactory = $controllerFactory;
     }
 
     /**
      * @param \Cake\Http\MiddlewareQueue $middleware The middleware queue to set in your App Class
      * @return \Cake\Http\MiddlewareQueue
      */
-    abstract public function middleware($middleware);
+    abstract public function middleware(MiddlewareQueue $middleware): MiddlewareQueue;
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function pluginMiddleware($middleware)
+    public function pluginMiddleware(MiddlewareQueue $middleware): MiddlewareQueue
     {
         foreach ($this->plugins->with('middleware') as $plugin) {
             $middleware = $plugin->middleware($middleware);
@@ -89,20 +107,14 @@ abstract class BaseApplication implements
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function addPlugin($name, array $config = [])
     {
         if (is_string($name)) {
-            $plugin = $this->makePlugin($name, $config);
+            $plugin = $this->plugins->create($name, $config);
         } else {
             $plugin = $name;
-        }
-        if (!$plugin instanceof PluginInterface) {
-            throw new InvalidArgumentException(sprintf(
-                "The `%s` plugin does not implement Cake\Core\PluginInterface.",
-                get_class($plugin)
-            ));
         }
         $this->plugins->add($plugin);
 
@@ -114,48 +126,23 @@ abstract class BaseApplication implements
      *
      * @return \Cake\Core\PluginCollection
      */
-    public function getPlugins()
+    public function getPlugins(): PluginCollection
     {
         return $this->plugins;
     }
 
     /**
-     * Create a plugin instance from a classname and configuration
-     *
-     * @param string $name The plugin classname
-     * @param array $config Configuration options for the plugin
-     * @return \Cake\Core\PluginInterface
+     * @inheritDoc
      */
-    protected function makePlugin($name, array $config)
+    public function bootstrap(): void
     {
-        $className = $name;
-        if (strpos($className, '\\') === false) {
-            $className = str_replace('/', '\\', $className) . '\\' . 'Plugin';
-        }
-        if (class_exists($className)) {
-            return new $className($config);
-        }
-
-        if (!isset($config['path'])) {
-            $config['path'] = $this->plugins->findPath($name);
-        }
-        $config['name'] = $name;
-
-        return new BasePlugin($config);
+        require_once $this->configDir . 'bootstrap.php';
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function bootstrap()
-    {
-        require_once $this->configDir . '/bootstrap.php';
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function pluginBootstrap()
+    public function pluginBootstrap(): void
     {
         foreach ($this->plugins->with('bootstrap') as $plugin) {
             $plugin->bootstrap($this);
@@ -170,20 +157,18 @@ abstract class BaseApplication implements
      * @param \Cake\Routing\RouteBuilder $routes A route builder to add routes into.
      * @return void
      */
-    public function routes($routes)
+    public function routes(RouteBuilder $routes): void
     {
-        if (!Router::$initialized) {
-            // Prevent routes from being loaded again
-            Router::$initialized = true;
-
-            require $this->configDir . '/routes.php';
+        // Only load routes if the router is empty
+        if (!Router::routes()) {
+            require $this->configDir . 'routes.php';
         }
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function pluginRoutes($routes)
+    public function pluginRoutes(RouteBuilder $routes): RouteBuilder
     {
         foreach ($this->plugins->with('routes') as $plugin) {
             $plugin->routes($routes);
@@ -201,15 +186,15 @@ abstract class BaseApplication implements
      * @param \Cake\Console\CommandCollection $commands The CommandCollection to add commands into.
      * @return \Cake\Console\CommandCollection The updated collection.
      */
-    public function console($commands)
+    public function console(CommandCollection $commands): CommandCollection
     {
         return $commands->addMany($commands->autoDiscover());
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function pluginConsole($commands)
+    public function pluginConsole(CommandCollection $commands): CommandCollection
     {
         foreach ($this->plugins->with('console') as $plugin) {
             $commands = $plugin->console($commands);
@@ -225,23 +210,22 @@ abstract class BaseApplication implements
      * - Create the controller that will handle this request.
      * - Invoke the controller.
      *
-     * @param \Psr\Http\Message\ServerRequestInterface $request The request
-     * @param \Psr\Http\Message\ResponseInterface $response The response
-     * @param callable $next The next middleware
+     * @param \Cake\Http\ServerRequest $request The request
      * @return \Psr\Http\Message\ResponseInterface
      */
-    public function __invoke(ServerRequestInterface $request, ResponseInterface $response, $next)
-    {
-        return $this->getDispatcher()->dispatch($request, $response);
-    }
+    public function handle(
+        ServerRequestInterface $request
+    ): ResponseInterface {
+        if ($this->controllerFactory === null) {
+            $this->controllerFactory = new ControllerFactory();
+        }
 
-    /**
-     * Get the ActionDispatcher.
-     *
-     * @return \Cake\Http\ActionDispatcher
-     */
-    protected function getDispatcher()
-    {
-        return new ActionDispatcher(null, $this->getEventManager(), DispatcherFactory::filters());
+        if (Router::getRequest() !== $request) {
+            Router::setRequest($request);
+        }
+
+        $controller = $this->controllerFactory->create($request);
+
+        return $this->controllerFactory->invoke($controller);
     }
 }

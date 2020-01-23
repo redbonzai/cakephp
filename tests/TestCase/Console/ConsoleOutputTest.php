@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * ConsoleOutputTest file
  *
@@ -24,16 +26,20 @@ use Cake\TestSuite\TestCase;
  */
 class ConsoleOutputTest extends TestCase
 {
+    /**
+     * @var \Cake\Console\ConsoleOutput|\PHPUnit\Framework\MockObject\MockObject
+     */
+    protected $output;
 
     /**
      * setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
-        $this->output = $this->getMockBuilder('Cake\Console\ConsoleOutput')
+        $this->output = $this->getMockBuilder(ConsoleOutput::class)
             ->setMethods(['_write'])
             ->getMock();
         $this->output->setOutputAs(ConsoleOutput::COLOR);
@@ -44,7 +50,7 @@ class ConsoleOutputTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         unset($this->output);
@@ -60,7 +66,7 @@ class ConsoleOutputTest extends TestCase
         $this->output->expects($this->once())->method('_write')
             ->with('Some output');
 
-        $this->output->write('Some output', false);
+        $this->output->write('Some output', 0);
     }
 
     /**
@@ -109,11 +115,11 @@ class ConsoleOutputTest extends TestCase
      */
     public function testStylesGet()
     {
-        $result = $this->output->styles('error');
+        $result = $this->output->getStyle('error');
         $expected = ['text' => 'red'];
         $this->assertEquals($expected, $result);
 
-        $this->assertNull($this->output->styles('made_up_goop'));
+        $this->assertSame([], $this->output->getStyle('made_up_goop'));
 
         $result = $this->output->styles();
         $this->assertNotEmpty($result, 'Error is missing');
@@ -127,13 +133,13 @@ class ConsoleOutputTest extends TestCase
      */
     public function testStylesAdding()
     {
-        $this->output->styles('test', ['text' => 'red', 'background' => 'black']);
-        $result = $this->output->styles('test');
+        $this->output->setStyle('test', ['text' => 'red', 'background' => 'black']);
+        $result = $this->output->getStyle('test');
         $expected = ['text' => 'red', 'background' => 'black'];
         $this->assertEquals($expected, $result);
 
-        $this->assertTrue($this->output->styles('test', false), 'Removing a style should return true.');
-        $this->assertNull($this->output->styles('test'), 'Removed styles should be null.');
+        $this->output->setStyle('test', []);
+        $this->assertSame([], $this->output->getStyle('test'), 'Removed styles should be empty.');
     }
 
     /**
@@ -146,7 +152,7 @@ class ConsoleOutputTest extends TestCase
         $this->output->expects($this->once())->method('_write')
             ->with("\033[31mError:\033[0m Something bad");
 
-        $this->output->write('<error>Error:</error> Something bad', false);
+        $this->output->write('<error>Error:</error> Something bad', 0);
     }
 
     /**
@@ -159,7 +165,7 @@ class ConsoleOutputTest extends TestCase
         $this->output->expects($this->once())->method('_write')
             ->with('<red> Something bad');
 
-        $this->output->write('<red> Something bad', false);
+        $this->output->write('<red> Something bad', 0);
     }
 
     /**
@@ -169,17 +175,17 @@ class ConsoleOutputTest extends TestCase
      */
     public function testFormattingCustom()
     {
-        $this->output->styles('annoying', [
+        $this->output->setStyle('annoying', [
             'text' => 'magenta',
             'background' => 'cyan',
             'blink' => true,
-            'underline' => true
+            'underline' => true,
         ]);
 
         $this->output->expects($this->once())->method('_write')
             ->with("\033[35;46;5;4mAnnoy:\033[0m Something bad");
 
-        $this->output->write('<annoying>Annoy:</annoying> Something bad', false);
+        $this->output->write('<annoying>Annoy:</annoying> Something bad', 0);
     }
 
     /**
@@ -192,7 +198,7 @@ class ConsoleOutputTest extends TestCase
         $this->output->expects($this->once())->method('_write')
             ->with('<not_there>Error:</not_there> Something bad');
 
-        $this->output->write('<not_there>Error:</not_there> Something bad', false);
+        $this->output->write('<not_there>Error:</not_there> Something bad', 0);
     }
 
     /**
@@ -205,7 +211,7 @@ class ConsoleOutputTest extends TestCase
         $this->output->expects($this->once())->method('_write')
             ->with("\033[31mBad\033[0m \033[33mWarning\033[0m Regular");
 
-        $this->output->write('<error>Bad</error> <warning>Warning</warning> Regular', false);
+        $this->output->write('<error>Bad</error> <warning>Warning</warning> Regular', 0);
     }
 
     /**
@@ -218,25 +224,7 @@ class ConsoleOutputTest extends TestCase
         $this->output->expects($this->once())->method('_write')
             ->with("\033[31mBad\033[0m \033[31mWarning\033[0m Regular");
 
-        $this->output->write('<error>Bad</error> <error>Warning</error> Regular', false);
-    }
-
-    /**
-     * test deprecated outputAs
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testOutputAsPlain()
-    {
-        $this->deprecated(function () {
-            $this->output->outputAs(ConsoleOutput::PLAIN);
-            $this->assertSame(ConsoleOutput::PLAIN, $this->output->outputAs());
-            $this->output->expects($this->once())->method('_write')
-                ->with('Bad Regular');
-
-            $this->output->write('<error>Bad</error> Regular', false);
-        });
+        $this->output->write('<error>Bad</error> <error>Warning</error> Regular', 0);
     }
 
     /**
@@ -250,46 +238,22 @@ class ConsoleOutputTest extends TestCase
         $this->output->expects($this->once())->method('_write')
             ->with('<error>Bad</error> Regular');
 
-        $this->output->write('<error>Bad</error> Regular', false);
+        $this->output->write('<error>Bad</error> Regular', 0);
     }
 
     /**
-     * test plain output.
+     * test set/get plain output.
      *
      * @return void
      */
     public function testSetOutputAsPlain()
     {
         $this->output->setOutputAs(ConsoleOutput::PLAIN);
+        $this->assertSame(ConsoleOutput::PLAIN, $this->output->getOutputAs());
         $this->output->expects($this->once())->method('_write')
             ->with('Bad Regular');
 
-        $this->output->write('<error>Bad</error> Regular', false);
-    }
-
-    /**
-     * test set plain output.
-     *
-     * @return void
-     */
-    public function testSetSetOutputAsPlain()
-    {
-        $this->output->setOutputAs(ConsoleOutput::PLAIN);
-        $this->output->expects($this->once())->method('_write')
-            ->with('Bad Regular');
-
-        $this->output->write('<error>Bad</error> Regular', false);
-    }
-
-    /**
-     * test set wrong type.
-     *
-     */
-    public function testSetOutputWrongType()
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Invalid output type "Foo".');
-        $this->output->setOutputAs('Foo');
+        $this->output->write('<error>Bad</error> Regular', 0);
     }
 
     /**
@@ -300,9 +264,10 @@ class ConsoleOutputTest extends TestCase
     public function testSetOutputAsPlainSelectiveTagRemoval()
     {
         $this->output->setOutputAs(ConsoleOutput::PLAIN);
-        $this->output->expects($this->once())->method('_write')
+        $this->output->expects($this->once())
+            ->method('_write')
             ->with('Bad Regular <b>Left</b> <i>behind</i> <name>');
 
-        $this->output->write('<error>Bad</error> Regular <b>Left</b> <i>behind</i> <name>', false);
+        $this->output->write('<error>Bad</error> Regular <b>Left</b> <i>behind</i> <name>', 0);
     }
 }

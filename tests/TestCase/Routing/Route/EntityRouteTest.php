@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -16,6 +18,7 @@ namespace Cake\Test\TestCase\Routing\Route;
 
 use Cake\Routing\Route\EntityRoute;
 use Cake\TestSuite\TestCase;
+use RuntimeException;
 use TestApp\Model\Entity\Article;
 
 /**
@@ -32,10 +35,10 @@ class EntityRouteTest extends TestCase
     {
         $entity = new Article([
             'category_id' => 2,
-            'slug' => 'article-slug'
+            'slug' => 'article-slug',
         ]);
 
-        $route = $route = new EntityRoute(
+        $route = new EntityRoute(
             '/articles/:category_id/:slug',
             [
                 '_name' => 'articlesView',
@@ -45,10 +48,10 @@ class EntityRouteTest extends TestCase
         $result = $route->match([
             'slug' => 'other-slug',
             '_entity' => $entity,
-            '_name' => 'articlesView'
+            '_name' => 'articlesView',
         ]);
 
-        $this->assertEquals('/articles/2/other-slug', $result);
+        $this->assertSame('/articles/2/other-slug', $result);
     }
 
     /**
@@ -60,10 +63,10 @@ class EntityRouteTest extends TestCase
     {
         $entity = new Article([
             'category_id' => 2,
-            'slug' => 'article-slug'
+            'slug' => 'article-slug',
         ]);
 
-        $route = $route = new EntityRoute(
+        $route = new EntityRoute(
             '/articles/:category_id/:slug',
             [
                 '_name' => 'articlesView',
@@ -72,10 +75,10 @@ class EntityRouteTest extends TestCase
 
         $result = $route->match([
             '_entity' => $entity,
-            '_name' => 'articlesView'
+            '_name' => 'articlesView',
         ]);
 
-        $this->assertEquals('/articles/2/article-slug', $result);
+        $this->assertSame('/articles/2/article-slug', $result);
     }
 
     /**
@@ -87,10 +90,10 @@ class EntityRouteTest extends TestCase
     {
         $entity = new Article([
             'category_id' => 2,
-            'slug' => 'article-slug'
+            'slug' => 'article-slug',
         ]);
 
-        $route = $route = new EntityRoute(
+        $route = new EntityRoute(
             '/articles/:category_id_:slug',
             [
                 '_name' => 'articlesView',
@@ -99,10 +102,10 @@ class EntityRouteTest extends TestCase
 
         $result = $route->match([
             '_entity' => $entity,
-            '_name' => 'articlesView'
+            '_name' => 'articlesView',
         ]);
 
-        $this->assertEquals('/articles/2_article-slug', $result);
+        $this->assertSame('/articles/2_article-slug', $result);
     }
 
     /**
@@ -114,35 +117,35 @@ class EntityRouteTest extends TestCase
     {
         $entity = [
             'category_id' => 2,
-            'slug' => 'article-slug'
+            'slug' => 'article-slug',
         ];
 
         $route = new EntityRoute(
             '/articles/:category_id/:slug',
             [
                 '_name' => 'articlesView',
-                '_entity' => $entity
+                '_entity' => $entity,
             ]
         );
 
         $result = $route->match([
             '_entity' => $entity,
-            '_name' => 'articlesView'
+            '_name' => 'articlesView',
         ]);
 
-        $this->assertEquals('/articles/2/article-slug', $result);
+        $this->assertSame('/articles/2/article-slug', $result);
     }
 
     /**
      * Test invalid entity option value
-     *
-     * @expectedException \RuntimeException
-     * @expectedExceptionMessage Route `/` expects the URL option `_entity` to be an array or object implementing \ArrayAccess, but `string` passed.
      */
     public function testInvalidEntityValueException()
     {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Route `/` expects the URL option `_entity` to be an array or object implementing \ArrayAccess, but `string` passed.');
+
         $route = new EntityRoute('/', [
-            '_entity' => 'Something else'
+            '_entity' => 'Something else',
         ]);
 
         $route->match([

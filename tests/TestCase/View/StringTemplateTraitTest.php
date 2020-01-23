@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,47 +16,29 @@
  */
 namespace Cake\Test\TestCase\View;
 
-use Cake\Core\InstanceConfigTrait;
 use Cake\TestSuite\TestCase;
-use Cake\View\StringTemplateTrait;
-
-/**
- * TestStringTemplate
- */
-class TestStringTemplate
-{
-
-    use InstanceConfigTrait;
-    use StringTemplateTrait;
-
-    /**
-     * _defaultConfig
-     *
-     * @var array
-     */
-    protected $_defaultConfig = [];
-}
+use Cake\View\StringTemplate;
+use TestApp\View\TestStringTemplate;
 
 /**
  * StringTemplateTraitTest class
  */
 class StringTemplateTraitTest extends TestCase
 {
-
     /**
-     * @var TestStringTemplate
+     * @var \TestApp\View\TestStringTemplate
      */
-    public $Template;
+    protected $Template;
 
     /**
      * setUp method
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
-        $this->Template = new TestStringTemplate;
+        $this->Template = new TestStringTemplate();
     }
 
     /**
@@ -71,7 +55,7 @@ class StringTemplateTraitTest extends TestCase
 
         $this->assertEquals(
             [
-                'text' => '<p>{{text}}</p>'
+                'text' => '<p>{{text}}</p>',
             ],
             $this->Template->getTemplates(),
             'newly added template should be included in template list'
@@ -92,7 +76,7 @@ class StringTemplateTraitTest extends TestCase
 
         $this->assertEquals(
             [
-                'text' => '<p>{{text}}</p>'
+                'text' => '<p>{{text}}</p>',
             ],
             $this->Template->getTemplates(),
             'Configured templates should be included in template list'
@@ -111,7 +95,7 @@ class StringTemplateTraitTest extends TestCase
         ];
         $this->Template->setTemplates($templates);
         $result = $this->Template->formatTemplate('text', [
-            'text' => 'CakePHP'
+            'text' => 'CakePHP',
         ]);
         $this->assertEquals(
             '<p>CakePHP</p>',
@@ -131,6 +115,6 @@ class StringTemplateTraitTest extends TestCase
         ];
         $this->Template->setTemplates($templates);
         $result = $this->Template->templater();
-        $this->assertInstanceOf('Cake\View\StringTemplate', $result);
+        $this->assertInstanceOf(StringTemplate::class, $result);
     }
 }

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * MissingEntityException file
  *
@@ -23,6 +25,8 @@ use Cake\Core\Exception\Exception;
  */
 class MissingEntityException extends Exception
 {
-
+    /**
+     * @var string
+     */
     protected $_messageTemplate = 'Entity class %s could not be found.';
 }

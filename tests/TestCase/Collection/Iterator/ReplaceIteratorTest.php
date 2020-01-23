@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -22,7 +24,6 @@ use Cake\TestSuite\TestCase;
  */
 class ReplaceIteratorTest extends TestCase
 {
-
     /**
      * Tests that the iterator works correctly
      *
@@ -31,7 +32,7 @@ class ReplaceIteratorTest extends TestCase
     public function testReplace()
     {
         $items = new \ArrayIterator([1, 2, 3]);
-        $callable = $this->getMockBuilder(\StdClass::class)
+        $callable = $this->getMockBuilder(\stdClass::class)
             ->setMethods(['__invoke'])
             ->getMock();
         $callable->expects($this->at(0))

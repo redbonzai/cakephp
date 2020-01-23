@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  *
@@ -14,6 +16,8 @@
 namespace Cake\Test\TestCase\Cache\Engine;
 
 use Cake\Cache\Cache;
+use Cake\Cache\Engine\ArrayEngine;
+use Cake\Cache\InvalidArgumentException;
 use Cake\TestSuite\TestCase;
 
 /**
@@ -26,7 +30,7 @@ class ArrayEngineTest extends TestCase
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -40,7 +44,7 @@ class ArrayEngineTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         Cache::drop('array');
@@ -98,7 +102,7 @@ class ArrayEngineTest extends TestCase
         $this->_configCache(['duration' => 1]);
 
         $result = Cache::read('test', 'array');
-        $this->assertFalse($result);
+        $this->assertNull($result);
 
         $data = 'this is a test of the emergency broadcasting system';
         $result = Cache::write('other_test', $data, 'array');
@@ -106,7 +110,7 @@ class ArrayEngineTest extends TestCase
 
         sleep(2);
         $result = Cache::read('other_test', 'array');
-        $this->assertFalse($result);
+        $this->assertNull($result);
     }
 
     /**
@@ -179,9 +183,9 @@ class ArrayEngineTest extends TestCase
     {
         Cache::write('some_value', 'value', 'array');
 
-        $result = Cache::clear(false, 'array');
+        $result = Cache::clear('array');
         $this->assertTrue($result);
-        $this->assertFalse(Cache::read('some_value', 'array'));
+        $this->assertNull(Cache::read('some_value', 'array'));
     }
 
     /**
@@ -201,17 +205,17 @@ class ArrayEngineTest extends TestCase
             'warnOnWriteFailures' => true,
         ]);
         $this->assertTrue(Cache::write('test_groups', 'value', 'array_groups'));
-        $this->assertEquals('value', Cache::read('test_groups', 'array_groups'));
+        $this->assertSame('value', Cache::read('test_groups', 'array_groups'));
 
         Cache::clearGroup('group_a', 'array_groups');
-        $this->assertFalse(Cache::read('test_groups', 'array_groups'));
+        $this->assertNull(Cache::read('test_groups', 'array_groups'));
         $this->assertTrue(Cache::write('test_groups', 'value2', 'array_groups'));
-        $this->assertEquals('value2', Cache::read('test_groups', 'array_groups'));
+        $this->assertSame('value2', Cache::read('test_groups', 'array_groups'));
 
         Cache::clearGroup('group_b', 'array_groups');
-        $this->assertFalse(Cache::read('test_groups', 'array_groups'));
+        $this->assertNull(Cache::read('test_groups', 'array_groups'));
         $this->assertTrue(Cache::write('test_groups', 'value3', 'array_groups'));
-        $this->assertEquals('value3', Cache::read('test_groups', 'array_groups'));
+        $this->assertSame('value3', Cache::read('test_groups', 'array_groups'));
     }
 
     /**
@@ -229,10 +233,10 @@ class ArrayEngineTest extends TestCase
             'warnOnWriteFailures' => true,
         ]);
         $this->assertTrue(Cache::write('test_groups', 'value', 'array_groups'));
-        $this->assertEquals('value', Cache::read('test_groups', 'array_groups'));
+        $this->assertSame('value', Cache::read('test_groups', 'array_groups'));
 
         $this->assertTrue(Cache::delete('test_groups', 'array_groups'));
-        $this->assertFalse(Cache::read('test_groups', 'array_groups'));
+        $this->assertNull(Cache::read('test_groups', 'array_groups'));
     }
 
     /**
@@ -252,11 +256,11 @@ class ArrayEngineTest extends TestCase
 
         $this->assertTrue(Cache::write('test_groups', 'value', 'array_groups'));
         $this->assertTrue(Cache::clearGroup('group_a', 'array_groups'));
-        $this->assertFalse(Cache::read('test_groups', 'array_groups'));
+        $this->assertNull(Cache::read('test_groups', 'array_groups'));
 
         $this->assertTrue(Cache::write('test_groups', 'value2', 'array_groups'));
         $this->assertTrue(Cache::clearGroup('group_b', 'array_groups'));
-        $this->assertFalse(Cache::read('test_groups', 'array_groups'));
+        $this->assertNull(Cache::read('test_groups', 'array_groups'));
     }
 
     /**
@@ -277,5 +281,66 @@ class ArrayEngineTest extends TestCase
 
         $result = Cache::add('test_add_key', 'test data 2', 'array');
         $this->assertFalse($result);
+    }
+
+    /**
+     * Test writeMany() with Traversable
+     *
+     * @return void
+     */
+    public function testWriteManyTraversable()
+    {
+        $data = new \ArrayObject([
+            'a' => 1,
+            'b' => 'foo',
+        ]);
+
+        $result = Cache::writeMany($data, 'array');
+        $this->assertTrue($result);
+
+        $this->assertSame(1, Cache::read('a', 'array'));
+        $this->assertSame('foo', Cache::read('b', 'array'));
+    }
+
+    /**
+     * Test that passing a non iterable argument to setMultiple() throws exception.
+     *
+     * @return void
+     */
+    public function testSetMultipleException()
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('A cache set must be either an array or a Traversable.');
+
+        $engine = new ArrayEngine();
+        $engine->setMultiple('foo');
+    }
+
+    /**
+     * Test that passing a non iterable argument to getMultiple() throws exception.
+     *
+     * @return void
+     */
+    public function testGetMultipleException()
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('A cache key set must be either an array or a Traversable.');
+
+        $engine = new ArrayEngine();
+        $engine->getMultiple('foo');
+    }
+
+    /**
+     * Test that passing a non iterable argument to deleteMultiple() throws exception.
+     *
+     * @return void
+     */
+    public function testDeleteMultipleException()
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('A cache key set must be either an array or a Traversable.');
+
+        $engine = new ArrayEngine();
+        $engine->deleteMultiple('foo');
     }
 }

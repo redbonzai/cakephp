@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -20,6 +22,10 @@ namespace Cake\TestSuite\Constraint\Response;
  */
 class FileSentAs extends ResponseBase
 {
+    /**
+     * @var \Cake\Http\Response
+     */
+    protected $response;
 
     /**
      * Checks assertion
@@ -27,9 +33,10 @@ class FileSentAs extends ResponseBase
      * @param mixed $other Expected type
      * @return bool
      */
-    public function matches($other)
+    public function matches($other): bool
     {
-        return $this->response->getFile()->path === $other;
+        /** @psalm-suppress PossiblyNullReference */
+        return $this->response->getFile()->getPathName() === $other;
     }
 
     /**
@@ -37,7 +44,7 @@ class FileSentAs extends ResponseBase
      *
      * @return string
      */
-    public function toString()
+    public function toString(): string
     {
         return 'file was sent';
     }

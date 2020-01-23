@@ -1,7 +1,10 @@
 <?php
+declare(strict_types=1);
+
 namespace TestApp\Controller;
 
 use Cake\Controller\Controller;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * CakesController class
@@ -13,7 +16,7 @@ class CakesController extends Controller
      *
      * @var string
      */
-    public $modelClass = 'Posts';
+    protected $modelClass = 'Posts';
 
     /**
      * index method
@@ -47,24 +50,32 @@ class CakesController extends Controller
     }
 
     /**
-     * startup process.
+     * Startup process
+     *
+     * \Psr\Http\Message\ResponseInterface|null
      */
-    public function startupProcess()
+    public function startupProcess(): ?ResponseInterface
     {
         parent::startupProcess();
         if ($this->request->getParam('stop') === 'startup') {
             return $this->response->withStringBody('startup stop');
         }
+
+        return null;
     }
 
     /**
-     * shutdown process.
+     * Shutdown process
+     *
+     * \Psr\Http\Message\ResponseInterface|null
      */
-    public function shutdownProcess()
+    public function shutdownProcess(): ?ResponseInterface
     {
         parent::shutdownProcess();
         if ($this->request->getParam('stop') === 'shutdown') {
             return $this->response->withStringBody('shutdown stop');
         }
+
+        return null;
     }
 }

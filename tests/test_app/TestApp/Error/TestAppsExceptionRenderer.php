@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace TestApp\Error;
 
@@ -11,13 +12,12 @@ use TestApp\Controller\TestAppsErrorController;
 
 class TestAppsExceptionRenderer extends ExceptionRenderer
 {
-
     /**
      * {@inheritDoc}
      */
-    protected function _getController()
+    protected function _getController(): Controller
     {
-        $request = $this->request ?: Router::getRequest(true);
+        $request = $this->request ?: Router::getRequest();
         if ($request === null) {
             $request = new ServerRequest();
         }

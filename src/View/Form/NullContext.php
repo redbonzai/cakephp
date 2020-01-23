@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -24,7 +26,6 @@ use Cake\Http\ServerRequest;
  */
 class NullContext implements ContextInterface
 {
-
     /**
      * The request object.
      *
@@ -44,97 +45,108 @@ class NullContext implements ContextInterface
     }
 
     /**
-     * {@inheritDoc}
+     * Get the fields used in the context as a primary key.
+     *
+     * @return string[]
+     * @deprecated 4.0.0 Renamed to getPrimaryKey()
      */
-    public function primaryKey()
+    public function primaryKey(): array
     {
         return [];
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function isPrimaryKey($field)
+    public function getPrimaryKey(): array
+    {
+        return [];
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function isPrimaryKey(string $field): bool
     {
         return false;
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function isCreate()
+    public function isCreate(): bool
     {
         return true;
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function val($field)
+    public function val(string $field, array $options = [])
     {
         return $this->_request->getData($field);
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function isRequired($field)
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function getRequiredMessage($field)
+    public function isRequired(string $field): ?bool
     {
         return null;
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function getMaxLength($field)
+    public function getRequiredMessage(string $field): ?string
     {
         return null;
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function fieldNames()
+    public function getMaxLength(string $field): ?int
+    {
+        return null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function fieldNames(): array
     {
         return [];
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function type($field)
+    public function type(string $field): ?string
     {
         return null;
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function attributes($field)
+    public function attributes(string $field): array
     {
         return [];
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function hasError($field)
+    public function hasError(string $field): bool
     {
         return false;
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function error($field)
+    public function error(string $field): array
     {
         return [];
     }

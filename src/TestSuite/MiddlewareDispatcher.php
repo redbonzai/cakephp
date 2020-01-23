@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,16 +16,18 @@
 namespace Cake\TestSuite;
 
 use Cake\Core\Configure;
-use Cake\Core\HttpApplicationInterface;
 use Cake\Core\PluginApplicationInterface;
 use Cake\Event\EventManager;
 use Cake\Http\Server;
+use Cake\Http\ServerRequest;
 use Cake\Http\ServerRequestFactory;
 use Cake\Routing\Router;
+use Cake\Routing\RoutingApplicationInterface;
+use Laminas\Diactoros\Stream;
 use LogicException;
+use Psr\Http\Message\ResponseInterface;
 use ReflectionClass;
 use ReflectionException;
-use Zend\Diactoros\Stream;
 
 /**
  * Dispatches a request capturing the response for integration
@@ -36,7 +40,7 @@ class MiddlewareDispatcher
     /**
      * The test case being run.
      *
-     * @var \Cake\TestSuite\IntegrationTestCase
+     * @var \Cake\TestSuite\TestCase
      */
     protected $_test;
 
@@ -57,24 +61,25 @@ class MiddlewareDispatcher
     /**
      * The application that is being dispatched.
      *
-     * @var \Cake\Core\HttpApplicationInterface
+     * @var \Cake\Core\HttpApplicationInterface|\Cake\Core\ConsoleApplicationInterface
      */
     protected $app;
 
     /**
      * Constructor
      *
-     * @param \Cake\TestSuite\IntegrationTestCase $test The test case to run.
+     * @param \Cake\TestSuite\TestCase $test The test case to run.
      * @param string|null $class The application class name. Defaults to App\Application.
      * @param array|null $constructorArgs The constructor arguments for your application class.
      *   Defaults to `['./config']`
-     * @param bool $disableRouterReload Disable Router::reload() call when resolving URLs. This
-     *   flag may be necessary if you are using Router methods in your test case setup, and using array URLs
-     *   when doing requests in your tests.
      * @throws \LogicException If it cannot load class for use in integration testing.
+     * @psalm-param \Cake\Core\HttpApplicationInterface::class|\Cake\Core\ConsoleApplicationInterface::class|null $class
      */
-    public function __construct($test, $class = null, $constructorArgs = null, $disableRouterReload = false)
-    {
+    public function __construct(
+        TestCase $test,
+        ?string $class = null,
+        ?array $constructorArgs = null
+    ) {
         $this->_test = $test;
         $this->_class = $class ?: Configure::read('App.namespace') . '\Application';
         $this->_constructorArgs = $constructorArgs ?: [CONFIG];
@@ -85,7 +90,7 @@ class MiddlewareDispatcher
             $app = $reflect->newInstanceArgs($this->_constructorArgs);
             $this->app = $app;
         } catch (ReflectionException $e) {
-            throw new LogicException(sprintf('Cannot load "%s" for use in integration testing.', $this->_class));
+            throw new LogicException("Cannot load `{$this->_class}` for use in integration testing.", 0, $e);
         }
     }
 
@@ -95,7 +100,7 @@ class MiddlewareDispatcher
      * @param array|string $url The URL array/string to resolve.
      * @return string
      */
-    public function resolveUrl($url)
+    public function resolveUrl($url): string
     {
         // If we need to resolve a Route URL but there are no routes, load routes.
         if (is_array($url) && count(Router::getRouteCollection()->routes()) === 0) {
@@ -111,7 +116,7 @@ class MiddlewareDispatcher
      * @param array $url The url to resolve
      * @return string
      */
-    protected function resolveRoute(array $url)
+    protected function resolveRoute(array $url): string
     {
         // Simulate application bootstrap and route loading.
         // We need both to ensure plugins are loaded.
@@ -121,7 +126,7 @@ class MiddlewareDispatcher
         }
         $builder = Router::createRouteBuilder('/');
 
-        if ($this->app instanceof HttpApplicationInterface) {
+        if ($this->app instanceof RoutingApplicationInterface) {
             $this->app->routes($builder);
         }
         if ($this->app instanceof PluginApplicationInterface) {
@@ -138,9 +143,9 @@ class MiddlewareDispatcher
      * Create a PSR7 request from the request spec.
      *
      * @param array $spec The request spec.
-     * @return \Psr\Http\Message\ServerRequestInterface
+     * @return \Cake\Http\ServerRequest
      */
-    protected function _createRequest($spec)
+    protected function _createRequest(array $spec): ServerRequest
     {
         if (isset($spec['input'])) {
             $spec['post'] = [];
@@ -176,11 +181,13 @@ class MiddlewareDispatcher
      *
      * @param array $requestSpec The request spec to execute.
      * @return \Psr\Http\Message\ResponseInterface The generated response.
+     * @throws \LogicException
      */
-    public function execute($requestSpec)
+    public function execute(array $requestSpec): ResponseInterface
     {
         try {
             $reflect = new ReflectionClass($this->_class);
+            /** @var \Cake\Core\HttpApplicationInterface $app */
             $app = $reflect->newInstanceArgs($this->_constructorArgs);
         } catch (ReflectionException $e) {
             throw new LogicException(sprintf(

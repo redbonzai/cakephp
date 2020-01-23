@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,29 +16,39 @@
  */
 namespace Cake\Test\TestCase\ORM;
 
-use Cake\Core\Plugin;
 use Cake\Database\Exception;
 use Cake\Datasource\ConnectionManager;
 use Cake\ORM\Entity;
 use Cake\ORM\ResultSet;
 use Cake\ORM\Table;
 use Cake\TestSuite\TestCase;
-use TestApp\Model\Entity\Article;
 
 /**
  * ResultSet test case.
  */
 class ResultSetTest extends TestCase
 {
+    /**
+     * @var array
+     */
+    protected $fixtures = ['core.Articles', 'core.Authors', 'core.Comments'];
 
-    public $fixtures = ['core.Articles', 'core.Authors', 'core.Comments'];
+    /**
+     * @var \Cake\ORM\Table
+     */
+    protected $table;
+
+    /**
+     * @var array
+     */
+    protected $fixtureData;
 
     /**
      * setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->connection = ConnectionManager::get('test');
@@ -48,7 +60,7 @@ class ResultSetTest extends TestCase
         $this->fixtureData = [
             ['id' => 1, 'author_id' => 1, 'title' => 'First Article', 'body' => 'First Article Body', 'published' => 'Y'],
             ['id' => 2, 'author_id' => 3, 'title' => 'Second Article', 'body' => 'Second Article Body', 'published' => 'Y'],
-            ['id' => 3, 'author_id' => 1, 'title' => 'Third Article', 'body' => 'Third Article Body', 'published' => 'Y']
+            ['id' => 3, 'author_id' => 1, 'title' => 'Third Article', 'body' => 'Third Article Body', 'published' => 'Y'],
         ];
     }
 
@@ -140,7 +152,7 @@ class ResultSetTest extends TestCase
         // Use a loop to test Iterator implementation
         foreach ($results as $i => $row) {
             $expected = new Entity($this->fixtureData[$i]);
-            $expected->isNew(false);
+            $expected->setNew(false);
             $expected->setSource($this->table->getAlias());
             $expected->clean();
             $this->assertEquals($expected, $row, "Row $i does not match");
@@ -235,16 +247,16 @@ class ResultSetTest extends TestCase
         $options = [
             'markNew' => false,
             'markClean' => true,
-            'source' => $this->table->getAlias()
+            'source' => $this->table->getAlias(),
         ];
         $expected = [
             1 => [
                 new Entity($this->fixtureData[0], $options),
-                new Entity($this->fixtureData[2], $options)
+                new Entity($this->fixtureData[2], $options),
             ],
             3 => [
                 new Entity($this->fixtureData[1], $options),
-            ]
+            ],
         ];
         $this->assertEquals($expected, $results);
     }
@@ -259,7 +271,7 @@ class ResultSetTest extends TestCase
         $query = $this->table->find('all');
         $results = $query->all();
         $expected = [
-            'items' => $results->toArray()
+            'items' => $results->toArray(),
         ];
         $this->assertSame($expected, $results->__debugInfo());
     }
@@ -309,7 +321,7 @@ class ResultSetTest extends TestCase
 
         $article = $articles->newEntity([
             'author_id' => $author->id,
-            'title' => 'article with author with null name'
+            'title' => 'article with author with null name',
         ]);
         $articles->save($article);
 
@@ -317,7 +329,7 @@ class ResultSetTest extends TestCase
             ->select(['Articles.id', 'Articles.title', 'Authors.name'])
             ->contain(['Authors'])
             ->where(['Articles.id' => $article->id])
-            ->enableAutoFields(false)
+            ->disableAutoFields()
             ->enableHydration(false)
             ->first();
 
@@ -361,7 +373,7 @@ class ResultSetTest extends TestCase
     {
         $comments = $this->getTableLocator()->get('Comments');
         $query = $comments->find()->select(['Other__field' => 'test']);
-        $query->enableAutoFields(false);
+        $query->disableAutoFields();
 
         $row = ['Other__field' => 'test'];
         $statement = $this->getMockBuilder('Cake\Database\StatementInterface')->getMock();
@@ -387,17 +399,17 @@ class ResultSetTest extends TestCase
         $comments = $this->getTableLocator()->get('TestPlugin.Comments');
         $comments->belongsTo('Authors', [
             'className' => 'TestPlugin.Authors',
-            'foreignKey' => 'user_id'
+            'foreignKey' => 'user_id',
         ]);
         $result = $comments->find()->contain(['Authors'])->first();
-        $this->assertEquals('TestPlugin.Comments', $result->getSource());
-        $this->assertEquals('TestPlugin.Authors', $result->author->getSource());
+        $this->assertSame('TestPlugin.Comments', $result->getSource());
+        $this->assertSame('TestPlugin.Authors', $result->author->getSource());
 
         $result = $comments->find()->matching('Authors', function ($q) {
             return $q->where(['Authors.id' => 1]);
         })->first();
-        $this->assertEquals('TestPlugin.Comments', $result->getSource());
-        $this->assertEquals('TestPlugin.Authors', $result->_matchingData['Authors']->getSource());
+        $this->assertSame('TestPlugin.Comments', $result->getSource());
+        $this->assertSame('TestPlugin.Authors', $result->_matchingData['Authors']->getSource());
         $this->clearPlugins();
     }
 
@@ -447,7 +459,7 @@ class ResultSetTest extends TestCase
     {
         $query = $this->table->find();
         $query->select([
-            'counter' => 'COUNT(*)'
+            'counter' => 'COUNT(*)',
         ])->group('author_id');
 
         $min = $query->min('counter');

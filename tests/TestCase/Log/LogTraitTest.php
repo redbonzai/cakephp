@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -21,8 +23,7 @@ use Cake\TestSuite\TestCase;
  */
 class LogTraitTest extends TestCase
 {
-
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         Log::drop('trait_test');
@@ -42,12 +43,12 @@ class LogTraitTest extends TestCase
 
         $mock->expects($this->at(1))
             ->method('log')
-            ->with('debug', [1, 2]);
+            ->with('debug', 'message');
 
         Log::setConfig('trait_test', ['engine' => $mock]);
         $subject = $this->getObjectForTrait('Cake\Log\LogTrait');
 
         $subject->log('Testing');
-        $subject->log([1, 2], 'debug');
+        $subject->log('message', 'debug');
     }
 }

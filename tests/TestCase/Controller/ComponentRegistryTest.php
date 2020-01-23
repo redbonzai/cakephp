@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,31 +16,31 @@
  */
 namespace Cake\Test\TestCase\Controller;
 
-use Cake\Controller\ComponentRegistry;
 use Cake\Controller\Component\AuthComponent;
-use Cake\Controller\Component\CookieComponent;
+use Cake\Controller\Component\FlashComponent;
+use Cake\Controller\ComponentRegistry;
 use Cake\Controller\Controller;
-use Cake\Core\Plugin;
 use Cake\Http\Response;
 use Cake\Http\ServerRequest;
 use Cake\TestSuite\TestCase;
-
-/**
- * Extended CookieComponent
- */
-class CookieAliasComponent extends CookieComponent
-{
-}
+use Countable;
+use TestApp\Controller\Component\FlashAliasComponent;
+use TestPlugin\Controller\Component\OtherComponent;
+use Traversable;
 
 class ComponentRegistryTest extends TestCase
 {
+    /**
+     * @var \Cake\Controller\ComponentRegistry
+     */
+    protected $Components;
 
     /**
      * setUp
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $controller = new Controller(new ServerRequest(), new Response());
@@ -50,7 +52,7 @@ class ComponentRegistryTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         unset($this->Components);
@@ -62,17 +64,17 @@ class ComponentRegistryTest extends TestCase
      *
      * @return void
      */
-    public function testLoad()
+    public function testLoad(): void
     {
-        $result = $this->Components->load('Cookie');
-        $this->assertInstanceOf('Cake\Controller\Component\CookieComponent', $result);
-        $this->assertInstanceOf('Cake\Controller\Component\CookieComponent', $this->Components->Cookie);
+        $result = $this->Components->load('Flash');
+        $this->assertInstanceOf(FlashComponent::class, $result);
+        $this->assertInstanceOf(FlashComponent::class, $this->Components->Flash);
 
         $result = $this->Components->loaded();
-        $this->assertEquals(['Cookie'], $result, 'loaded() results are wrong.');
+        $this->assertEquals(['Flash'], $result, 'loaded() results are wrong.');
 
-        $result = $this->Components->load('Cookie');
-        $this->assertSame($result, $this->Components->Cookie);
+        $result = $this->Components->load('Flash');
+        $this->assertSame($result, $this->Components->Flash);
     }
 
     /**
@@ -80,26 +82,26 @@ class ComponentRegistryTest extends TestCase
      *
      * @return void
      */
-    public function testLoadWithAlias()
+    public function testLoadWithAlias(): void
     {
-        $result = $this->Components->load('Cookie', ['className' => __NAMESPACE__ . '\CookieAliasComponent', 'somesetting' => true]);
-        $this->assertInstanceOf(__NAMESPACE__ . '\CookieAliasComponent', $result);
-        $this->assertInstanceOf(__NAMESPACE__ . '\CookieAliasComponent', $this->Components->Cookie);
-        $this->assertTrue($this->Components->Cookie->getConfig('somesetting'));
+        $result = $this->Components->load('Flash', ['className' => FlashAliasComponent::class, 'somesetting' => true]);
+        $this->assertInstanceOf(FlashAliasComponent::class, $result);
+        $this->assertInstanceOf(FlashAliasComponent::class, $this->Components->Flash);
+        $this->assertTrue($this->Components->Flash->getConfig('somesetting'));
 
         $result = $this->Components->loaded();
-        $this->assertEquals(['Cookie'], $result, 'loaded() results are wrong.');
+        $this->assertEquals(['Flash'], $result, 'loaded() results are wrong.');
 
-        $result = $this->Components->load('Cookie');
-        $this->assertInstanceOf(__NAMESPACE__ . '\CookieAliasComponent', $result);
+        $result = $this->Components->load('Flash');
+        $this->assertInstanceOf(FlashAliasComponent::class, $result);
 
         $this->loadPlugins(['TestPlugin']);
         $result = $this->Components->load('SomeOther', ['className' => 'TestPlugin.Other']);
-        $this->assertInstanceOf('TestPlugin\Controller\Component\OtherComponent', $result);
-        $this->assertInstanceOf('TestPlugin\Controller\Component\OtherComponent', $this->Components->SomeOther);
+        $this->assertInstanceOf(OtherComponent::class, $result);
+        $this->assertInstanceOf(OtherComponent::class, $this->Components->SomeOther);
 
         $result = $this->Components->loaded();
-        $this->assertEquals(['Cookie', 'SomeOther'], $result, 'loaded() results are wrong.');
+        $this->assertEquals(['Flash', 'SomeOther'], $result, 'loaded() results are wrong.');
     }
 
     /**
@@ -107,17 +109,17 @@ class ComponentRegistryTest extends TestCase
      *
      * @return void
      */
-    public function testLoadWithEnableFalse()
+    public function testLoadWithEnableFalse(): void
     {
         $mock = $this->getMockBuilder('Cake\Event\EventManager')->getMock();
         $mock->expects($this->never())
-            ->method('attach');
+            ->method('on');
 
         $this->Components->getController()->setEventManager($mock);
 
-        $result = $this->Components->load('Cookie', ['enabled' => false]);
-        $this->assertInstanceOf('Cake\Controller\Component\CookieComponent', $result);
-        $this->assertInstanceOf('Cake\Controller\Component\CookieComponent', $this->Components->Cookie);
+        $result = $this->Components->load('Flash', ['enabled' => false]);
+        $this->assertInstanceOf(FlashComponent::class, $result);
+        $this->assertInstanceOf(FlashComponent::class, $this->Components->Flash);
     }
 
     /**
@@ -125,7 +127,7 @@ class ComponentRegistryTest extends TestCase
      *
      * @return void
      */
-    public function testLoadMissingComponent()
+    public function testLoadMissingComponent(): void
     {
         $this->expectException(\Cake\Controller\Exception\MissingComponentException::class);
         $this->Components->load('ThisComponentShouldAlwaysBeMissing');
@@ -136,12 +138,12 @@ class ComponentRegistryTest extends TestCase
      *
      * @return void
      */
-    public function testLoadPluginComponent()
+    public function testLoadPluginComponent(): void
     {
         $this->loadPlugins(['TestPlugin']);
         $result = $this->Components->load('TestPlugin.Other');
-        $this->assertInstanceOf('TestPlugin\Controller\Component\OtherComponent', $result, 'Component class is wrong.');
-        $this->assertInstanceOf('TestPlugin\Controller\Component\OtherComponent', $this->Components->Other, 'Class is wrong');
+        $this->assertInstanceOf(OtherComponent::class, $result, 'Component class is wrong.');
+        $this->assertInstanceOf(OtherComponent::class, $this->Components->Other, 'Class is wrong');
     }
 
     /**
@@ -149,12 +151,12 @@ class ComponentRegistryTest extends TestCase
      *
      * @return void
      */
-    public function testLoadWithAliasAndPlugin()
+    public function testLoadWithAliasAndPlugin(): void
     {
         $this->loadPlugins(['TestPlugin']);
         $result = $this->Components->load('AliasedOther', ['className' => 'TestPlugin.Other']);
-        $this->assertInstanceOf('TestPlugin\Controller\Component\OtherComponent', $result);
-        $this->assertInstanceOf('TestPlugin\Controller\Component\OtherComponent', $this->Components->AliasedOther);
+        $this->assertInstanceOf(OtherComponent::class, $result);
+        $this->assertInstanceOf(OtherComponent::class, $this->Components->AliasedOther);
 
         $result = $this->Components->loaded();
         $this->assertEquals(['AliasedOther'], $result, 'loaded() results are wrong.');
@@ -165,7 +167,7 @@ class ComponentRegistryTest extends TestCase
      *
      * @return void
      */
-    public function testGetController()
+    public function testGetController(): void
     {
         $result = $this->Components->getController();
         $this->assertInstanceOf('Cake\Controller\Controller', $result);
@@ -176,7 +178,7 @@ class ComponentRegistryTest extends TestCase
      *
      * @return void
      */
-    public function testReset()
+    public function testReset(): void
     {
         $eventManager = $this->Components->getController()->getEventManager();
         $instance = $this->Components->load('Auth');
@@ -198,7 +200,7 @@ class ComponentRegistryTest extends TestCase
      *
      * @return void
      */
-    public function testUnload()
+    public function testUnload(): void
     {
         $eventManager = $this->Components->getController()->getEventManager();
 
@@ -215,7 +217,7 @@ class ComponentRegistryTest extends TestCase
      *
      * @return void
      */
-    public function testUnset()
+    public function testUnset(): void
     {
         $eventManager = $this->Components->getController()->getEventManager();
 
@@ -231,7 +233,7 @@ class ComponentRegistryTest extends TestCase
      *
      * @return void
      */
-    public function testUnloadUnknown()
+    public function testUnloadUnknown(): void
     {
         $this->expectException(\Cake\Controller\Exception\MissingComponentException::class);
         $this->expectExceptionMessage('Component class FooComponent could not be found.');
@@ -243,7 +245,7 @@ class ComponentRegistryTest extends TestCase
      *
      * @return void
      */
-    public function testSet()
+    public function testSet(): void
     {
         $eventManager = $this->Components->getController()->getEventManager();
         $this->assertCount(0, $eventManager->listeners('Controller.startup'));
@@ -261,7 +263,7 @@ class ComponentRegistryTest extends TestCase
      *
      * @return void
      */
-    public function testMagicSet()
+    public function testMagicSet(): void
     {
         $eventManager = $this->Components->getController()->getEventManager();
         $this->assertCount(0, $eventManager->listeners('Controller.startup'));
@@ -278,10 +280,10 @@ class ComponentRegistryTest extends TestCase
      *
      * @return void
      */
-    public function testCountable()
+    public function testCountable(): void
     {
         $this->Components->load('Auth');
-        $this->assertInstanceOf('\Countable', $this->Components);
+        $this->assertInstanceOf(Countable::class, $this->Components);
         $count = count($this->Components);
         $this->assertEquals(1, $count);
     }
@@ -291,10 +293,10 @@ class ComponentRegistryTest extends TestCase
      *
      * @return void
      */
-    public function testTraversable()
+    public function testTraversable(): void
     {
         $this->Components->load('Auth');
-        $this->assertInstanceOf('\Traversable', $this->Components);
+        $this->assertInstanceOf(Traversable::class, $this->Components);
 
         $result = null;
         foreach ($this->Components as $component) {

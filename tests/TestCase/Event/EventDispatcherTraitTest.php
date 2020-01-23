@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -11,7 +13,6 @@
  * @since         3.0.0
  * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
-
 namespace Cake\Test\TestCase\Event;
 
 use Cake\Event\Event;
@@ -27,44 +28,18 @@ class EventDispatcherTraitTest extends TestCase
     /**
      * @var \Cake\Event\EventDispatcherTrait
      */
-    public $subject;
+    protected $subject;
 
     /**
      * setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
         $this->subject = $this->getObjectForTrait(EventDispatcherTrait::class);
-    }
-
-    /**
-     * testIsInitiallyEmpty
-     *
-     * @return void
-     */
-    public function testIsInitiallyEmpty()
-    {
-        $this->assertAttributeEmpty('_eventManager', $this->subject);
-    }
-
-    /**
-     * testEventManager
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testEventManager()
-    {
-        $this->deprecated(function () {
-            $eventManager = new EventManager();
-            $this->subject->eventManager($eventManager);
-
-            $this->assertSame($eventManager, $this->subject->eventManager());
-        });
     }
 
     /**
@@ -78,20 +53,6 @@ class EventDispatcherTraitTest extends TestCase
     }
 
     /**
-     * testSetEventManager
-     *
-     * @return void
-     */
-    public function testSetEventManager()
-    {
-        $eventManager = new EventManager();
-
-        $this->subject->setEventManager($eventManager);
-
-        $this->assertSame($eventManager, $this->subject->getEventManager());
-    }
-
-    /**
      * testDispatchEvent
      *
      * @return void
@@ -102,7 +63,7 @@ class EventDispatcherTraitTest extends TestCase
 
         $this->assertInstanceOf(Event::class, $event);
         $this->assertSame($this->subject, $event->getSubject());
-        $this->assertEquals('some.event', $event->getName());
+        $this->assertSame('some.event', $event->getName());
         $this->assertEquals(['foo' => 'bar'], $event->getData());
     }
 }

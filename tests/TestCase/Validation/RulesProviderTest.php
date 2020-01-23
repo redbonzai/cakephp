@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -16,13 +18,13 @@ namespace Cake\Test\TestCase\Validation;
 
 use Cake\TestSuite\TestCase;
 use Cake\Validation\RulesProvider;
+use TestApp\Validation\CustomProvider;
 
 /**
  * Tests RulesProvider class
  */
 class RulesProviderTest extends TestCase
 {
-
     /**
      * Tests that RulesProvider proxies the method correctly and removes the
      * extra arguments that are passed according to the signature of validation
@@ -32,7 +34,7 @@ class RulesProviderTest extends TestCase
      */
     public function testProxyToValidation()
     {
-        $provider = new RulesProvider;
+        $provider = new RulesProvider();
         $this->assertTrue($provider->extension('foo.jpg', compact('provider')));
         $this->assertFalse($provider->extension('foo.jpg', ['png'], compact('provider')));
     }
@@ -45,15 +47,9 @@ class RulesProviderTest extends TestCase
      */
     public function testCustomObject()
     {
-        $mock = $this->getMockBuilder('\Cake\Validation\Validator')
-            ->setMethods(['field'])
-            ->getMock();
-        $mock->expects($this->once())
-            ->method('field')
-            ->with('first', null)
-            ->will($this->returnValue(true));
+        $object = new CustomProvider();
 
-        $provider = new RulesProvider($mock);
-        $provider->field('first', compact('provider'));
+        $provider = new RulesProvider($object);
+        $this->assertFalse($provider->validate('string', 'context'));
     }
 }

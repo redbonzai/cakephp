@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,87 +17,30 @@ namespace Cake\Test\TestCase\Core;
 
 use Cake\Core\StaticConfigTrait;
 use Cake\TestSuite\TestCase;
-
-/**
- * TestCacheStaticConfig
- */
-class TestCacheStaticConfig
-{
-
-    use StaticConfigTrait;
-
-    /**
-     * Cache driver class map.
-     *
-     * @var array
-     */
-    protected static $_dsnClassMap = [
-        'apc' => 'Cake\Cache\Engine\ApcuEngine', // @deprecated in 3.6. Use apcu instead.
-        'apcu' => 'Cake\Cache\Engine\ApcuEngine',
-        'file' => 'Cake\Cache\Engine\FileEngine',
-        'memcached' => 'Cake\Cache\Engine\MemcachedEngine',
-        'null' => 'Cake\Cache\Engine\NullEngine',
-        'redis' => 'Cake\Cache\Engine\RedisEngine',
-        'wincache' => 'Cake\Cache\Engine\WincacheEngine',
-        'xcache' => 'Cake\Cache\Engine\XcacheEngine',
-    ];
-}
-
-/**
- * TestEmailStaticConfig
- */
-class TestEmailStaticConfig
-{
-
-    use StaticConfigTrait;
-
-    /**
-     * Email driver class map.
-     *
-     * @var array
-     */
-    protected static $_dsnClassMap = [
-        'debug' => 'Cake\Mailer\Transport\DebugTransport',
-        'mail' => 'Cake\Mailer\Transport\MailTransport',
-        'smtp' => 'Cake\Mailer\Transport\SmtpTransport',
-    ];
-}
-
-/**
- * TestLogStaticConfig
- */
-class TestLogStaticConfig
-{
-
-    use StaticConfigTrait;
-
-    /**
-     * Log engine class map.
-     *
-     * @var array
-     */
-    protected static $_dsnClassMap = [
-        'console' => 'Cake\Log\Engine\ConsoleLog',
-        'file' => 'Cake\Log\Engine\FileLog',
-        'syslog' => 'Cake\Log\Engine\SyslogLog',
-    ];
-}
+use InvalidArgumentException;
+use TestApp\Config\TestEmailStaticConfig;
+use TestApp\Config\TestLogStaticConfig;
+use TypeError;
 
 /**
  * StaticConfigTraitTest class
  */
 class StaticConfigTraitTest extends TestCase
 {
+    /**
+     * @var object
+     */
+    protected $subject;
 
     /**
      * setup method
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
-        $this->subject = $this->getObjectForTrait('Cake\Core\StaticConfigTrait');
+        $this->subject = $this->getObjectForTrait(StaticConfigTrait::class);
     }
 
     /**
@@ -103,7 +48,7 @@ class StaticConfigTraitTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         unset($this->subject);
         parent::tearDown();
@@ -127,9 +72,34 @@ class StaticConfigTraitTest extends TestCase
      */
     public function testParseBadType()
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(TypeError::class);
         $className = get_class($this->subject);
         $className::parseDsn(['url' => 'http://:80']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testGetConfigOrFail()
+    {
+        $className = get_class($this->subject);
+        $className::setConfig('foo', 'bar');
+
+        $result = $className::getConfigOrFail('foo');
+        $this->assertSame('bar', $result);
+    }
+
+    /**
+     * @return void
+     */
+    public function testGetConfigOrFailException()
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Expected configuration `foo` not found.');
+
+        $className = get_class($this->subject);
+        $result = $className::getConfigOrFail('foo');
+        $this->assertSame('bar', $result);
     }
 
     /**
@@ -238,54 +208,5 @@ class StaticConfigTraitTest extends TestCase
             'scheme' => 'file',
         ];
         $this->assertEquals($expected, TestLogStaticConfig::parseDsn($dsn));
-    }
-
-    /**
-     * Test that the dsn map can be updated/append to
-     *
-     * @return void
-     */
-    public function testCanUpdateClassMap()
-    {
-        $this->deprecated(function () {
-            $expected = [
-                'console' => 'Cake\Log\Engine\ConsoleLog',
-                'file' => 'Cake\Log\Engine\FileLog',
-                'syslog' => 'Cake\Log\Engine\SyslogLog',
-            ];
-            $result = TestLogStaticConfig::getdsnClassMap();
-            $this->assertEquals($expected, $result, 'The class map should match the class property');
-
-            $expected = [
-                'console' => 'Special\EngineLog',
-                'file' => 'Cake\Log\Engine\FileLog',
-                'syslog' => 'Cake\Log\Engine\SyslogLog',
-            ];
-            $result = TestLogStaticConfig::dsnClassMap(['console' => 'Special\EngineLog']);
-            $this->assertEquals($expected, $result, 'Should be possible to change the map');
-
-            $expected = [
-                'console' => 'Special\EngineLog',
-                'file' => 'Cake\Log\Engine\FileLog',
-                'syslog' => 'Cake\Log\Engine\SyslogLog',
-                'my' => 'Special\OtherLog'
-            ];
-            $result = TestLogStaticConfig::dsnClassMap(['my' => 'Special\OtherLog']);
-            $this->assertEquals($expected, $result, 'Should be possible to add to the map');
-        });
-    }
-
-    /**
-     * Tests that former handling of integer keys coming in from PHP internal conversions
-     * won't break in 3.4.
-     *
-     * @return void
-     */
-    public function testConfigBC()
-    {
-        $this->deprecated(function () {
-            $result = TestLogStaticConfig::config(404);
-            $this->assertNull($result);
-        });
     }
 }

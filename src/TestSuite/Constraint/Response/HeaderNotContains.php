@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -20,14 +22,13 @@ namespace Cake\TestSuite\Constraint\Response;
  */
 class HeaderNotContains extends HeaderContains
 {
-
     /**
      * Checks assertion
      *
      * @param mixed $other Expected content
      * @return bool
      */
-    public function matches($other)
+    public function matches($other): bool
     {
         return parent::matches($other) === false;
     }
@@ -37,8 +38,12 @@ class HeaderNotContains extends HeaderContains
      *
      * @return string
      */
-    public function toString()
+    public function toString(): string
     {
-        return sprintf("is not in header '%s'", $this->headerName);
+        return sprintf(
+            "is not in header '%s' (`%s`)",
+            $this->headerName,
+            $this->response->getHeaderLine($this->headerName)
+        );
     }
 }

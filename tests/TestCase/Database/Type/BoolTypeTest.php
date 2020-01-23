@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,7 +16,7 @@
  */
 namespace Cake\Test\TestCase\Database\Type;
 
-use Cake\Database\Type;
+use Cake\Database\TypeFactory;
 use Cake\TestSuite\TestCase;
 use PDO;
 
@@ -26,22 +28,22 @@ class BoolTypeTest extends TestCase
     /**
      * @var \Cake\Database\Type\BoolType
      */
-    public $type;
+    protected $type;
 
     /**
      * @var \Cake\Database\Driver
      */
-    public $driver;
+    protected $driver;
 
     /**
      * Setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
-        $this->type = Type::build('boolean');
+        $this->type = TypeFactory::build('boolean');
         $this->driver = $this->getMockBuilder('Cake\Database\Driver')->getMock();
     }
 
@@ -151,12 +153,15 @@ class BoolTypeTest extends TestCase
         $this->assertTrue($this->type->marshal(1));
         $this->assertTrue($this->type->marshal('1'));
         $this->assertTrue($this->type->marshal('true'));
+        $this->assertTrue($this->type->marshal('on'));
 
+        $this->assertFalse($this->type->marshal(false));
         $this->assertFalse($this->type->marshal('false'));
         $this->assertFalse($this->type->marshal('0'));
         $this->assertFalse($this->type->marshal(0));
-        $this->assertFalse($this->type->marshal(''));
-        $this->assertTrue($this->type->marshal('not empty'));
+        $this->assertFalse($this->type->marshal('off'));
+        $this->assertNull($this->type->marshal(''));
+        $this->assertNull($this->type->marshal('not empty'));
         $this->assertNull($this->type->marshal(['2', '3']));
     }
 

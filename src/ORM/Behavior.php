@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -48,41 +50,41 @@ use ReflectionMethod;
  * CakePHP provides a number of lifecycle events your behaviors can
  * listen to:
  *
- * - `beforeFind(Event $event, Query $query, ArrayObject $options, boolean $primary)`
+ * - `beforeFind(EventInterface $event, Query $query, ArrayObject $options, boolean $primary)`
  *   Fired before each find operation. By stopping the event and supplying a
  *   return value you can bypass the find operation entirely. Any changes done
  *   to the $query instance will be retained for the rest of the find. The
  *   $primary parameter indicates whether or not this is the root query,
  *   or an associated query.
  *
- * - `buildValidator(Event $event, Validator $validator, string $name)`
+ * - `buildValidator(EventInterface $event, Validator $validator, string $name)`
  *   Fired when the validator object identified by $name is being built. You can use this
  *   callback to add validation rules or add validation providers.
  *
- * - `buildRules(Event $event, RulesChecker $rules)`
+ * - `buildRules(EventInterface $event, RulesChecker $rules)`
  *   Fired when the rules checking object for the table is being built. You can use this
  *   callback to add more rules to the set.
  *
- * - `beforeRules(Event $event, EntityInterface $entity, ArrayObject $options, $operation)`
+ * - `beforeRules(EventInterface $event, EntityInterface $entity, ArrayObject $options, $operation)`
  *   Fired before an entity is validated using by a rules checker. By stopping this event,
  *   you can return the final value of the rules checking operation.
  *
- * - `afterRules(Event $event, EntityInterface $entity, ArrayObject $options, bool $result, $operation)`
+ * - `afterRules(EventInterface $event, EntityInterface $entity, ArrayObject $options, bool $result, $operation)`
  *   Fired after the rules have been checked on the entity. By stopping this event,
  *   you can return the final value of the rules checking operation.
  *
- * - `beforeSave(Event $event, EntityInterface $entity, ArrayObject $options)`
+ * - `beforeSave(EventInterface $event, EntityInterface $entity, ArrayObject $options)`
  *   Fired before each entity is saved. Stopping this event will abort the save
  *   operation. When the event is stopped the result of the event will be returned.
  *
- * - `afterSave(Event $event, EntityInterface $entity, ArrayObject $options)`
+ * - `afterSave(EventInterface $event, EntityInterface $entity, ArrayObject $options)`
  *   Fired after an entity is saved.
  *
- * - `beforeDelete(Event $event, EntityInterface $entity, ArrayObject $options)`
+ * - `beforeDelete(EventInterface $event, EntityInterface $entity, ArrayObject $options)`
  *   Fired before an entity is deleted. By stopping this event you will abort
  *   the delete operation.
  *
- * - `afterDelete(Event $event, EntityInterface $entity, ArrayObject $options)`
+ * - `afterDelete(EventInterface $event, EntityInterface $entity, ArrayObject $options)`
  *   Fired after an entity has been deleted.
  *
  * In addition to the core events, behaviors can respond to any
@@ -112,7 +114,6 @@ use ReflectionMethod;
  */
 class Behavior implements EventListenerInterface
 {
-
     use InstanceConfigTrait;
 
     /**
@@ -175,7 +176,7 @@ class Behavior implements EventListenerInterface
      * @param array $config The configuration settings provided to this behavior.
      * @return void
      */
-    public function initialize(array $config)
+    public function initialize(array $config): void
     {
     }
 
@@ -184,7 +185,7 @@ class Behavior implements EventListenerInterface
      *
      * @return \Cake\ORM\Table The bound table instance.
      */
-    public function getTable()
+    public function getTable(): Table
     {
         return $this->_table;
     }
@@ -197,7 +198,7 @@ class Behavior implements EventListenerInterface
      * @param array $config The customized method mappings.
      * @return array A de-duped list of config data.
      */
-    protected function _resolveMethodAliases($key, $defaults, $config)
+    protected function _resolveMethodAliases(string $key, array $defaults, array $config): array
     {
         if (!isset($defaults[$key], $config[$key])) {
             return $config;
@@ -230,7 +231,7 @@ class Behavior implements EventListenerInterface
      * @return void
      * @throws \Cake\Core\Exception\Exception if config are invalid
      */
-    public function verifyConfig()
+    public function verifyConfig(): void
     {
         $keys = ['implementedFinders', 'implementedMethods'];
         foreach ($keys as $key) {
@@ -240,7 +241,11 @@ class Behavior implements EventListenerInterface
 
             foreach ($this->_config[$key] as $method) {
                 if (!is_callable([$this, $method])) {
-                    throw new Exception(sprintf('The method %s is not callable on class %s', $method, get_class($this)));
+                    throw new Exception(sprintf(
+                        'The method %s is not callable on class %s',
+                        $method,
+                        static::class
+                    ));
                 }
             }
         }
@@ -257,7 +262,7 @@ class Behavior implements EventListenerInterface
      *
      * @return array
      */
-    public function implementedEvents()
+    public function implementedEvents(): array
     {
         $eventMap = [
             'Model.beforeMarshal' => 'beforeMarshal',
@@ -274,7 +279,7 @@ class Behavior implements EventListenerInterface
             'Model.afterRules' => 'afterRules',
         ];
         $config = $this->getConfig();
-        $priority = isset($config['priority']) ? $config['priority'] : null;
+        $priority = $config['priority'] ?? null;
         $events = [];
 
         foreach ($eventMap as $event => $method) {
@@ -286,7 +291,7 @@ class Behavior implements EventListenerInterface
             } else {
                 $events[$event] = [
                     'callable' => $method,
-                    'priority' => $priority
+                    'priority' => $priority,
                 ];
             }
         }
@@ -306,8 +311,8 @@ class Behavior implements EventListenerInterface
      *  ]
      * ```
      *
-     * With the above example, a call to `$Table->find('this')` will call `$Behavior->findThis()`
-     * and a call to `$Table->find('alias')` will call `$Behavior->findMethodName()`
+     * With the above example, a call to `$table->find('this')` will call `$behavior->findThis()`
+     * and a call to `$table->find('alias')` will call `$behavior->findMethodName()`
      *
      * It is recommended, though not required, to define implementedFinders in the config property
      * of child classes such that it is not necessary to use reflections to derive the available
@@ -316,7 +321,7 @@ class Behavior implements EventListenerInterface
      * @return array
      * @throws \ReflectionException
      */
-    public function implementedFinders()
+    public function implementedFinders(): array
     {
         $methods = $this->getConfig('implementedFinders');
         if (isset($methods)) {
@@ -334,12 +339,12 @@ class Behavior implements EventListenerInterface
      * ```
      *  [
      *    'method' => 'method',
-     *    'aliasedmethod' => 'somethingElse'
+     *    'aliasedMethod' => 'somethingElse'
      *  ]
      * ```
      *
-     * With the above example, a call to `$Table->method()` will call `$Behavior->method()`
-     * and a call to `$Table->aliasedmethod()` will call `$Behavior->somethingElse()`
+     * With the above example, a call to `$table->method()` will call `$behavior->method()`
+     * and a call to `$table->aliasedMethod()` will call `$behavior->somethingElse()`
      *
      * It is recommended, though not required, to define implementedFinders in the config property
      * of child classes such that it is not necessary to use reflections to derive the available
@@ -348,7 +353,7 @@ class Behavior implements EventListenerInterface
      * @return array
      * @throws \ReflectionException
      */
-    public function implementedMethods()
+    public function implementedMethods(): array
     {
         $methods = $this->getConfig('implementedMethods');
         if (isset($methods)) {
@@ -368,25 +373,25 @@ class Behavior implements EventListenerInterface
      * @return array
      * @throws \ReflectionException
      */
-    protected function _reflectionCache()
+    protected function _reflectionCache(): array
     {
-        $class = get_class($this);
+        $class = static::class;
         if (isset(self::$_reflectionCache[$class])) {
             return self::$_reflectionCache[$class];
         }
 
         $events = $this->implementedEvents();
         $eventMethods = [];
-        foreach ($events as $e => $binding) {
+        foreach ($events as $binding) {
             if (is_array($binding) && isset($binding['callable'])) {
-                /* @var string $callable */
+                /** @var string $callable */
                 $callable = $binding['callable'];
                 $binding = $callable;
             }
             $eventMethods[$binding] = true;
         }
 
-        $baseClass = 'Cake\ORM\Behavior';
+        $baseClass = self::class;
         if (isset(self::$_reflectionCache[$baseClass])) {
             $baseMethods = self::$_reflectionCache[$baseClass];
         } else {
@@ -396,14 +401,15 @@ class Behavior implements EventListenerInterface
 
         $return = [
             'finders' => [],
-            'methods' => []
+            'methods' => [],
         ];
 
         $reflection = new ReflectionClass($class);
 
         foreach ($reflection->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
             $methodName = $method->getName();
-            if (in_array($methodName, $baseMethods) ||
+            if (
+                in_array($methodName, $baseMethods, true) ||
                 isset($eventMethods[$methodName])
             ) {
                 continue;

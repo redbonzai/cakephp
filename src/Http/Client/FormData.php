@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -25,7 +27,6 @@ use finfo;
  */
 class FormData implements Countable
 {
-
     /**
      * Boundary marker.
      *
@@ -59,12 +60,12 @@ class FormData implements Countable
      *
      * @return string
      */
-    public function boundary()
+    public function boundary(): string
     {
         if ($this->_boundary) {
             return $this->_boundary;
         }
-        $this->_boundary = md5(uniqid(time()));
+        $this->_boundary = md5(uniqid((string)time()));
 
         return $this->_boundary;
     }
@@ -76,7 +77,7 @@ class FormData implements Countable
      * @param string $value The value to add.
      * @return \Cake\Http\Client\FormDataPart
      */
-    public function newPart($name, $value)
+    public function newPart(string $name, string $value): FormDataPart
     {
         return new FormDataPart($name, $value);
     }
@@ -90,22 +91,24 @@ class FormData implements Countable
      * If the $value is an array, multiple parts will be added.
      * Files will be read from their current position and saved in memory.
      *
-     * @param string|\Cake\Http\Client\FormData $name The name of the part to add,
+     * @param string|\Cake\Http\Client\FormDataPart $name The name of the part to add,
      *   or the part data object.
      * @param mixed $value The value for the part.
      * @return $this
      */
     public function add($name, $value = null)
     {
-        if (is_array($value)) {
-            $this->addRecursive($name, $value);
-        } elseif (is_resource($value)) {
-            $this->addFile($name, $value);
-        } elseif ($name instanceof FormDataPart && $value === null) {
+        if (is_string($name)) {
+            if (is_array($value)) {
+                $this->addRecursive($name, $value);
+            } elseif (is_resource($value)) {
+                $this->addFile($name, $value);
+            } else {
+                $this->_parts[] = $this->newPart($name, (string)$value);
+            }
+        } else {
             $this->_hasComplexPart = true;
             $this->_parts[] = $name;
-        } else {
-            $this->_parts[] = $this->newPart($name, $value);
         }
 
         return $this;
@@ -136,7 +139,7 @@ class FormData implements Countable
      * @param mixed $value Either a string filename, or a filehandle.
      * @return \Cake\Http\Client\FormDataPart
      */
-    public function addFile($name, $value)
+    public function addFile(string $name, $value): FormDataPart
     {
         $this->_hasFile = true;
 
@@ -174,7 +177,7 @@ class FormData implements Countable
      * @param mixed $value The value to add.
      * @return void
      */
-    public function addRecursive($name, $value)
+    public function addRecursive(string $name, $value): void
     {
         foreach ($value as $key => $value) {
             $key = $name . '[' . $key . ']';
@@ -187,7 +190,7 @@ class FormData implements Countable
      *
      * @return int
      */
-    public function count()
+    public function count(): int
     {
         return count($this->_parts);
     }
@@ -198,7 +201,7 @@ class FormData implements Countable
      *
      * @return bool Whether or not there is a file in this payload.
      */
-    public function hasFile()
+    public function hasFile(): bool
     {
         return $this->_hasFile;
     }
@@ -212,7 +215,7 @@ class FormData implements Countable
      *
      * @return bool Whether or not the payload is multipart.
      */
-    public function isMultipart()
+    public function isMultipart(): bool
     {
         return $this->hasFile() || $this->_hasComplexPart;
     }
@@ -225,13 +228,13 @@ class FormData implements Countable
      *
      * @return string
      */
-    public function contentType()
+    public function contentType(): string
     {
         if (!$this->isMultipart()) {
             return 'application/x-www-form-urlencoded';
         }
 
-        return 'multipart/form-data; boundary="' . $this->boundary() . '"';
+        return 'multipart/form-data; boundary=' . $this->boundary();
     }
 
     /**
@@ -240,7 +243,7 @@ class FormData implements Countable
      *
      * @return string
      */
-    public function __toString()
+    public function __toString(): string
     {
         if ($this->isMultipart()) {
             $boundary = $this->boundary();
@@ -250,7 +253,7 @@ class FormData implements Countable
                 $out .= (string)$part;
                 $out .= "\r\n";
             }
-            $out .= "--$boundary--\r\n\r\n";
+            $out .= "--$boundary--\r\n";
 
             return $out;
         }
@@ -262,6 +265,3 @@ class FormData implements Countable
         return http_build_query($data);
     }
 }
-
-// @deprecated 3.4.0 Add backwards compat alias.
-class_alias('Cake\Http\Client\FormData', 'Cake\Network\Http\FormData');

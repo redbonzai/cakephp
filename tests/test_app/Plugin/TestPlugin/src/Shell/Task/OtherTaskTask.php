@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * Testing task in a plugin
  *
@@ -24,5 +26,4 @@ use Cake\Console\Shell;
 
 class OtherTaskTask extends Shell
 {
-
 }

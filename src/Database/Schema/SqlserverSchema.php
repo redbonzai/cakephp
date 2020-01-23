@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -19,13 +21,12 @@ namespace Cake\Database\Schema;
  */
 class SqlserverSchema extends BaseSchema
 {
-
-    const DEFAULT_SCHEMA_NAME = 'dbo';
+    public const DEFAULT_SCHEMA_NAME = 'dbo';
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function listTablesSql($config)
+    public function listTablesSql(array $config): array
     {
         $sql = "SELECT TABLE_NAME
             FROM INFORMATION_SCHEMA.TABLES
@@ -38,9 +39,9 @@ class SqlserverSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function describeColumnSql($tableName, $config)
+    public function describeColumnSql(string $tableName, array $config): array
     {
         $sql = 'SELECT DISTINCT
             AC.column_id AS [column_id],
@@ -69,7 +70,7 @@ class SqlserverSchema extends BaseSchema
      * Convert a column definition to the abstract types.
      *
      * The returned type will be a type that
-     * Cake\Database\Type can handle.
+     * Cake\Database\TypeFactory  can handle.
      *
      * @param string $col The column type
      * @param int|null $length the column length
@@ -78,18 +79,33 @@ class SqlserverSchema extends BaseSchema
      * @return array Array of column information.
      * @link https://technet.microsoft.com/en-us/library/ms187752.aspx
      */
-    protected function _convertColumn($col, $length = null, $precision = null, $scale = null)
-    {
+    protected function _convertColumn(
+        string $col,
+        ?int $length = null,
+        ?int $precision = null,
+        ?int $scale = null
+    ): array {
         $col = strtolower($col);
-        $length = (int)$length;
-        $precision = (int)$precision;
-        $scale = (int)$scale;
 
         if (in_array($col, ['date', 'time'])) {
             return ['type' => $col, 'length' => null];
         }
+
+        if ($col === 'datetime') {
+            // datetime cannot parse more than 3 digits of precision and isn't accurate
+            return ['type' => TableSchema::TYPE_DATETIME, 'length' => null];
+        }
         if (strpos($col, 'datetime') !== false) {
-            return ['type' => TableSchema::TYPE_TIMESTAMP, 'length' => null];
+            $typeName = TableSchema::TYPE_DATETIME;
+            if ($scale > 0) {
+                $typeName = TableSchema::TYPE_DATETIME_FRACTIONAL;
+            }
+
+            return ['type' => $typeName, 'length' => null, 'precision' => $scale];
+        }
+
+        if ($col === 'char') {
+            return ['type' => TableSchema::TYPE_CHAR, 'length' => $length];
         }
 
         if ($col === 'tinyint') {
@@ -107,7 +123,8 @@ class SqlserverSchema extends BaseSchema
         if ($col === 'bit') {
             return ['type' => TableSchema::TYPE_BOOLEAN, 'length' => null];
         }
-        if (strpos($col, 'numeric') !== false ||
+        if (
+            strpos($col, 'numeric') !== false ||
             strpos($col, 'money') !== false ||
             strpos($col, 'decimal') !== false
         ) {
@@ -131,7 +148,7 @@ class SqlserverSchema extends BaseSchema
         }
 
         if (strpos($col, 'char') !== false) {
-            return ['type' => TableSchema::TYPE_STRING, 'fixed' => true, 'length' => $length];
+            return ['type' => TableSchema::TYPE_CHAR, 'length' => $length];
         }
 
         if (strpos($col, 'text') !== false) {
@@ -139,6 +156,11 @@ class SqlserverSchema extends BaseSchema
         }
 
         if ($col === 'image' || strpos($col, 'binary') !== false) {
+            // -1 is the value for MAX which we treat as a 'long' binary
+            if ($length == -1) {
+                $length = TableSchema::LENGTH_LONG;
+            }
+
             return ['type' => TableSchema::TYPE_BINARY, 'length' => $length];
         }
 
@@ -150,29 +172,24 @@ class SqlserverSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function convertColumnDescription(TableSchema $schema, $row)
+    public function convertColumnDescription(TableSchema $schema, array $row): void
     {
         $field = $this->_convertColumn(
             $row['type'],
-            $row['char_length'],
-            $row['precision'],
-            $row['scale']
+            $row['char_length'] !== null ? (int)$row['char_length'] : null,
+            $row['precision'] !== null ? (int)$row['precision'] : null,
+            $row['scale'] !== null ? (int)$row['scale'] : null
         );
-        if (!empty($row['default'])) {
-            $row['default'] = trim($row['default'], '()');
-        }
+
         if (!empty($row['autoincrement'])) {
             $field['autoIncrement'] = true;
-        }
-        if ($field['type'] === TableSchema::TYPE_BOOLEAN) {
-            $row['default'] = (int)$row['default'];
         }
 
         $field += [
             'null' => $row['null'] === '1',
-            'default' => $this->_defaultValue($row['default']),
+            'default' => $this->_defaultValue($field['type'], $row['default']),
             'collate' => $row['collation_name'],
         ];
         $schema->addColumn($row['name'], $field);
@@ -181,20 +198,35 @@ class SqlserverSchema extends BaseSchema
     /**
      * Manipulate the default value.
      *
-     * Sqlite includes quotes and bared NULLs in default values.
-     * We need to remove those.
+     * Removes () wrapping default values, extracts strings from
+     * N'' wrappers and collation text and converts NULL strings.
      *
+     * @param string $type The schema type
      * @param string|null $default The default value.
-     * @return string|null
+     * @return string|int|null
      */
-    protected function _defaultValue($default)
+    protected function _defaultValue($type, $default)
     {
+        if ($default === null) {
+            return $default;
+        }
+
+        // remove () surrounding value (NULL) but leave () at the end of functions
+        // integers might have two ((0)) wrapping value
+        if (preg_match('/^\(+(.*?(\(\))?)\)+$/', $default, $matches)) {
+            $default = $matches[1];
+        }
+
         if ($default === 'NULL') {
             return null;
         }
 
+        if ($type === TableSchema::TYPE_BOOLEAN) {
+            return (int)$default;
+        }
+
         // Remove quotes
-        if (preg_match("/^N?'(.*)'/", $default, $matches)) {
+        if (preg_match("/^\(?N?'(.*)'\)?/", $default, $matches)) {
             return str_replace("''", "'", $matches[1]);
         }
 
@@ -202,9 +234,9 @@ class SqlserverSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function describeIndexSql($tableName, $config)
+    public function describeIndexSql(string $tableName, array $config): array
     {
         $sql = "SELECT
                 I.[name] AS [index_name],
@@ -226,9 +258,9 @@ class SqlserverSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function convertIndexDescription(TableSchema $schema, $row)
+    public function convertIndexDescription(TableSchema $schema, array $row): void
     {
         $type = TableSchema::INDEX_INDEX;
         $name = $row['index_name'];
@@ -253,22 +285,23 @@ class SqlserverSchema extends BaseSchema
         if ($type === TableSchema::CONSTRAINT_PRIMARY || $type === TableSchema::CONSTRAINT_UNIQUE) {
             $schema->addConstraint($name, [
                 'type' => $type,
-                'columns' => $columns
+                'columns' => $columns,
             ]);
 
             return;
         }
         $schema->addIndex($name, [
             'type' => $type,
-            'columns' => $columns
+            'columns' => $columns,
         ]);
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function describeForeignKeySql($tableName, $config)
+    public function describeForeignKeySql(string $tableName, array $config): array
     {
+        // phpcs:disable Generic.Files.LineLength
         $sql = 'SELECT FK.[name] AS [foreign_key_name], FK.[delete_referential_action_desc] AS [delete_type],
                 FK.[update_referential_action_desc] AS [update_type], C.name AS [column], RT.name AS [reference_table],
                 RC.name AS [reference_column]
@@ -280,6 +313,7 @@ class SqlserverSchema extends BaseSchema
             INNER JOIN sys.columns C ON C.column_id = FKC.parent_column_id AND C.object_id = FKC.parent_object_id
             INNER JOIN sys.columns RC ON RC.column_id = FKC.referenced_column_id AND RC.object_id = FKC.referenced_object_id
             WHERE FK.is_ms_shipped = 0 AND T.name = ? AND S.name = ?';
+        // phpcs:enable Generic.Files.LineLength
 
         $schema = empty($config['schema']) ? static::DEFAULT_SCHEMA_NAME : $config['schema'];
 
@@ -287,9 +321,9 @@ class SqlserverSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function convertForeignKeyDescription(TableSchema $schema, $row)
+    public function convertForeignKeyDescription(TableSchema $schema, array $row): void
     {
         $data = [
             'type' => TableSchema::CONSTRAINT_FOREIGN,
@@ -303,19 +337,19 @@ class SqlserverSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    protected function _foreignOnClause($on)
+    protected function _foreignOnClause(string $on): string
     {
         $parent = parent::_foreignOnClause($on);
 
-        return $parent === 'RESTRICT' ? parent::_foreignOnClause(TableSchema::ACTION_SET_NULL) : $parent;
+        return $parent === 'RESTRICT' ? parent::_foreignOnClause(TableSchema::ACTION_NO_ACTION) : $parent;
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    protected function _convertOnClause($clause)
+    protected function _convertOnClause(string $clause): string
     {
         switch ($clause) {
             case 'NO_ACTION':
@@ -332,10 +366,11 @@ class SqlserverSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function columnSql(TableSchema $schema, $name)
+    public function columnSql(TableSchema $schema, string $name): string
     {
+        /** @var array $data */
         $data = $schema->getColumn($name);
         $out = $this->_driver->quoteIdentifier($name);
         $typeMap = [
@@ -345,12 +380,16 @@ class SqlserverSchema extends BaseSchema
             TableSchema::TYPE_BIGINTEGER => ' BIGINT',
             TableSchema::TYPE_BINARY_UUID => ' UNIQUEIDENTIFIER',
             TableSchema::TYPE_BOOLEAN => ' BIT',
+            TableSchema::TYPE_CHAR => ' NCHAR',
             TableSchema::TYPE_FLOAT => ' FLOAT',
             TableSchema::TYPE_DECIMAL => ' DECIMAL',
             TableSchema::TYPE_DATE => ' DATE',
             TableSchema::TYPE_TIME => ' TIME',
-            TableSchema::TYPE_DATETIME => ' DATETIME',
-            TableSchema::TYPE_TIMESTAMP => ' DATETIME',
+            TableSchema::TYPE_DATETIME => ' DATETIME2',
+            TableSchema::TYPE_DATETIME_FRACTIONAL => ' DATETIME2',
+            TableSchema::TYPE_TIMESTAMP => ' DATETIME2',
+            TableSchema::TYPE_TIMESTAMP_FRACTIONAL => ' DATETIME2',
+            TableSchema::TYPE_TIMESTAMP_TIMEZONE => ' DATETIME2',
             TableSchema::TYPE_UUID => ' UNIQUEIDENTIFIER',
             TableSchema::TYPE_JSON => ' NVARCHAR(MAX)',
         ];
@@ -360,7 +399,7 @@ class SqlserverSchema extends BaseSchema
         }
 
         if ($data['type'] === TableSchema::TYPE_INTEGER || $data['type'] === TableSchema::TYPE_BIGINTEGER) {
-            if ([$name] === $schema->primaryKey() || $data['autoIncrement'] === true) {
+            if ($schema->getPrimaryKey() === [$name] || $data['autoIncrement'] === true) {
                 unset($data['null'], $data['default']);
                 $out .= ' IDENTITY(1, 1)';
             }
@@ -370,9 +409,15 @@ class SqlserverSchema extends BaseSchema
             $out .= ' NVARCHAR(MAX)';
         }
 
+        if ($data['type'] === TableSchema::TYPE_CHAR) {
+            $out .= '(' . $data['length'] . ')';
+        }
+
         if ($data['type'] === TableSchema::TYPE_BINARY) {
-            if (!isset($data['length'])
-                || in_array($data['length'], [TableSchema::LENGTH_MEDIUM, TableSchema::LENGTH_LONG], true)) {
+            if (
+                !isset($data['length'])
+                || in_array($data['length'], [TableSchema::LENGTH_MEDIUM, TableSchema::LENGTH_LONG], true)
+            ) {
                 $data['length'] = 'MAX';
             }
 
@@ -385,33 +430,40 @@ class SqlserverSchema extends BaseSchema
             }
         }
 
-        if ($data['type'] === TableSchema::TYPE_STRING ||
-            ($data['type'] === TableSchema::TYPE_TEXT && $data['length'] === TableSchema::LENGTH_TINY)
+        if (
+            $data['type'] === TableSchema::TYPE_STRING ||
+            (
+                $data['type'] === TableSchema::TYPE_TEXT &&
+                $data['length'] === TableSchema::LENGTH_TINY
+            )
         ) {
             $type = ' NVARCHAR';
-
-            if (!empty($data['fixed'])) {
-                $type = ' NCHAR';
-            }
-
-            if (!isset($data['length'])) {
-                $data['length'] = 255;
-            }
-
-            $out .= sprintf('%s(%d)', $type, $data['length']);
+            $length = $data['length'] ?? TableSchema::LENGTH_TINY;
+            $out .= sprintf('%s(%d)', $type, $length);
         }
 
-        $hasCollate = [TableSchema::TYPE_TEXT, TableSchema::TYPE_STRING];
+        $hasCollate = [TableSchema::TYPE_TEXT, TableSchema::TYPE_STRING, TableSchema::TYPE_CHAR];
         if (in_array($data['type'], $hasCollate, true) && isset($data['collate']) && $data['collate'] !== '') {
             $out .= ' COLLATE ' . $data['collate'];
         }
 
-        if ($data['type'] === TableSchema::TYPE_FLOAT && isset($data['precision'])) {
+        $precisionTypes = [
+            TableSchema::TYPE_FLOAT,
+            TableSchema::TYPE_DATETIME,
+            TableSchema::TYPE_DATETIME_FRACTIONAL,
+            TableSchema::TYPE_TIMESTAMP,
+            TableSchema::TYPE_TIMESTAMP_FRACTIONAL,
+        ];
+        if (in_array($data['type'], $precisionTypes, true) && isset($data['precision'])) {
             $out .= '(' . (int)$data['precision'] . ')';
         }
 
-        if ($data['type'] === TableSchema::TYPE_DECIMAL &&
-            (isset($data['length']) || isset($data['precision']))
+        if (
+            $data['type'] === TableSchema::TYPE_DECIMAL &&
+            (
+                isset($data['length']) ||
+                isset($data['precision'])
+            )
         ) {
             $out .= '(' . (int)$data['length'] . ',' . (int)$data['precision'] . ')';
         }
@@ -420,13 +472,30 @@ class SqlserverSchema extends BaseSchema
             $out .= ' NOT NULL';
         }
 
-        if (isset($data['default']) &&
-            in_array($data['type'], [TableSchema::TYPE_TIMESTAMP, TableSchema::TYPE_DATETIME]) &&
-            strtolower($data['default']) === 'current_timestamp'
+        $dateTimeTypes = [
+            TableSchema::TYPE_DATETIME,
+            TableSchema::TYPE_DATETIME_FRACTIONAL,
+            TableSchema::TYPE_TIMESTAMP,
+            TableSchema::TYPE_TIMESTAMP_FRACTIONAL,
+        ];
+        $dateTimeDefaults = [
+            'current_timestamp',
+            'getdate()',
+            'getutcdate()',
+            'sysdatetime()',
+            'sysutcdatetime()',
+            'sysdatetimeoffset()',
+        ];
+        if (
+            isset($data['default']) &&
+            in_array($data['type'], $dateTimeTypes, true) &&
+            in_array(strtolower($data['default']), $dateTimeDefaults, true)
         ) {
-            $out .= ' DEFAULT CURRENT_TIMESTAMP';
+            $out .= ' DEFAULT ' . strtoupper($data['default']);
         } elseif (isset($data['default'])) {
-            $default = is_bool($data['default']) ? (int)$data['default'] : $this->_driver->schemaValue($data['default']);
+            $default = is_bool($data['default'])
+                ? (int)$data['default']
+                : $this->_driver->schemaValue($data['default']);
             $out .= ' DEFAULT ' . $default;
         } elseif (isset($data['null']) && $data['null'] !== false) {
             $out .= ' DEFAULT NULL';
@@ -436,14 +505,15 @@ class SqlserverSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function addConstraintSql(TableSchema $schema)
+    public function addConstraintSql(TableSchema $schema): array
     {
         $sqlPattern = 'ALTER TABLE %s ADD %s;';
         $sql = [];
 
         foreach ($schema->constraints() as $name) {
+            /** @var array $constraint */
             $constraint = $schema->getConstraint($name);
             if ($constraint['type'] === TableSchema::CONSTRAINT_FOREIGN) {
                 $tableName = $this->_driver->quoteIdentifier($schema->name());
@@ -455,14 +525,15 @@ class SqlserverSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function dropConstraintSql(TableSchema $schema)
+    public function dropConstraintSql(TableSchema $schema): array
     {
         $sqlPattern = 'ALTER TABLE %s DROP CONSTRAINT %s;';
         $sql = [];
 
         foreach ($schema->constraints() as $name) {
+            /** @var array $constraint */
             $constraint = $schema->getConstraint($name);
             if ($constraint['type'] === TableSchema::CONSTRAINT_FOREIGN) {
                 $tableName = $this->_driver->quoteIdentifier($schema->name());
@@ -475,10 +546,11 @@ class SqlserverSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function indexSql(TableSchema $schema, $name)
+    public function indexSql(TableSchema $schema, string $name): string
     {
+        /** @var array $data */
         $data = $schema->getIndex($name);
         $columns = array_map(
             [$this->_driver, 'quoteIdentifier'],
@@ -494,10 +566,11 @@ class SqlserverSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function constraintSql(TableSchema $schema, $name)
+    public function constraintSql(TableSchema $schema, string $name): string
     {
+        /** @var array $data */
         $data = $schema->getConstraint($name);
         $out = 'CONSTRAINT ' . $this->_driver->quoteIdentifier($name);
         if ($data['type'] === TableSchema::CONSTRAINT_PRIMARY) {
@@ -517,7 +590,7 @@ class SqlserverSchema extends BaseSchema
      * @param array $data Key data.
      * @return string
      */
-    protected function _keySql($prefix, $data)
+    protected function _keySql(string $prefix, array $data): string
     {
         $columns = array_map(
             [$this->_driver, 'quoteIdentifier'],
@@ -538,9 +611,9 @@ class SqlserverSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function createTableSql(TableSchema $schema, $columns, $constraints, $indexes)
+    public function createTableSql(TableSchema $schema, array $columns, array $constraints, array $indexes): array
     {
         $content = array_merge($columns, $constraints);
         $content = implode(",\n", array_filter($content));
@@ -555,18 +628,19 @@ class SqlserverSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function truncateTableSql(TableSchema $schema)
+    public function truncateTableSql(TableSchema $schema): array
     {
         $name = $this->_driver->quoteIdentifier($schema->name());
         $queries = [
-            sprintf('DELETE FROM %s', $name)
+            sprintf('DELETE FROM %s', $name),
         ];
 
         // Restart identity sequences
-        $pk = $schema->primaryKey();
+        $pk = $schema->getPrimaryKey();
         if (count($pk) === 1) {
+            /** @var array $column */
             $column = $schema->getColumn($pk[0]);
             if (in_array($column['type'], ['integer', 'biginteger'])) {
                 $queries[] = sprintf(

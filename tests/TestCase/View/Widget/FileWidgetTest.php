@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,7 +16,10 @@
  */
 namespace Cake\Test\TestCase\View\Widget;
 
+use Cake\Core\Configure;
+use Cake\Http\ServerRequest;
 use Cake\TestSuite\TestCase;
+use Cake\View\Form\NullContext;
 use Cake\View\StringTemplate;
 use Cake\View\Widget\FileWidget;
 
@@ -23,20 +28,19 @@ use Cake\View\Widget\FileWidget;
  */
 class FileWidgetTest extends TestCase
 {
-
     /**
      * setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $templates = [
             'file' => '<input type="file" name="{{name}}"{{attrs}}>',
         ];
         $this->templates = new StringTemplate($templates);
-        $this->context = $this->getMockBuilder('Cake\View\Form\ContextInterface')->getMock();
+        $this->context = new NullContext(new ServerRequest(), []);
     }
 
     /**
@@ -91,9 +95,27 @@ class FileWidgetTest extends TestCase
             'input' => [
                 'type' => 'file',
                 'name' => 'files',
-                'custom' => 'value'
+                'custom' => 'value',
             ],
         ];
         $this->assertHtml($expected, $result);
+    }
+
+    /**
+     * Test secureFields
+     *
+     * @return void
+     */
+    public function testSecureFields()
+    {
+        $input = new FileWidget($this->templates);
+        $data = ['name' => 'image', 'required' => true, 'val' => 'nope'];
+        $this->assertEquals(['image'], $input->secureFields($data));
+
+        Configure::write('App.uploadedFilesAsObjects', false);
+        $this->assertEquals(
+            ['image[name]', 'image[type]', 'image[tmp_name]', 'image[error]', 'image[size]'],
+            $input->secureFields($data)
+        );
     }
 }

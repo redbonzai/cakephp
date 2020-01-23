@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -8,7 +10,7 @@
  * Redistributions of files must retain the above copyright notice.
  *
  * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
- * @link          https://book.cakephp.org/3.0/en/development/testing.html
+ * @link          https://book.cakephp.org/4/en/development/testing.html
  * @since         1.2.0
  * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
@@ -22,7 +24,6 @@ use Cake\Utility\Inflector;
  */
 class InflectorTest extends TestCase
 {
-
     /**
      * A list of chars to test transliteration.
      *
@@ -31,7 +32,7 @@ class InflectorTest extends TestCase
     public static $maps = [
         'de' => [ /* German */
             'Ä' => 'Ae', 'Ö' => 'Oe', 'Ü' => 'Ue', 'ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss',
-            'ẞ' => 'SS'
+            'ẞ' => 'SS',
         ],
         'latin' => [
             'À' => 'A', 'Á' => 'A', 'Â' => 'A', 'Ã' => 'A', 'Å' => 'A', 'Ă' => 'A', 'Æ' => 'AE', 'Ç' =>
@@ -42,36 +43,36 @@ class InflectorTest extends TestCase
             'å' => 'a', 'ă' => 'a', 'æ' => 'ae', 'ç' => 'c', 'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
             'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i', 'ð' => 'd', 'ñ' => 'n', 'ò' => 'o', 'ó' =>
             'o', 'ô' => 'o', 'õ' => 'o', 'ő' => 'o', 'ø' => 'o', 'ș' => 's', 'ț' => 't', 'ù' => 'u', 'ú' => 'u',
-            'û' => 'u', 'ű' => 'u', 'ý' => 'y', 'þ' => 'th', 'ÿ' => 'y'
+            'û' => 'u', 'ű' => 'u', 'ý' => 'y', 'þ' => 'th', 'ÿ' => 'y',
         ],
         'tr' => [ /* Turkish */
-            'ş' => 's', 'Ş' => 'S', 'ı' => 'i', 'İ' => 'I', 'ç' => 'c', 'Ç' => 'C', 'ğ' => 'g', 'Ğ' => 'G'
+            'ş' => 's', 'Ş' => 'S', 'ı' => 'i', 'İ' => 'I', 'ç' => 'c', 'Ç' => 'C', 'ğ' => 'g', 'Ğ' => 'G',
         ],
         'uk' => [ /* Ukrainian */
-            'Є' => 'Ye', 'І' => 'I', 'Ї' => 'Yi', 'Ґ' => 'G', 'є' => 'ye', 'і' => 'i', 'ї' => 'yi', 'ґ' => 'g'
+            'Є' => 'Ye', 'І' => 'I', 'Ї' => 'Yi', 'Ґ' => 'G', 'є' => 'ye', 'і' => 'i', 'ї' => 'yi', 'ґ' => 'g',
         ],
         'cs' => [ /* Czech */
             'č' => 'c', 'ď' => 'd', 'ě' => 'e', 'ň' => 'n', 'ř' => 'r', 'š' => 's', 'ť' => 't', 'ů' => 'u',
             'ž' => 'z', 'Č' => 'C', 'Ď' => 'D', 'Ě' => 'E', 'Ň' => 'N', 'Ř' => 'R', 'Š' => 'S', 'Ť' => 'T',
-            'Ů' => 'U', 'Ž' => 'Z'
+            'Ů' => 'U', 'Ž' => 'Z',
         ],
         'pl' => [ /* Polish */
             'ą' => 'a', 'ć' => 'c', 'ę' => 'e', 'ł' => 'l', 'ń' => 'n', 'ó' => 'o', 'ś' => 's', 'ź' => 'z',
             'ż' => 'z', 'Ą' => 'A', 'Ć' => 'C', 'Ł' => 'L', 'Ń' => 'N', 'Ó' => 'O', 'Ś' => 'S',
-            'Ź' => 'Z', 'Ż' => 'Z'
+            'Ź' => 'Z', 'Ż' => 'Z',
         ],
         'ro' => [ /* Romanian */
-            'ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ț' => 't', 'Ţ' => 'T', 'ţ' => 't'
+            'ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ț' => 't', 'Ţ' => 'T', 'ţ' => 't',
         ],
         'lv' => [ /* Latvian */
             'ā' => 'a', 'č' => 'c', 'ē' => 'e', 'ģ' => 'g', 'ī' => 'i', 'ķ' => 'k', 'ļ' => 'l', 'ņ' => 'n',
             'š' => 's', 'ū' => 'u', 'ž' => 'z', 'Ā' => 'A', 'Č' => 'C', 'Ē' => 'E', 'Ģ' => 'G', 'Ī' => 'I',
-            'Ķ' => 'K', 'Ļ' => 'L', 'Ņ' => 'N', 'Š' => 'S', 'Ū' => 'U', 'Ž' => 'Z'
+            'Ķ' => 'K', 'Ļ' => 'L', 'Ņ' => 'N', 'Š' => 'S', 'Ū' => 'U', 'Ž' => 'Z',
         ],
         'lt' => [ /* Lithuanian */
             'ą' => 'a', 'č' => 'c', 'ę' => 'e', 'ė' => 'e', 'į' => 'i', 'š' => 's', 'ų' => 'u', 'ū' => 'u', 'ž' => 'z',
-            'Ą' => 'A', 'Č' => 'C', 'Ę' => 'E', 'Ė' => 'E', 'Į' => 'I', 'Š' => 'S', 'Ų' => 'U', 'Ū' => 'U', 'Ž' => 'Z'
-        ]
+            'Ą' => 'A', 'Č' => 'C', 'Ę' => 'E', 'Ė' => 'E', 'Į' => 'I', 'Š' => 'S', 'Ų' => 'U', 'Ū' => 'U', 'Ž' => 'Z',
+        ],
     ];
 
     /**
@@ -79,7 +80,7 @@ class InflectorTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         Inflector::reset();
@@ -93,7 +94,7 @@ class InflectorTest extends TestCase
      */
     public function testInflectingSingulars($singular, $plural)
     {
-        $this->assertEquals($singular, Inflector::singularize($plural));
+        $this->assertSame($singular, Inflector::singularize($plural));
     }
 
     /**
@@ -119,6 +120,7 @@ class InflectorTest extends TestCase
             ['matrix', 'matrices'],
             ['vertex', 'vertices'],
             ['index', 'indices'],
+            ['index', 'indexes'],
             ['Alias', 'Aliases'],
             ['Alias', 'Alias'],
             ['Media', 'Media'],
@@ -204,12 +206,12 @@ class InflectorTest extends TestCase
             'pregunta_frecuente' => 'preguntas_frecuentes',
             'categoria_pregunta_frecuente' => 'categorias_preguntas_frecuentes',
         ]);
-        $this->assertEquals('pregunta_frecuente', Inflector::singularize('preguntas_frecuentes'));
-        $this->assertEquals(
+        $this->assertSame('pregunta_frecuente', Inflector::singularize('preguntas_frecuentes'));
+        $this->assertSame(
             'categoria_pregunta_frecuente',
             Inflector::singularize('categorias_preguntas_frecuentes')
         );
-        $this->assertEquals(
+        $this->assertSame(
             'faq_categoria_pregunta_frecuente',
             Inflector::singularize('faq_categorias_preguntas_frecuentes')
         );
@@ -223,7 +225,7 @@ class InflectorTest extends TestCase
      */
     public function testInflectingPlurals($plural, $singular)
     {
-        $this->assertEquals($plural, Inflector::pluralize($singular));
+        $this->assertSame($plural, Inflector::pluralize($singular));
     }
 
     /**
@@ -256,7 +258,7 @@ class InflectorTest extends TestCase
             ['matrix_rows', 'matrix_row'],
             ['matrices', 'matrix'],
             ['vertices', 'vertex'],
-            ['indices', 'index'],
+            ['indexes', 'index'],
             ['Aliases', 'Alias'],
             ['Aliases', 'Aliases'],
             ['Media', 'Media'],
@@ -305,7 +307,7 @@ class InflectorTest extends TestCase
             ['blue_octopuses', 'blue_octopus'],
             ['chefs', 'chef'],
             ['', ''],
-            ['pokemon', 'pokemon']
+            ['pokemon', 'pokemon'],
         ];
     }
 
@@ -320,12 +322,12 @@ class InflectorTest extends TestCase
             'pregunta_frecuente' => 'preguntas_frecuentes',
             'categoria_pregunta_frecuente' => 'categorias_preguntas_frecuentes',
         ]);
-        $this->assertEquals('preguntas_frecuentes', Inflector::pluralize('pregunta_frecuente'));
-        $this->assertEquals(
+        $this->assertSame('preguntas_frecuentes', Inflector::pluralize('pregunta_frecuente'));
+        $this->assertSame(
             'categorias_preguntas_frecuentes',
             Inflector::pluralize('categoria_pregunta_frecuente')
         );
-        $this->assertEquals(
+        $this->assertSame(
             'faq_categorias_preguntas_frecuentes',
             Inflector::pluralize('faq_categoria_pregunta_frecuente')
         );
@@ -348,141 +350,13 @@ class InflectorTest extends TestCase
             'rules' => [],
         ]);
 
-        $this->assertEquals('wisdom tooth', Inflector::singularize('wisdom teeth'));
-        $this->assertEquals('wisdom-tooth', Inflector::singularize('wisdom-teeth'));
-        $this->assertEquals('wisdom_tooth', Inflector::singularize('wisdom_teeth'));
+        $this->assertSame('wisdom tooth', Inflector::singularize('wisdom teeth'));
+        $this->assertSame('wisdom-tooth', Inflector::singularize('wisdom-teeth'));
+        $this->assertSame('wisdom_tooth', Inflector::singularize('wisdom_teeth'));
 
-        $this->assertEquals('sweet potatoes', Inflector::pluralize('sweet potato'));
-        $this->assertEquals('sweet-potatoes', Inflector::pluralize('sweet-potato'));
-        $this->assertEquals('sweet_potatoes', Inflector::pluralize('sweet_potato'));
-    }
-
-    /**
-     * testSlug method
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testSlug()
-    {
-        $this->deprecated(function () {
-            $result = Inflector::slug('Foo Bar: Not just for breakfast any-more');
-            $expected = 'Foo-Bar-Not-just-for-breakfast-any-more';
-            $this->assertEquals($expected, $result);
-
-            $result = Inflector::slug('this/is/a/path');
-            $expected = 'this-is-a-path';
-            $this->assertEquals($expected, $result);
-
-            $result = Inflector::slug('Foo Bar: Not just for breakfast any-more', '_');
-            $expected = 'Foo_Bar_Not_just_for_breakfast_any_more';
-            $this->assertEquals($expected, $result);
-
-            $result = Inflector::slug('Foo Bar: Not just for breakfast any-more', '+');
-            $expected = 'Foo+Bar+Not+just+for+breakfast+any+more';
-            $this->assertEquals($expected, $result);
-
-            $result = Inflector::slug('Äpfel Über Öl grün ärgert groß öko', '-');
-            $expected = 'Aepfel-Ueber-Oel-gruen-aergert-gross-oeko';
-            $this->assertEquals($expected, $result);
-
-            $result = Inflector::slug('The truth - and- more- news', '-');
-            $expected = 'The-truth-and-more-news';
-            $this->assertEquals($expected, $result);
-
-            $result = Inflector::slug('The truth: and more news', '-');
-            $expected = 'The-truth-and-more-news';
-            $this->assertEquals($expected, $result);
-
-            $result = Inflector::slug('La langue française est un attribut de souveraineté en France', '-');
-            $expected = 'La-langue-francaise-est-un-attribut-de-souverainete-en-France';
-            $this->assertEquals($expected, $result);
-
-            $result = Inflector::slug('!@$#exciting stuff! - what !@-# was that?', '-');
-            $expected = 'exciting-stuff-what-was-that';
-            $this->assertEquals($expected, $result);
-
-            $result = Inflector::slug('20% of profits went to me!', '-');
-            $expected = '20-of-profits-went-to-me';
-            $this->assertEquals($expected, $result);
-
-            $result = Inflector::slug('#this melts your face1#2#3', '-');
-            $expected = 'this-melts-your-face1-2-3';
-            $this->assertEquals($expected, $result);
-
-            $result = Inflector::slug('controller/action/りんご/1');
-            $expected = 'controller-action-りんご-1';
-            $this->assertEquals($expected, $result);
-
-            $result = Inflector::slug('の話が出たので大丈夫かなあと');
-            $expected = 'の話が出たので大丈夫かなあと';
-            $this->assertEquals($expected, $result);
-
-            $result = Inflector::slug('posts/view/한국어/page:1/sort:asc');
-            $expected = 'posts-view-한국어-page-1-sort-asc';
-            $this->assertEquals($expected, $result);
-
-            $result = Inflector::slug("non\xc2\xa0breaking\xc2\xa0space");
-            $this->assertEquals('non-breaking-space', $result);
-
-            $result = Inflector::slug('Foo Bar: Not just for breakfast any-more', '');
-            $expected = 'FooBarNotjustforbreakfastanymore';
-            $this->assertEquals($expected, $result);
-        });
-    }
-
-    /**
-     * Test slug() with a complete list of special chars.
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testSlugCharList()
-    {
-        $this->deprecated(function () {
-            foreach (self::$maps as $language => $list) {
-                foreach ($list as $from => $to) {
-                    $result = Inflector::slug($from);
-                    $this->assertEquals($to, $result, $from . ' (' . $language . ') should be ' . $to . ' - but is ' . $result);
-                }
-            }
-        });
-    }
-
-    /**
-     * testSlugWithMap method
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testSlugWithMap()
-    {
-        $this->deprecated(function () {
-            Inflector::rules('transliteration', ['r' => '1']);
-            $result = Inflector::slug('replace every r');
-            $expected = '1eplace-eve1y-1';
-            $this->assertEquals($expected, $result);
-
-            $result = Inflector::slug('replace every r', '_');
-            $expected = '1eplace_eve1y_1';
-            $this->assertEquals($expected, $result);
-        });
-    }
-
-    /**
-     * testSlugWithMapOverridingDefault method
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testSlugWithMapOverridingDefault()
-    {
-        $this->deprecated(function () {
-            Inflector::rules('transliteration', ['å' => 'aa', 'ø' => 'oe']);
-            $result = Inflector::slug('Testing æ ø å', '-');
-            $expected = 'Testing-ae-oe-aa';
-            $this->assertEquals($expected, $result);
-        });
+        $this->assertSame('sweet potatoes', Inflector::pluralize('sweet potato'));
+        $this->assertSame('sweet-potatoes', Inflector::pluralize('sweet-potato'));
+        $this->assertSame('sweet_potatoes', Inflector::pluralize('sweet_potato'));
     }
 
     /**
@@ -506,10 +380,8 @@ class InflectorTest extends TestCase
         $this->assertSame('test_thing_extra', Inflector::underscore('testThingExtra'));
         $this->assertSame('test_thing_extrå', Inflector::underscore('testThingExtrå'));
 
-        // Test stupid values
-        $this->assertSame('', Inflector::underscore(''));
-        $this->assertSame('0', Inflector::underscore(0));
-        $this->assertSame('', Inflector::underscore(false));
+        // Test other values
+        $this->assertSame('0', Inflector::underscore('0'));
     }
 
     /**
@@ -526,10 +398,8 @@ class InflectorTest extends TestCase
         $this->assertSame('test-this-thing', Inflector::dasherize('test_this_thing'));
 
         // Test stupid values
-        $this->assertSame('', Inflector::dasherize(null));
         $this->assertSame('', Inflector::dasherize(''));
-        $this->assertSame('0', Inflector::dasherize(0));
-        $this->assertSame('', Inflector::dasherize(false));
+        $this->assertSame('0', Inflector::dasherize('0'));
     }
 
     /**
@@ -561,10 +431,10 @@ class InflectorTest extends TestCase
      */
     public function testVariableNaming()
     {
-        $this->assertEquals('testField', Inflector::variable('test_field'));
-        $this->assertEquals('testFieLd', Inflector::variable('test_fieLd'));
-        $this->assertEquals('testField', Inflector::variable('test field'));
-        $this->assertEquals('testField', Inflector::variable('Test_field'));
+        $this->assertSame('testField', Inflector::variable('test_field'));
+        $this->assertSame('testFieLd', Inflector::variable('test_fieLd'));
+        $this->assertSame('testField', Inflector::variable('test field'));
+        $this->assertSame('testField', Inflector::variable('Test_field'));
     }
 
     /**
@@ -574,10 +444,10 @@ class InflectorTest extends TestCase
      */
     public function testClassNaming()
     {
-        $this->assertEquals('ArtistsGenre', Inflector::classify('artists_genres'));
-        $this->assertEquals('FileSystem', Inflector::classify('file_systems'));
-        $this->assertEquals('News', Inflector::classify('news'));
-        $this->assertEquals('Bureau', Inflector::classify('bureaus'));
+        $this->assertSame('ArtistsGenre', Inflector::classify('artists_genres'));
+        $this->assertSame('FileSystem', Inflector::classify('file_systems'));
+        $this->assertSame('News', Inflector::classify('news'));
+        $this->assertSame('Bureau', Inflector::classify('bureaus'));
     }
 
     /**
@@ -587,10 +457,10 @@ class InflectorTest extends TestCase
      */
     public function testTableNaming()
     {
-        $this->assertEquals('artists_genres', Inflector::tableize('ArtistsGenre'));
-        $this->assertEquals('file_systems', Inflector::tableize('FileSystem'));
-        $this->assertEquals('news', Inflector::tableize('News'));
-        $this->assertEquals('bureaus', Inflector::tableize('Bureau'));
+        $this->assertSame('artists_genres', Inflector::tableize('ArtistsGenre'));
+        $this->assertSame('file_systems', Inflector::tableize('FileSystem'));
+        $this->assertSame('news', Inflector::tableize('News'));
+        $this->assertSame('bureaus', Inflector::tableize('Bureau'));
     }
 
     /**
@@ -600,11 +470,9 @@ class InflectorTest extends TestCase
      */
     public function testHumanization()
     {
-        $this->assertEquals('Posts', Inflector::humanize('posts'));
-        $this->assertEquals('Posts Tags', Inflector::humanize('posts_tags'));
-        $this->assertEquals('File Systems', Inflector::humanize('file_systems'));
-        $this->assertSame('', Inflector::humanize(null));
-        $this->assertSame('', Inflector::humanize(false));
+        $this->assertSame('Posts', Inflector::humanize('posts'));
+        $this->assertSame('Posts Tags', Inflector::humanize('posts_tags'));
+        $this->assertSame('File Systems', Inflector::humanize('file_systems'));
         $this->assertSame('Hello Wörld', Inflector::humanize('hello_wörld'));
         $this->assertSame('福岡 City', Inflector::humanize('福岡_city'));
     }
@@ -619,17 +487,17 @@ class InflectorTest extends TestCase
         Inflector::rules('plural', ['/^(custom)$/i' => '\1izables']);
         Inflector::rules('uninflected', ['uninflectable']);
 
-        $this->assertEquals('customizables', Inflector::pluralize('custom'));
-        $this->assertEquals('uninflectable', Inflector::pluralize('uninflectable'));
+        $this->assertSame('customizables', Inflector::pluralize('custom'));
+        $this->assertSame('uninflectable', Inflector::pluralize('uninflectable'));
 
         Inflector::rules('plural', ['/^(alert)$/i' => '\1ables']);
         Inflector::rules('irregular', ['amaze' => 'amazable', 'phone' => 'phonezes']);
         Inflector::rules('uninflected', ['noflect', 'abtuse']);
-        $this->assertEquals('noflect', Inflector::pluralize('noflect'));
-        $this->assertEquals('abtuse', Inflector::pluralize('abtuse'));
-        $this->assertEquals('alertables', Inflector::pluralize('alert'));
-        $this->assertEquals('amazable', Inflector::pluralize('amaze'));
-        $this->assertEquals('phonezes', Inflector::pluralize('phone'));
+        $this->assertSame('noflect', Inflector::pluralize('noflect'));
+        $this->assertSame('abtuse', Inflector::pluralize('abtuse'));
+        $this->assertSame('alertables', Inflector::pluralize('alert'));
+        $this->assertSame('amazable', Inflector::pluralize('amaze'));
+        $this->assertSame('phonezes', Inflector::pluralize('phone'));
     }
 
     /**
@@ -642,35 +510,16 @@ class InflectorTest extends TestCase
         Inflector::rules('uninflected', ['singulars']);
         Inflector::rules('singular', ['/(eple)r$/i' => '\1', '/(jente)r$/i' => '\1']);
 
-        $this->assertEquals('eple', Inflector::singularize('epler'));
-        $this->assertEquals('jente', Inflector::singularize('jenter'));
+        $this->assertSame('eple', Inflector::singularize('epler'));
+        $this->assertSame('jente', Inflector::singularize('jenter'));
 
         Inflector::rules('singular', ['/^(bil)er$/i' => '\1', '/^(inflec|contribu)tors$/i' => '\1ta']);
         Inflector::rules('irregular', ['spinor' => 'spins']);
 
-        $this->assertEquals('spinor', Inflector::singularize('spins'));
-        $this->assertEquals('inflecta', Inflector::singularize('inflectors'));
-        $this->assertEquals('contributa', Inflector::singularize('contributors'));
-        $this->assertEquals('singulars', Inflector::singularize('singulars'));
-    }
-
-    /**
-     * testCustomTransliterationRule method
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testCustomTransliterationRule()
-    {
-        $this->deprecated(function () {
-            $this->assertEquals('Testing-ae-o-a', Inflector::slug('Testing æ ø å'));
-
-            Inflector::rules('transliteration', ['å' => 'aa', 'ø' => 'oe']);
-            $this->assertEquals('Testing-ae-oe-aa', Inflector::slug('Testing æ ø å'));
-
-            Inflector::rules('transliteration', ['æ' => 'ae', 'å' => 'aa'], true);
-            $this->assertEquals('Testing-ae-ø-aa', Inflector::slug('Testing æ ø å'));
-        });
+        $this->assertSame('spinor', Inflector::singularize('spins'));
+        $this->assertSame('inflecta', Inflector::singularize('inflectors'));
+        $this->assertSame('contributa', Inflector::singularize('contributors'));
+        $this->assertSame('singulars', Inflector::singularize('singulars'));
     }
 
     /**
@@ -680,17 +529,17 @@ class InflectorTest extends TestCase
      */
     public function testRulesClearsCaches()
     {
-        $this->assertEquals('Banana', Inflector::singularize('Bananas'));
-        $this->assertEquals('bananas', Inflector::tableize('Banana'));
-        $this->assertEquals('Bananas', Inflector::pluralize('Banana'));
+        $this->assertSame('Banana', Inflector::singularize('Bananas'));
+        $this->assertSame('bananas', Inflector::tableize('Banana'));
+        $this->assertSame('Bananas', Inflector::pluralize('Banana'));
 
         Inflector::rules('singular', ['/(.*)nas$/i' => '\1zzz']);
-        $this->assertEquals('Banazzz', Inflector::singularize('Bananas'), 'Was inflected with old rules.');
+        $this->assertSame('Banazzz', Inflector::singularize('Bananas'), 'Was inflected with old rules.');
 
         Inflector::rules('plural', ['/(.*)na$/i' => '\1zzz']);
         Inflector::rules('irregular', ['corpus' => 'corpora']);
-        $this->assertEquals('Banazzz', Inflector::pluralize('Banana'), 'Was inflected with old rules.');
-        $this->assertEquals('corpora', Inflector::pluralize('corpus'), 'Was inflected with old irregular form.');
+        $this->assertSame('Banazzz', Inflector::pluralize('Banana'), 'Was inflected with old rules.');
+        $this->assertSame('corpora', Inflector::pluralize('corpus'), 'Was inflected with old irregular form.');
     }
 
     /**
@@ -708,9 +557,9 @@ class InflectorTest extends TestCase
         Inflector::rules('uninflected', $uninflected, true);
         Inflector::rules('irregular', $pluralIrregular, true);
 
-        $this->assertEquals('Alcoois', Inflector::pluralize('Alcool'));
-        $this->assertEquals('Atlas', Inflector::pluralize('Atlas'));
-        $this->assertEquals('Alcool', Inflector::singularize('Alcoois'));
-        $this->assertEquals('Atlas', Inflector::singularize('Atlas'));
+        $this->assertSame('Alcoois', Inflector::pluralize('Alcool'));
+        $this->assertSame('Atlas', Inflector::pluralize('Atlas'));
+        $this->assertSame('Alcool', Inflector::singularize('Alcoois'));
+        $this->assertSame('Atlas', Inflector::singularize('Atlas'));
     }
 }

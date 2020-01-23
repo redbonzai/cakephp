@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -16,6 +18,7 @@ namespace Cake\Test\TestCase\Database\Expression;
 use Cake\Database\Expression\FunctionExpression;
 use Cake\Database\Expression\QueryExpression;
 use Cake\Database\ValueBinder;
+use Cake\Datasource\ConnectionManager;
 use Cake\TestSuite\TestCase;
 
 /**
@@ -23,7 +26,6 @@ use Cake\TestSuite\TestCase;
  */
 class FunctionExpressionTest extends TestCase
 {
-
     /**
      * Tests generating a function with no arguments
      *
@@ -32,7 +34,7 @@ class FunctionExpressionTest extends TestCase
     public function testArityZero()
     {
         $f = new FunctionExpression('MyFunction');
-        $this->assertEquals('MyFunction()', $f->sql(new ValueBinder));
+        $this->assertSame('MyFunction()', $f->sql(new ValueBinder()));
     }
 
     /**
@@ -44,16 +46,16 @@ class FunctionExpressionTest extends TestCase
     public function testArityMultiplePlainValues()
     {
         $f = new FunctionExpression('MyFunction', ['foo', 'bar']);
-        $binder = new ValueBinder;
-        $this->assertEquals('MyFunction(:param0, :param1)', $f->sql($binder));
+        $binder = new ValueBinder();
+        $this->assertSame('MyFunction(:param0, :param1)', $f->sql($binder));
 
-        $this->assertEquals('foo', $binder->bindings()[':param0']['value']);
-        $this->assertEquals('bar', $binder->bindings()[':param1']['value']);
+        $this->assertSame('foo', $binder->bindings()[':param0']['value']);
+        $this->assertSame('bar', $binder->bindings()[':param1']['value']);
 
-        $binder = new ValueBinder;
+        $binder = new ValueBinder();
         $f = new FunctionExpression('MyFunction', ['bar']);
-        $this->assertEquals('MyFunction(:param0)', $f->sql($binder));
-        $this->assertEquals('bar', $binder->bindings()[':param0']['value']);
+        $this->assertSame('MyFunction(:param0)', $f->sql($binder));
+        $this->assertSame('bar', $binder->bindings()[':param0']['value']);
     }
 
     /**
@@ -63,9 +65,9 @@ class FunctionExpressionTest extends TestCase
      */
     public function testLiteralParams()
     {
-        $binder = new ValueBinder;
+        $binder = new ValueBinder();
         $f = new FunctionExpression('MyFunction', ['foo' => 'literal', 'bar']);
-        $this->assertEquals('MyFunction(foo, :param0)', $f->sql($binder));
+        $this->assertSame('MyFunction(foo, :param0)', $f->sql($binder));
     }
 
     /**
@@ -76,10 +78,10 @@ class FunctionExpressionTest extends TestCase
      */
     public function testFunctionNesting()
     {
-        $binder = new ValueBinder;
+        $binder = new ValueBinder();
         $f = new FunctionExpression('MyFunction', ['foo', 'bar']);
         $g = new FunctionExpression('Wrapper', ['bar' => 'literal', $f]);
-        $this->assertEquals('Wrapper(bar, MyFunction(:param0, :param1))', $g->sql($binder));
+        $this->assertSame('Wrapper(bar, MyFunction(:param0, :param1))', $g->sql($binder));
     }
 
     /**
@@ -90,10 +92,49 @@ class FunctionExpressionTest extends TestCase
      */
     public function testFunctionNestingQueryExpression()
     {
-        $binder = new ValueBinder;
+        $binder = new ValueBinder();
         $q = new QueryExpression('a');
         $f = new FunctionExpression('MyFunction', [$q]);
-        $this->assertEquals('MyFunction(a)', $f->sql($binder));
+        $this->assertSame('MyFunction(a)', $f->sql($binder));
+    }
+
+    /**
+     * Tests that passing a database query as an argument wraps the query SQL into parentheses.
+     *
+     * @return void
+     */
+    public function testFunctionWithDatabaseQuery()
+    {
+        $query = ConnectionManager::get('test')
+            ->newQuery()
+            ->select(['column']);
+
+        $binder = new ValueBinder();
+        $function = new FunctionExpression('MyFunction', [$query]);
+        $this->assertEquals(
+            'MyFunction((SELECT column))',
+            preg_replace('/[`"\[\]]/', '', $function->sql($binder))
+        );
+    }
+
+    /**
+     * Tests that passing a ORM query as an argument wraps the query SQL into parentheses.
+     *
+     * @return void
+     */
+    public function testFunctionWithOrmQuery()
+    {
+        $query = $this->getTableLocator()->get('Articles')
+            ->setSchema(['column' => 'integer'])
+            ->find()
+            ->select(['column']);
+
+        $binder = new ValueBinder();
+        $function = new FunctionExpression('MyFunction', [$query]);
+        $this->assertEquals(
+            'MyFunction((SELECT Articles.column AS Articles__column FROM articles Articles))',
+            preg_replace('/[`"\[\]]/', '', $function->sql($binder))
+        );
     }
 
     /**
@@ -103,12 +144,12 @@ class FunctionExpressionTest extends TestCase
      */
     public function testNumericLiteral()
     {
-        $binder = new ValueBinder;
+        $binder = new ValueBinder();
         $f = new FunctionExpression('MyFunction', ['a_field' => 'literal', '32' => 'literal']);
-        $this->assertEquals('MyFunction(a_field, 32)', $f->sql($binder));
+        $this->assertSame('MyFunction(a_field, 32)', $f->sql($binder));
 
         $f = new FunctionExpression('MyFunction', ['a_field' => 'literal', 32 => 'literal']);
-        $this->assertEquals('MyFunction(a_field, 32)', $f->sql($binder));
+        $this->assertSame('MyFunction(a_field, 32)', $f->sql($binder));
     }
 
     /**

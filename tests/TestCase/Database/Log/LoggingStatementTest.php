@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,14 +16,33 @@
  */
 namespace Cake\Test\TestCase\Database\Log;
 
+use Cake\Database\DriverInterface;
 use Cake\Database\Log\LoggingStatement;
+use Cake\Database\Log\QueryLogger;
+use Cake\Database\StatementInterface;
+use Cake\Log\Log;
 use Cake\TestSuite\TestCase;
+use LogicException;
 
 /**
  * Tests LoggingStatement class
  */
 class LoggingStatementTest extends TestCase
 {
+    public function setUp(): void
+    {
+        parent::setUp();
+        Log::setConfig('queries', [
+            'className' => 'Array',
+            'scopes' => ['queriesLog'],
+        ]);
+    }
+
+    public function tearDown(): void
+    {
+        parent::tearDown();
+        Log::drop('queries');
+    }
 
     /**
      * Tests that queries are logged when executed without params
@@ -30,22 +51,19 @@ class LoggingStatementTest extends TestCase
      */
     public function testExecuteNoParams()
     {
-        $inner = $this->getMockBuilder('PDOStatement')->getMock();
-        $inner->expects($this->once())->method('rowCount')->will($this->returnValue(3));
-        $logger = $this->getMockBuilder('\Cake\Database\Log\QueryLogger')->getMock();
-        $logger->expects($this->once())
-            ->method('log')
-            ->with($this->logicalAnd(
-                $this->isInstanceOf('\Cake\Database\Log\LoggedQuery'),
-                $this->attributeEqualTo('query', 'SELECT bar FROM foo'),
-                $this->attributeEqualTo('took', 5, 200),
-                $this->attributeEqualTo('numRows', 3),
-                $this->attributeEqualTo('params', [])
-            ));
-        $st = new LoggingStatement($inner);
+        $inner = $this->getMockBuilder(StatementInterface::class)->getMock();
+        $inner->method('rowCount')->will($this->returnValue(3));
+        $inner->method('execute')->will($this->returnValue(true));
+
+        $driver = $this->getMockBuilder(DriverInterface::class)->getMock();
+        $st = new LoggingStatement($inner, $driver);
         $st->queryString = 'SELECT bar FROM foo';
-        $st->setLogger($logger);
+        $st->setLogger(new QueryLogger());
         $st->execute();
+
+        $messages = Log::engine('queries')->read();
+        $this->assertCount(1, $messages);
+        $this->assertRegExp('/^debug duration=\d rows=3 SELECT bar FROM foo$/', $messages[0]);
     }
 
     /**
@@ -55,22 +73,19 @@ class LoggingStatementTest extends TestCase
      */
     public function testExecuteWithParams()
     {
-        $inner = $this->getMockBuilder('PDOStatement')->getMock();
-        $inner->expects($this->once())->method('rowCount')->will($this->returnValue(4));
-        $logger = $this->getMockBuilder('\Cake\Database\Log\QueryLogger')->getMock();
-        $logger->expects($this->once())
-            ->method('log')
-            ->with($this->logicalAnd(
-                $this->isInstanceOf('\Cake\Database\Log\LoggedQuery'),
-                $this->attributeEqualTo('query', 'SELECT bar FROM foo'),
-                $this->attributeEqualTo('took', 5, 200),
-                $this->attributeEqualTo('numRows', 4),
-                $this->attributeEqualTo('params', ['a' => 1, 'b' => 2])
-            ));
-        $st = new LoggingStatement($inner);
-        $st->queryString = 'SELECT bar FROM foo';
-        $st->setLogger($logger);
+        $inner = $this->getMockBuilder(StatementInterface::class)->getMock();
+        $inner->method('rowCount')->will($this->returnValue(4));
+        $inner->method('execute')->will($this->returnValue(true));
+
+        $driver = $this->getMockBuilder(DriverInterface::class)->getMock();
+        $st = new LoggingStatement($inner, $driver);
+        $st->queryString = 'SELECT bar FROM foo WHERE x=:a AND y=:b';
+        $st->setLogger(new QueryLogger());
         $st->execute(['a' => 1, 'b' => 2]);
+
+        $messages = Log::engine('queries')->read();
+        $this->assertCount(1, $messages);
+        $this->assertRegExp('/^debug duration=\d rows=4 SELECT bar FROM foo WHERE x=1 AND y=2$/', $messages[0]);
     }
 
     /**
@@ -80,39 +95,29 @@ class LoggingStatementTest extends TestCase
      */
     public function testExecuteWithBinding()
     {
-        $inner = $this->getMockBuilder('PDOStatement')->getMock();
-        $inner->expects($this->any())->method('rowCount')->will($this->returnValue(4));
-        $logger = $this->getMockBuilder('\Cake\Database\Log\QueryLogger')->getMock();
-        $logger->expects($this->at(0))
-            ->method('log')
-            ->with($this->logicalAnd(
-                $this->isInstanceOf('\Cake\Database\Log\LoggedQuery'),
-                $this->attributeEqualTo('query', 'SELECT bar FROM foo'),
-                $this->attributeEqualTo('took', 5, 200),
-                $this->attributeEqualTo('numRows', 4),
-                $this->attributeEqualTo('params', ['a' => 1, 'b' => '2013-01-01'])
-            ));
-        $logger->expects($this->at(1))
-            ->method('log')
-            ->with($this->logicalAnd(
-                $this->isInstanceOf('\Cake\Database\Log\LoggedQuery'),
-                $this->attributeEqualTo('query', 'SELECT bar FROM foo'),
-                $this->attributeEqualTo('took', 5, 200),
-                $this->attributeEqualTo('numRows', 4),
-                $this->attributeEqualTo('params', ['a' => 1, 'b' => '2014-01-01'])
-            ));
+        $inner = $this->getMockBuilder(StatementInterface::class)->getMock();
+        $inner->method('rowCount')->will($this->returnValue(4));
+        $inner->method('execute')->will($this->returnValue(true));
+
         $date = new \DateTime('2013-01-01');
         $inner->expects($this->at(0))->method('bindValue')->with('a', 1);
         $inner->expects($this->at(1))->method('bindValue')->with('b', $date);
-        $driver = $this->getMockBuilder('\Cake\Database\Driver')->getMock();
+
+        $driver = $this->getMockBuilder('Cake\Database\Driver')->getMock();
         $st = new LoggingStatement($inner, $driver);
-        $st->queryString = 'SELECT bar FROM foo';
-        $st->setLogger($logger);
+        $st->queryString = 'SELECT bar FROM foo WHERE a=:a AND b=:b';
+        $st->setLogger(new QueryLogger());
         $st->bindValue('a', 1);
         $st->bindValue('b', $date, 'date');
         $st->execute();
+
         $st->bindValue('b', new \DateTime('2014-01-01'), 'date');
         $st->execute();
+
+        $messages = Log::engine('queries')->read();
+        $this->assertCount(2, $messages);
+        $this->assertRegExp("/^debug duration=\d rows=4 SELECT bar FROM foo WHERE a='1' AND b='2013-01-01'$/", $messages[0]);
+        $this->assertRegExp("/^debug duration=\d rows=4 SELECT bar FROM foo WHERE a='1' AND b='2014-01-01'$/", $messages[1]);
     }
 
     /**
@@ -122,45 +127,26 @@ class LoggingStatementTest extends TestCase
      */
     public function testExecuteWithError()
     {
-        $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('This is bad');
-        $exception = new \LogicException('This is bad');
-        $inner = $this->getMockBuilder('PDOStatement')->getMock();
-        $inner->expects($this->once())->method('execute')
+        $exception = new LogicException('This is bad');
+        $inner = $this->getMockBuilder(StatementInterface::class)->getMock();
+        $inner->expects($this->once())
+            ->method('execute')
             ->will($this->throwException($exception));
-        $logger = $this->getMockBuilder('\Cake\Database\Log\QueryLogger')->getMock();
-        $logger->expects($this->once())
-            ->method('log')
-            ->with($this->logicalAnd(
-                $this->isInstanceOf('\Cake\Database\Log\LoggedQuery'),
-                $this->attributeEqualTo('query', 'SELECT bar FROM foo'),
-                $this->attributeEqualTo('took', 5, 200),
-                $this->attributeEqualTo('params', []),
-                $this->attributeEqualTo('error', $exception)
-            ));
-        $st = new LoggingStatement($inner);
+
+        $driver = $this->getMockBuilder(DriverInterface::class)->getMock();
+        $st = new LoggingStatement($inner, $driver);
         $st->queryString = 'SELECT bar FROM foo';
-        $st->setLogger($logger);
-        $st->execute();
-    }
+        $st->setLogger(new QueryLogger());
+        try {
+            $st->execute();
+        } catch (LogicException $e) {
+            $this->assertSame('This is bad', $e->getMessage());
+            $this->assertSame($st->queryString, $e->queryString);
+        }
 
-    /**
-     * Tests setting and getting the logger
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testLoggerCompat()
-    {
-        $this->deprecated(function () {
-            $logger = $this->getMockBuilder('\Cake\Database\Log\QueryLogger')->getMock();
-            $st = new LoggingStatement();
-
-            $this->assertNull($st->logger());
-
-            $st->logger($logger);
-            $this->assertSame($logger, $st->logger());
-        });
+        $messages = Log::engine('queries')->read();
+        $this->assertCount(1, $messages);
+        $this->assertRegExp("/^debug duration=\d rows=0 SELECT bar FROM foo$/", $messages[0]);
     }
 
     /**
@@ -170,9 +156,12 @@ class LoggingStatementTest extends TestCase
      */
     public function testSetAndGetLogger()
     {
-        $logger = $this->getMockBuilder('\Cake\Database\Log\QueryLogger')->getMock();
-        $st = new LoggingStatement();
-        $this->assertNull($st->getLogger());
+        $logger = new QueryLogger();
+        $st = new LoggingStatement(
+            $this->getMockBuilder(StatementInterface::class)->getMock(),
+            $this->getMockBuilder(DriverInterface::class)->getMock()
+        );
+
         $st->setLogger($logger);
         $this->assertSame($logger, $st->getLogger());
     }

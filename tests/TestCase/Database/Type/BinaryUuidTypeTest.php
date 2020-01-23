@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,6 +16,7 @@
  */
 namespace Cake\Test\TestCase\Database\Type;
 
+use Cake\Core\Exception\Exception;
 use Cake\Database\Type\BinaryUuidType;
 use Cake\TestSuite\TestCase;
 use Cake\Utility\Text;
@@ -27,19 +30,19 @@ class BinaryUuidTypeTest extends TestCase
     /**
      * @var \Cake\Database\Type\BinaryUuidType
      */
-    public $type;
+    protected $type;
 
     /**
      * @var \Cake\Database\Driver
      */
-    public $driver;
+    protected $driver;
 
     /**
      * Setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->type = new BinaryUuidType();
@@ -69,18 +72,18 @@ class BinaryUuidTypeTest extends TestCase
         $fh = fopen(__FILE__, 'r');
         $result = $this->type->toPHP($fh, $this->driver);
         $this->assertSame($fh, $result);
-        $this->assertInternalType('resource', $result);
+        $this->assertIsResource($result);
         fclose($fh);
     }
 
     /**
      * Test exceptions on invalid data.
-     *
-     * @expectedException \Cake\Core\Exception\Exception
-     * @expectedExceptionMessage Unable to convert array into binary uuid.
      */
     public function testToPHPFailure()
     {
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage('Unable to convert array into binary uuid.');
+
         $this->type->toPHP([], $this->driver);
     }
 

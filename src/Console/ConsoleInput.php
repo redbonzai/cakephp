@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,12 +16,13 @@
  */
 namespace Cake\Console;
 
+use Cake\Console\Exception\ConsoleException;
+
 /**
  * Object wrapper for interacting with stdin
  */
 class ConsoleInput
 {
-
     /**
      * Input value.
      *
@@ -43,7 +46,7 @@ class ConsoleInput
      *
      * @param string $handle The location of the stream to use as input.
      */
-    public function __construct($handle = 'php://stdin')
+    public function __construct(string $handle = 'php://stdin')
     {
         $this->_canReadline = (extension_loaded('readline') && $handle === 'php://stdin');
         $this->_input = fopen($handle, 'rb');
@@ -52,9 +55,9 @@ class ConsoleInput
     /**
      * Read a value from the stream
      *
-     * @return mixed The value of the stream
+     * @return string The value of the stream
      */
-    public function read()
+    public function read(): string
     {
         if ($this->_canReadline) {
             $line = readline('');
@@ -65,7 +68,7 @@ class ConsoleInput
             return $line;
         }
 
-        return fgets($this->_input);
+        return (string)fgets($this->_input);
     }
 
     /**
@@ -74,13 +77,23 @@ class ConsoleInput
      * @param int $timeout An optional time to wait for data
      * @return bool True for data available, false otherwise
      */
-    public function dataAvailable($timeout = 0)
+    public function dataAvailable(int $timeout = 0): bool
     {
         $readFds = [$this->_input];
         $writeFds = null;
         $errorFds = null;
-        $readyFds = stream_select($readFds, $writeFds, $errorFds, $timeout);
 
-        return ($readyFds > 0);
+        /** @var string|null $error */
+        $error = null;
+        set_error_handler(function (int $code, string $message) use (&$error) {
+            $error = "stream_select failed with code={$code} message={$message}.";
+        });
+        $readyFds = stream_select($readFds, $writeFds, $errorFds, $timeout);
+        restore_error_handler();
+        if ($error !== null) {
+            throw new ConsoleException($error);
+        }
+
+        return $readyFds > 0;
     }
 }

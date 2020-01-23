@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,38 +16,60 @@
  */
 namespace Cake\Datasource;
 
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerInterface;
+use Psr\SimpleCache\CacheInterface;
+
 /**
  * This interface defines the methods you can depend on in
  * a connection.
  *
- * @method object getLogger() Get the current logger instance
+ * @method object getDriver() Gets the driver instance.
  * @method $this setLogger($logger) Set the current logger.
  * @method bool supportsDynamicConstraints()
  * @method \Cake\Database\Schema\Collection getSchemaCollection()
  * @method \Cake\Database\Query newQuery()
  * @method \Cake\Database\StatementInterface prepare($sql)
  * @method \Cake\Database\StatementInterface execute($query, $params = [], array $types = [])
- * @method $this enableQueryLogging($value)
- * @method $this disableQueryLogging()
- * @method $this disableSavePoints()
- * @method bool isQueryLoggingEnabled()
- * @method string quote($value, $type = null)
+ * @method \Cake\Database\StatementInterface query(string $sql)
  */
-interface ConnectionInterface
+interface ConnectionInterface extends LoggerAwareInterface
 {
+    /**
+     * Gets the current logger object.
+     *
+     * @return \Psr\Log\LoggerInterface logger instance
+     */
+    public function getLogger(): LoggerInterface;
+
+    /**
+     * Set a cacher.
+     *
+     * @param \Psr\SimpleCache\CacheInterface $cacher Cacher object
+     * @return $this
+     */
+    public function setCacher(CacheInterface $cacher);
+
+    /**
+     * Get a cacher.
+     *
+     * @return \Psr\SimpleCache\CacheInterface $cacher Cacher object
+     */
+    public function getCacher(): CacheInterface;
+
     /**
      * Get the configuration name for this connection.
      *
      * @return string
      */
-    public function configName();
+    public function configName(): string;
 
     /**
      * Get the configuration data used to create the connection.
      *
      * @return array
      */
-    public function config();
+    public function config(): array;
 
     /**
      * Executes a callable function inside a transaction, if any exception occurs
@@ -76,21 +100,24 @@ interface ConnectionInterface
     public function disableConstraints(callable $operation);
 
     /**
-     * Enables or disables query logging for this connection.
+     * Enable/disable query logging
      *
-     * @param bool|null $enable whether to turn logging on or disable it.
-     *   Use null to read current value.
-     * @return bool
+     * @param bool $value Enable/disable query logging
+     * @return $this
      */
-    public function logQueries($enable = null);
+    public function enableQueryLogging(bool $value = true);
 
     /**
-     * Sets the logger object instance. When called with no arguments
-     * it returns the currently setup logger instance.
+     * Disable query logging
      *
-     * @param object|null $instance logger object instance
-     * @return object logger instance
-     * @deprecated 3.5.0 Will be replaced by getLogger()/setLogger()
+     * @return $this
      */
-    public function logger($instance = null);
+    public function disableQueryLogging();
+
+    /**
+     * Check if query logging is enabled.
+     *
+     * @return bool
+     */
+    public function isQueryLoggingEnabled(): bool;
 }

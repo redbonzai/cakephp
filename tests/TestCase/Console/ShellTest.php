@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP :  Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -16,53 +18,44 @@ namespace Cake\Test\TestCase\Console;
 
 use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
+use Cake\Console\Exception\StopException;
 use Cake\Console\Shell;
-use Cake\Core\Plugin;
 use Cake\Filesystem\Folder;
 use Cake\TestSuite\TestCase;
+use RuntimeException;
 use TestApp\Shell\MergeShell;
 use TestApp\Shell\ShellTestShell;
+use TestApp\Shell\Task\TestAppleTask;
+use TestApp\Shell\Task\TestBananaTask;
 use TestApp\Shell\TestingDispatchShell;
+use TestPlugin\Model\Table\TestPluginCommentsTable;
 
-/**
- * TestAppleTask class
- */
-class TestAppleTask extends Shell
-{
-}
-
-/**
- * TestBananaTask class
- */
-class TestBananaTask extends Shell
-{
-}
-
-class_alias(__NAMESPACE__ . '\TestAppleTask', 'Cake\Shell\Task\TestAppleTask');
-class_alias(__NAMESPACE__ . '\TestBananaTask', 'Cake\Shell\Task\TestBananaTask');
+class_alias(TestAppleTask::class, 'Cake\Shell\Task\TestAppleTask');
+class_alias(TestBananaTask::class, 'Cake\Shell\Task\TestBananaTask');
 
 /**
  * ShellTest class
  */
 class ShellTest extends TestCase
 {
-
     /**
      * Fixtures used in this test case
      *
      * @var array
      */
-    public $fixtures = [
+    protected $fixtures = [
         'core.Articles',
         'core.ArticlesTags',
         'core.Attachments',
         'core.Comments',
         'core.Posts',
         'core.Tags',
-        'core.Users'
+        'core.Users',
     ];
 
-    /** @var \Cake\Console\Shell */
+    /**
+     * @var \Cake\Console\Shell
+     */
     protected $Shell;
 
     /**
@@ -75,7 +68,7 @@ class ShellTest extends TestCase
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -97,27 +90,8 @@ class ShellTest extends TestCase
      */
     public function testConstruct()
     {
-        $this->assertEquals('ShellTestShell', $this->Shell->name);
+        $this->assertSame('ShellTestShell', $this->Shell->name);
         $this->assertInstanceOf(ConsoleIo::class, $this->Shell->getIo());
-    }
-
-    /**
-     * test io method
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testIo()
-    {
-        $this->deprecated(function () {
-            $this->assertInstanceOf(ConsoleIo::class, $this->Shell->io());
-
-            $io = $this->getMockBuilder(ConsoleIo::class)
-                ->disableOriginalConstructor()
-                ->getMock();
-            $this->assertSame($io, $this->Shell->io($io));
-            $this->assertSame($io, $this->Shell->io());
-        });
     }
 
     /**
@@ -130,15 +104,15 @@ class ShellTest extends TestCase
         static::setAppNamespace();
 
         $this->loadPlugins(['TestPlugin']);
-        $this->Shell->tasks = ['Extract' => ['one', 'two']];
+        $this->Shell->tasks = ['Sample' => ['one', 'two']];
         $this->Shell->plugin = 'TestPlugin';
-        $this->Shell->modelClass = 'TestPlugin.TestPluginComments';
         $this->Shell->initialize();
+        // TestApp\Shell\ShellTestShell has $modelClass property set to 'TestPlugin.TestPluginComments'
         $this->Shell->loadModel();
 
         $this->assertTrue(isset($this->Shell->TestPluginComments));
         $this->assertInstanceOf(
-            'TestPlugin\Model\Table\TestPluginCommentsTable',
+            TestPluginCommentsTable::class,
             $this->Shell->TestPluginComments
         );
         $this->clearPlugins();
@@ -158,16 +132,16 @@ class ShellTest extends TestCase
             'TestApp\Model\Table\ArticlesTable',
             $Shell->Articles
         );
-        $this->assertEquals('Articles', $Shell->modelClass);
+        $this->assertSame('Articles', $Shell->modelClass);
 
         $this->loadPlugins(['TestPlugin']);
         $result = $this->Shell->loadModel('TestPlugin.TestPluginComments');
         $this->assertInstanceOf(
-            'TestPlugin\Model\Table\TestPluginCommentsTable',
+            TestPluginCommentsTable::class,
             $result
         );
         $this->assertInstanceOf(
-            'TestPlugin\Model\Table\TestPluginCommentsTable',
+            TestPluginCommentsTable::class,
             $this->Shell->TestPluginComments
         );
         $this->clearPlugins();
@@ -191,10 +165,10 @@ class ShellTest extends TestCase
             ->will($this->returnValue('n'));
 
         $result = $this->Shell->in('Just a test?', ['y', 'n'], 'n');
-        $this->assertEquals('n', $result);
+        $this->assertSame('n', $result);
 
         $result = $this->Shell->in('Just a test?', null, 'n');
-        $this->assertEquals('n', $result);
+        $this->assertSame('n', $result);
     }
 
     /**
@@ -212,7 +186,7 @@ class ShellTest extends TestCase
         $this->Shell->interactive = false;
 
         $result = $this->Shell->in('Just a test?', 'y/n', 'n');
-        $this->assertEquals('n', $result);
+        $this->assertSame('n', $result);
     }
 
     /**
@@ -398,25 +372,21 @@ class ShellTest extends TestCase
     }
 
     /**
-     * testError
+     * testAbort
      *
-     * @group deprecated
      * @return void
      */
-    public function testError()
+    public function testAbort()
     {
+        $this->expectException(StopException::class);
+        $this->expectExceptionMessage('Foo Not Found');
+        $this->expectExceptionCode(1);
+
         $this->io->expects($this->at(0))
             ->method('err')
-            ->with('<error>Error:</error> Foo Not Found');
+            ->with('<error>Foo Not Found</error>');
 
-        $this->io->expects($this->at(1))
-            ->method('err')
-            ->with('Searched all...');
-
-        $this->deprecated(function () {
-            $this->Shell->error('Foo Not Found', 'Searched all...');
-            $this->assertSame($this->Shell->stopped, 1);
-        });
+        $this->Shell->abort('Foo Not Found');
     }
 
     /**
@@ -506,7 +476,7 @@ class ShellTest extends TestCase
 
         $path = APP;
         $result = $this->Shell->shortPath($path);
-        $this->assertNotContains(ROOT, $result, 'Short paths should not contain ROOT');
+        $this->assertStringNotContainsString(ROOT, $result, 'Short paths should not contain ROOT');
     }
 
     /**
@@ -562,7 +532,6 @@ class ShellTest extends TestCase
      */
     public function testCreateFileNoReply()
     {
-        $eol = PHP_EOL;
         $path = TMP . 'shell_test';
         $file = $path . DS . 'file1.php';
 
@@ -589,7 +558,6 @@ class ShellTest extends TestCase
      */
     public function testCreateFileOverwrite()
     {
-        $eol = PHP_EOL;
         $path = TMP . 'shell_test';
         $file = $path . DS . 'file1.php';
 
@@ -641,12 +609,11 @@ class ShellTest extends TestCase
      */
     public function testCreateFileOverwriteAll()
     {
-        $eol = PHP_EOL;
         $path = TMP . 'shell_test';
         $files = [
             $path . DS . 'file1.php' => 'My first content',
             $path . DS . 'file2.php' => 'My second content',
-            $path . DS . 'file3.php' => 'My third content'
+            $path . DS . 'file3.php' => 'My third content',
         ];
 
         new Folder($path, true);
@@ -697,26 +664,28 @@ class ShellTest extends TestCase
      */
     public function testHasTask()
     {
-        $this->Shell->tasks = ['Extract', 'Assets'];
+        $this->setAppNamespace();
+        $this->Shell->tasks = ['Sample', 'TestApple'];
         $this->Shell->loadTasks();
 
-        $this->assertTrue($this->Shell->hasTask('extract'));
-        $this->assertTrue($this->Shell->hasTask('Extract'));
+        $this->assertTrue($this->Shell->hasTask('sample'));
+        $this->assertTrue($this->Shell->hasTask('Sample'));
         $this->assertFalse($this->Shell->hasTask('random'));
 
-        $this->assertTrue($this->Shell->hasTask('assets'));
-        $this->assertTrue($this->Shell->hasTask('Assets'));
+        $this->assertTrue($this->Shell->hasTask('testApple'));
+        $this->assertTrue($this->Shell->hasTask('TestApple'));
     }
 
     /**
      * test task loading exception
      *
-     * @expectedException \RuntimeException
-     * @expectedExceptionMessage Task `DoesNotExist` not found. Maybe you made a typo or a plugin is missing or not loaded?
      * @return void
      */
     public function testMissingTaskException()
     {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Task `DoesNotExist` not found. Maybe you made a typo or a plugin is missing or not loaded?');
+
         $this->Shell->tasks = ['DoesNotExist'];
         $this->Shell->loadTasks();
     }
@@ -742,6 +711,7 @@ class ShellTest extends TestCase
     public function testRunCommandMain()
     {
         $io = $this->getMockBuilder('Cake\Console\ConsoleIo')->getMock();
+        /** @var \Cake\Console\Shell|\PHPUnit\Framework\MockObject\MockObject $shell */
         $shell = $this->getMockBuilder('Cake\Console\Shell')
             ->setMethods(['main', 'startup'])
             ->setConstructorArgs([$io])
@@ -753,7 +723,7 @@ class ShellTest extends TestCase
             ->will($this->returnValue(true));
         $result = $shell->runCommand(['cakes', '--verbose']);
         $this->assertTrue($result);
-        $this->assertEquals('main', $shell->command);
+        $this->assertSame('main', $shell->command);
     }
 
     /**
@@ -764,6 +734,7 @@ class ShellTest extends TestCase
     public function testRunCommandWithMethod()
     {
         $io = $this->getMockBuilder('Cake\Console\ConsoleIo')->getMock();
+        /** @var \Cake\Console\Shell|\PHPUnit\Framework\MockObject\MockObject $shell */
         $shell = $this->getMockBuilder('Cake\Console\Shell')
             ->setMethods(['hitMe', 'startup'])
             ->setConstructorArgs([$io])
@@ -775,7 +746,7 @@ class ShellTest extends TestCase
             ->will($this->returnValue(true));
         $result = $shell->runCommand(['hit_me', 'cakes', '--verbose'], true);
         $this->assertTrue($result);
-        $this->assertEquals('hit_me', $shell->command);
+        $this->assertSame('hit_me', $shell->command);
     }
 
     /**
@@ -831,13 +802,13 @@ class ShellTest extends TestCase
 
         // Shell::dispatchShell(['command' => 'schema create DbAcl']);
         $result = $Shell->parseDispatchArguments([[
-            'command' => 'schema create DbAcl'
+            'command' => 'schema create DbAcl',
         ]]);
         $this->assertEquals($expected, $result);
 
         // Shell::dispatchShell(['command' => ['schema', 'create', 'DbAcl']]);
         $result = $Shell->parseDispatchArguments([[
-            'command' => ['schema', 'create', 'DbAcl']
+            'command' => ['schema', 'create', 'DbAcl'],
         ]]);
         $this->assertEquals($expected, $result);
 
@@ -845,14 +816,14 @@ class ShellTest extends TestCase
         // Shell::dispatchShell(['command' => 'schema create DbAcl', 'extra' => ['param' => 'value']]);
         $result = $Shell->parseDispatchArguments([[
             'command' => 'schema create DbAcl',
-            'extra' => ['param' => 'value']
+            'extra' => ['param' => 'value'],
         ]]);
         $this->assertEquals($expected, $result);
 
         // Shell::dispatchShell(['command' => ['schema', 'create', 'DbAcl'], 'extra' => ['param' => 'value']]);
         $result = $Shell->parseDispatchArguments([[
             'command' => ['schema', 'create', 'DbAcl'],
-            'extra' => ['param' => 'value']
+            'extra' => ['param' => 'value'],
         ]]);
         $this->assertEquals($expected, $result);
     }
@@ -937,6 +908,7 @@ TEXT;
     public function testRunCommandAutoMethodOff()
     {
         $io = $this->getMockBuilder('Cake\Console\ConsoleIo')->getMock();
+        /** @var \Cake\Console\Shell|\PHPUnit\Framework\MockObject\MockObject $shell */
         $shell = $this->getMockBuilder('Cake\Console\Shell')
             ->setMethods(['hit_me', 'startup'])
             ->setConstructorArgs([$io])
@@ -1056,6 +1028,7 @@ TEXT;
      */
     public function testRunCommandBaseClassMethod()
     {
+        /** @var \Cake\Console\Shell|\PHPUnit\Framework\MockObject\MockObject $shell */
         $shell = $this->getMockBuilder('Cake\Console\Shell')
             ->setMethods(['startup', 'getOptionParser', 'hr'])
             ->disableOriginalConstructor()
@@ -1068,8 +1041,10 @@ TEXT;
         $parser = $this->getMockBuilder('Cake\Console\ConsoleOptionParser')
             ->disableOriginalConstructor()
             ->getMock();
-
         $parser->expects($this->once())->method('help');
+        $parser->method('parse')
+            ->will($this->returnValue([[], []]));
+
         $shell->expects($this->once())->method('getOptionParser')
             ->will($this->returnValue($parser));
         $shell->expects($this->never())->method('hr');
@@ -1085,6 +1060,7 @@ TEXT;
      */
     public function testRunCommandMissingMethod()
     {
+        /** @var \Cake\Console\Shell|\PHPUnit\Framework\MockObject\MockObject $shell */
         $shell = $this->getMockBuilder('Cake\Console\Shell')
             ->setMethods(['startup', 'getOptionParser', 'hr'])
             ->disableOriginalConstructor()
@@ -1097,8 +1073,10 @@ TEXT;
         $parser = $this->getMockBuilder('Cake\Console\ConsoleOptionParser')
             ->disableOriginalConstructor()
             ->getMock();
-
         $parser->expects($this->once())->method('help');
+        $parser->method('parse')
+            ->will($this->returnValue([[], []]));
+
         $shell->expects($this->once())->method('getOptionParser')
             ->will($this->returnValue($parser));
         $shell->_io->expects($this->exactly(2))->method('err');
@@ -1141,6 +1119,7 @@ TEXT;
      */
     public function testRunCommandNotCallUnexposedTask()
     {
+        /** @var \Cake\Console\Shell|\PHPUnit\Framework\MockObject\MockObject $shell */
         $shell = $this->getMockBuilder('Cake\Console\Shell')
             ->setMethods(['startup', 'hasTask'])
             ->disableOriginalConstructor()
@@ -1267,7 +1246,7 @@ TEXT;
 
         $io->expects($this->once())
             ->method('error')
-            ->with('Error: Missing required arguments. filename is required.');
+            ->with('Error: Missing required arguments. The `filename` argument is required.');
         $result = $shell->runCommand([]);
         $this->assertFalse($result, 'Shell should fail');
     }
@@ -1321,7 +1300,7 @@ TEXT;
             'key' => 'value',
             'help' => false,
             'emptykey' => '',
-            'truthy' => true
+            'truthy' => true,
         ];
         $this->assertSame($expected, $this->Shell->param($toRead));
     }
@@ -1353,7 +1332,7 @@ TEXT;
             [
                 'does_not_exist',
                 null,
-            ]
+            ],
         ];
     }
 
@@ -1368,7 +1347,7 @@ TEXT;
         $this->Shell->plugin = 'plugin';
         $parser = $this->Shell->getOptionParser();
 
-        $this->assertEquals('plugin.test', $parser->getCommand());
+        $this->assertSame('plugin.test', $parser->getCommand());
     }
 
     /**
@@ -1417,7 +1396,7 @@ TEXT;
     public function testSetRootNamePropagatesToHelpText()
     {
         $this->assertSame($this->Shell, $this->Shell->setRootName('tool'), 'is chainable');
-        $this->assertContains('tool shell_test_shell [-h]', $this->Shell->getOptionParser()->help());
+        $this->assertStringContainsString('tool shell_test_shell [-h]', $this->Shell->getOptionParser()->help());
     }
 
     /**
@@ -1434,7 +1413,7 @@ TEXT;
             'tasks' => [],
             'params' => [],
             'args' => [],
-            'interactive' => true
+            'interactive' => true,
         ];
         $result = $this->Shell->__debugInfo();
         $this->assertEquals($expected, $result);

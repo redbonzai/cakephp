@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -17,26 +19,33 @@ namespace Cake\Test\TestCase\Cache\Engine;
 use Cake\Cache\Cache;
 use Cake\Cache\Engine\RedisEngine;
 use Cake\TestSuite\TestCase;
+use DateInterval;
 
 /**
  * RedisEngineTest class
  */
 class RedisEngineTest extends TestCase
 {
+    /**
+     * @var string
+     */
+    protected $port = '6379';
 
     /**
      * setUp method
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->skipIf(!class_exists('Redis'), 'Redis extension is not installed or configured properly.');
 
-        // @codingStandardsIgnoreStart
-        $socket = @fsockopen('127.0.0.1', 6379, $errno, $errstr, 1);
-        // @codingStandardsIgnoreEnd
+        $this->port = env('REDIS_PORT', $this->port);
+
+        // phpcs:disable
+        $socket = @fsockopen('127.0.0.1', (int)$this->port, $errno, $errstr, 1);
+        // phpcs:enable
         $this->skipIf(!$socket, 'Redis is not running.');
         fclose($socket);
 
@@ -49,7 +58,7 @@ class RedisEngineTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         Cache::drop('redis');
@@ -68,7 +77,8 @@ class RedisEngineTest extends TestCase
         $defaults = [
             'className' => 'Redis',
             'prefix' => 'cake_',
-            'duration' => 3600
+            'duration' => 3600,
+            'port' => $this->port,
         ];
         Cache::drop('redis');
         Cache::setConfig('redis', array_merge($defaults, $config));
@@ -81,14 +91,13 @@ class RedisEngineTest extends TestCase
      */
     public function testConfig()
     {
-        $config = Cache::engine('redis')->getConfig();
+        $config = Cache::pool('redis')->getConfig();
         $expecting = [
             'prefix' => 'cake_',
             'duration' => 3600,
-            'probability' => 100,
             'groups' => [],
             'server' => '127.0.0.1',
-            'port' => 6379,
+            'port' => $this->port,
             'timeout' => 0,
             'persistent' => true,
             'password' => false,
@@ -107,17 +116,16 @@ class RedisEngineTest extends TestCase
     public function testConfigDsn()
     {
         Cache::setConfig('redis_dsn', [
-            'url' => 'redis://localhost:6379?database=1&prefix=redis_'
+            'url' => 'redis://localhost:' . $this->port . '?database=1&prefix=redis_',
         ]);
 
-        $config = Cache::engine('redis_dsn')->getConfig();
+        $config = Cache::pool('redis_dsn')->getConfig();
         $expecting = [
             'prefix' => 'redis_',
             'duration' => 3600,
-            'probability' => 100,
             'groups' => [],
             'server' => 'localhost',
-            'port' => 6379,
+            'port' => $this->port,
             'timeout' => 0,
             'persistent' => true,
             'password' => false,
@@ -139,7 +147,7 @@ class RedisEngineTest extends TestCase
     public function testConnect()
     {
         $Redis = new RedisEngine();
-        $this->assertTrue($Redis->init(Cache::engine('redis')->getConfig()));
+        $this->assertTrue($Redis->init(Cache::pool('redis')->getConfig()));
     }
 
     /**
@@ -154,6 +162,7 @@ class RedisEngineTest extends TestCase
             'prefix' => 'cake2_',
             'duration' => 3600,
             'persistent' => false,
+            'port' => $this->port,
         ]);
 
         Cache::setConfig('redisdb1', [
@@ -162,6 +171,7 @@ class RedisEngineTest extends TestCase
             'prefix' => 'cake2_',
             'duration' => 3600,
             'persistent' => false,
+            'port' => $this->port,
         ]);
 
         $result = Cache::write('save_in_0', true, 'redisdb0');
@@ -172,17 +182,17 @@ class RedisEngineTest extends TestCase
         $result = Cache::write('save_in_1', true, 'redisdb1');
         $this->assertTrue($result);
         $exist = Cache::read('save_in_0', 'redisdb1');
-        $this->assertFalse($exist);
+        $this->assertNull($exist);
         $exist = Cache::read('save_in_1', 'redisdb1');
         $this->assertTrue($exist);
 
         Cache::delete('save_in_0', 'redisdb0');
         $exist = Cache::read('save_in_0', 'redisdb0');
-        $this->assertFalse($exist);
+        $this->assertNull($exist);
 
         Cache::delete('save_in_1', 'redisdb1');
         $exist = Cache::read('save_in_1', 'redisdb1');
-        $this->assertFalse($exist);
+        $this->assertNull($exist);
 
         Cache::drop('redisdb0');
         Cache::drop('redisdb1');
@@ -215,22 +225,49 @@ class RedisEngineTest extends TestCase
         $this->_configCache(['duration' => 1]);
 
         $result = Cache::read('test', 'redis');
-        $expecting = '';
-        $this->assertEquals($expecting, $result);
+        $this->assertNull($result);
 
         $data = 'this is a test of the emergency broadcasting system';
         $result = Cache::write('test', $data, 'redis');
         $this->assertTrue($result);
 
         $result = Cache::read('test', 'redis');
-        $expecting = $data;
-        $this->assertEquals($expecting, $result);
+        $this->assertEquals($data, $result);
 
         $data = [1, 2, 3];
         $this->assertTrue(Cache::write('array_data', $data, 'redis'));
         $this->assertEquals($data, Cache::read('array_data', 'redis'));
 
+        $result = Cache::write('test', false, 'redis');
+        $this->assertTrue($result);
+
+        $result = Cache::read('test', 'redis');
+        $this->assertFalse($result);
+
+        $result = Cache::write('test', null, 'redis');
+        $this->assertTrue($result);
+
+        $result = Cache::read('test', 'redis');
+        $this->assertNull($result);
+
         Cache::delete('test', 'redis');
+    }
+
+    /**
+     * Test get with default value
+     *
+     * @return void
+     */
+    public function testGetDefaultValue()
+    {
+        $redis = Cache::pool('redis');
+        $this->assertFalse($redis->get('nope', false));
+        $this->assertNull($redis->get('nope', null));
+        $this->assertTrue($redis->get('nope', true));
+        $this->assertSame(0, $redis->get('nope', 0));
+
+        $redis->set('yep', 0);
+        $this->assertSame(0, $redis->get('yep', false));
     }
 
     /**
@@ -243,7 +280,7 @@ class RedisEngineTest extends TestCase
         $this->_configCache(['duration' => 1]);
 
         $result = Cache::read('test', 'redis');
-        $this->assertFalse($result);
+        $this->assertNull($result);
 
         $data = 'this is a test of the emergency broadcasting system';
         $result = Cache::write('other_test', $data, 'redis');
@@ -251,7 +288,7 @@ class RedisEngineTest extends TestCase
 
         sleep(2);
         $result = Cache::read('other_test', 'redis');
-        $this->assertFalse($result);
+        $this->assertNull($result);
 
         $this->_configCache(['duration' => '+1 second']);
 
@@ -261,12 +298,12 @@ class RedisEngineTest extends TestCase
 
         sleep(2);
         $result = Cache::read('other_test', 'redis');
-        $this->assertFalse($result);
+        $this->assertNull($result);
 
         sleep(2);
 
         $result = Cache::read('other_test', 'redis');
-        $this->assertFalse($result);
+        $this->assertNull($result);
 
         $this->_configCache(['duration' => '+29 days']);
         $data = 'this is a test of the emergency broadcasting system';
@@ -277,6 +314,28 @@ class RedisEngineTest extends TestCase
         $result = Cache::read('long_expiry_test', 'redis');
         $expecting = $data;
         $this->assertEquals($expecting, $result);
+    }
+
+    /**
+     * test set ttl parameter
+     *
+     * @return void
+     */
+    public function testSetWithTtl()
+    {
+        $this->_configCache(['duration' => 99]);
+        $engine = Cache::pool('redis');
+        $this->assertNull($engine->get('test'));
+
+        $data = 'this is a test of the emergency broadcasting system';
+        $this->assertTrue($engine->set('default_ttl', $data));
+        $this->assertTrue($engine->set('int_ttl', $data, 1));
+        $this->assertTrue($engine->set('interval_ttl', $data, new DateInterval('PT1S')));
+
+        sleep(2);
+        $this->assertNull($engine->get('int_ttl'));
+        $this->assertNull($engine->get('interval_ttl'));
+        $this->assertSame($data, $engine->get('default_ttl'));
     }
 
     /**
@@ -340,6 +399,27 @@ class RedisEngineTest extends TestCase
     }
 
     /**
+     * testIncrementAfterWrite method
+     *
+     * @return void
+     */
+    public function testIncrementAfterWrite()
+    {
+        Cache::delete('test_increment', 'redis');
+        $result = Cache::write('test_increment', 1, 'redis');
+        $this->assertTrue($result);
+
+        $result = Cache::read('test_increment', 'redis');
+        $this->assertSame(1, $result);
+
+        $result = Cache::increment('test_increment', 2, 'redis');
+        $this->assertSame(3, $result);
+
+        $result = Cache::read('test_increment', 'redis');
+        $this->assertSame(3, $result);
+    }
+
+    /**
      * Test that increment() and decrement() can live forever.
      *
      * @return void
@@ -376,8 +456,8 @@ class RedisEngineTest extends TestCase
 
         sleep(2);
 
-        $this->assertFalse(Cache::read('test_increment', 'redis'));
-        $this->assertFalse(Cache::read('test_decrement', 'redis'));
+        $this->assertNull(Cache::read('test_increment', 'redis'));
+        $this->assertNull(Cache::read('test_decrement', 'redis'));
     }
 
     /**
@@ -390,21 +470,22 @@ class RedisEngineTest extends TestCase
         Cache::setConfig('redis2', [
             'engine' => 'Redis',
             'prefix' => 'cake2_',
-            'duration' => 3600
+            'duration' => 3600,
+            'port' => $this->port,
         ]);
 
         Cache::write('some_value', 'cache1', 'redis');
-        $result = Cache::clear(true, 'redis');
+        $result = Cache::clear('redis');
         $this->assertTrue($result);
-        $this->assertEquals('cache1', Cache::read('some_value', 'redis'));
+        $this->assertNull(Cache::read('some_value', 'redis'));
 
         Cache::write('some_value', 'cache2', 'redis2');
-        $result = Cache::clear(false, 'redis');
+        $result = Cache::clear('redis');
         $this->assertTrue($result);
-        $this->assertFalse(Cache::read('some_value', 'redis'));
-        $this->assertEquals('cache2', Cache::read('some_value', 'redis2'));
+        $this->assertNull(Cache::read('some_value', 'redis'));
+        $this->assertSame('cache2', Cache::read('some_value', 'redis2'));
 
-        Cache::clear(false, 'redis2');
+        Cache::clear('redis2');
     }
 
     /**
@@ -419,7 +500,7 @@ class RedisEngineTest extends TestCase
 
         $this->assertTrue($result);
         $result = Cache::read('test_key', 'redis');
-        $this->assertEquals('written!', $result);
+        $this->assertSame('written!', $result);
     }
 
     /**
@@ -435,25 +516,27 @@ class RedisEngineTest extends TestCase
             'engine' => 'Redis',
             'duration' => 3600,
             'groups' => ['group_a', 'group_b'],
-            'prefix' => 'test_'
+            'prefix' => 'test_',
+            'port' => $this->port,
         ]);
         Cache::setConfig('redis_helper', [
             'engine' => 'Redis',
             'duration' => 3600,
-            'prefix' => 'test_'
+            'prefix' => 'test_',
+            'port' => $this->port,
         ]);
         $this->assertTrue(Cache::write('test_groups', 'value', 'redis_groups'));
-        $this->assertEquals('value', Cache::read('test_groups', 'redis_groups'));
+        $this->assertSame('value', Cache::read('test_groups', 'redis_groups'));
 
         Cache::increment('group_a', 1, 'redis_helper');
-        $this->assertFalse(Cache::read('test_groups', 'redis_groups'));
+        $this->assertNull(Cache::read('test_groups', 'redis_groups'));
         $this->assertTrue(Cache::write('test_groups', 'value2', 'redis_groups'));
-        $this->assertEquals('value2', Cache::read('test_groups', 'redis_groups'));
+        $this->assertSame('value2', Cache::read('test_groups', 'redis_groups'));
 
         Cache::increment('group_b', 1, 'redis_helper');
-        $this->assertFalse(Cache::read('test_groups', 'redis_groups'));
+        $this->assertNull(Cache::read('test_groups', 'redis_groups'));
         $this->assertTrue(Cache::write('test_groups', 'value3', 'redis_groups'));
-        $this->assertEquals('value3', Cache::read('test_groups', 'redis_groups'));
+        $this->assertSame('value3', Cache::read('test_groups', 'redis_groups'));
     }
 
     /**
@@ -466,13 +549,14 @@ class RedisEngineTest extends TestCase
         Cache::setConfig('redis_groups', [
             'engine' => 'Redis',
             'duration' => 3600,
-            'groups' => ['group_a', 'group_b']
+            'groups' => ['group_a', 'group_b'],
+            'port' => $this->port,
         ]);
         $this->assertTrue(Cache::write('test_groups', 'value', 'redis_groups'));
-        $this->assertEquals('value', Cache::read('test_groups', 'redis_groups'));
+        $this->assertSame('value', Cache::read('test_groups', 'redis_groups'));
         $this->assertTrue(Cache::delete('test_groups', 'redis_groups'));
 
-        $this->assertFalse(Cache::read('test_groups', 'redis_groups'));
+        $this->assertNull(Cache::read('test_groups', 'redis_groups'));
     }
 
     /**
@@ -485,16 +569,17 @@ class RedisEngineTest extends TestCase
         Cache::setConfig('redis_groups', [
             'engine' => 'Redis',
             'duration' => 3600,
-            'groups' => ['group_a', 'group_b']
+            'groups' => ['group_a', 'group_b'],
+            'port' => $this->port,
         ]);
 
         $this->assertTrue(Cache::write('test_groups', 'value', 'redis_groups'));
         $this->assertTrue(Cache::clearGroup('group_a', 'redis_groups'));
-        $this->assertFalse(Cache::read('test_groups', 'redis_groups'));
+        $this->assertNull(Cache::read('test_groups', 'redis_groups'));
 
         $this->assertTrue(Cache::write('test_groups', 'value2', 'redis_groups'));
         $this->assertTrue(Cache::clearGroup('group_b', 'redis_groups'));
-        $this->assertFalse(Cache::read('test_groups', 'redis_groups'));
+        $this->assertNull(Cache::read('test_groups', 'redis_groups'));
     }
 
     /**

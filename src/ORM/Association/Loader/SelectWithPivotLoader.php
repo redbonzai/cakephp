@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,6 +16,7 @@
  */
 namespace Cake\ORM\Association\Loader;
 
+use Cake\ORM\Query;
 use RuntimeException;
 
 /**
@@ -23,7 +26,6 @@ use RuntimeException;
  */
 class SelectWithPivotLoader extends SelectLoader
 {
-
     /**
      * The name of the junction association
      *
@@ -48,7 +50,7 @@ class SelectWithPivotLoader extends SelectLoader
     /**
      * Custom conditions for the junction association
      *
-     * @var string|array|\Cake\Database\ExpressionInterface|callable|null
+     * @var string|array|\Cake\Database\ExpressionInterface|\Closure|null
      */
     protected $junctionConditions;
 
@@ -76,7 +78,7 @@ class SelectWithPivotLoader extends SelectLoader
      * @return \Cake\ORM\Query
      * @throws \InvalidArgumentException When a key is required for associations but not selected.
      */
-    protected function _buildQuery($options)
+    protected function _buildQuery(array $options): Query
     {
         $name = $this->junctionAssociationName;
         $assoc = $this->junctionAssoc;
@@ -129,13 +131,21 @@ class SelectWithPivotLoader extends SelectLoader
     }
 
     /**
+     * @inheritDoc
+     */
+    protected function _assertFieldsPresent(Query $fetchQuery, array $key): void
+    {
+        // _buildQuery() manually adds in required fields from junction table
+    }
+
+    /**
      * Generates a string used as a table field that contains the values upon
      * which the filter should be applied
      *
      * @param array $options the options to use for getting the link field.
-     * @return array|string
+     * @return string|string[]
      */
-    protected function _linkField($options)
+    protected function _linkField(array $options)
     {
         $links = [];
         $name = $this->junctionAssociationName;
@@ -160,7 +170,7 @@ class SelectWithPivotLoader extends SelectLoader
      * @return array
      * @throws \RuntimeException when the association property is not part of the results set.
      */
-    protected function _buildResultMap($fetchQuery, $options)
+    protected function _buildResultMap(Query $fetchQuery, array $options): array
     {
         $resultMap = [];
         $key = (array)$options['foreignKey'];

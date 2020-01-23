@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -24,23 +26,22 @@ use Cake\TestSuite\TestCase;
  */
 class DigestTest extends TestCase
 {
-
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|\Cake\Http\Client
+     * @var \PHPUnit\Framework\MockObject\MockObject|\Cake\Http\Client
      */
-    public $client;
+    protected $client;
 
     /**
      * @var \Cake\Http\Client\Auth\Digest
      */
-    public $auth;
+    protected $auth;
 
     /**
      * Setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -49,7 +50,7 @@ class DigestTest extends TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|\Cake\Http\Client
+     * @return \PHPUnit\Framework\MockObject\MockObject|\Cake\Http\Client
      */
     protected function getClientMock()
     {
@@ -66,7 +67,7 @@ class DigestTest extends TestCase
     public function testRealmAndNonceFromExtraRequest()
     {
         $headers = [
-            'WWW-Authenticate: Digest realm="The batcave",nonce="4cded326c6c51"'
+            'WWW-Authenticate: Digest realm="The batcave",nonce="4cded326c6c51"',
         ];
 
         $response = new Response($headers, '');
@@ -79,13 +80,13 @@ class DigestTest extends TestCase
         $request = $this->auth->authentication($request, $auth);
 
         $result = $request->getHeaderLine('Authorization');
-        $this->assertContains('Digest', $result);
-        $this->assertContains('realm="The batcave"', $result);
-        $this->assertContains('nonce="4cded326c6c51"', $result);
-        $this->assertContains('response="a21a874c0b29165929f5d24d1aad2c47"', $result);
-        $this->assertContains('uri="/some/path"', $result);
-        $this->assertNotContains('qop=', $result);
-        $this->assertNotContains('nc=', $result);
+        $this->assertStringContainsString('Digest', $result);
+        $this->assertStringContainsString('realm="The batcave"', $result);
+        $this->assertStringContainsString('nonce="4cded326c6c51"', $result);
+        $this->assertStringContainsString('response="a21a874c0b29165929f5d24d1aad2c47"', $result);
+        $this->assertStringContainsString('uri="/some/path"', $result);
+        $this->assertStringNotContainsString('qop=', $result);
+        $this->assertStringNotContainsString('nc=', $result);
     }
 
     /**
@@ -96,7 +97,7 @@ class DigestTest extends TestCase
     public function testQop()
     {
         $headers = [
-            'WWW-Authenticate: Digest realm="The batcave",nonce="4cded326c6c51",qop="auth"'
+            'WWW-Authenticate: Digest realm="The batcave",nonce="4cded326c6c51",qop="auth"',
         ];
 
         $response = new Response($headers, '');
@@ -109,8 +110,8 @@ class DigestTest extends TestCase
         $request = $this->auth->authentication($request, $auth);
         $result = $request->getHeaderLine('Authorization');
 
-        $this->assertContains('qop="auth"', $result);
-        $this->assertContains('nc=00000001', $result);
+        $this->assertStringContainsString('qop="auth"', $result);
+        $this->assertStringContainsString('nc=00000001', $result);
         $this->assertRegexp('/cnonce="[a-z0-9]+"/', $result);
     }
 
@@ -122,7 +123,7 @@ class DigestTest extends TestCase
     public function testOpaque()
     {
         $headers = [
-            'WWW-Authenticate: Digest realm="The batcave",nonce="4cded326c6c51",opaque="d8ea7aa61a1693024c4cc3a516f49b3c"'
+            'WWW-Authenticate: Digest realm="The batcave",nonce="4cded326c6c51",opaque="d8ea7aa61a1693024c4cc3a516f49b3c"',
         ];
 
         $response = new Response($headers, '');
@@ -135,6 +136,6 @@ class DigestTest extends TestCase
         $request = $this->auth->authentication($request, $auth);
         $result = $request->getHeaderLine('Authorization');
 
-        $this->assertContains('opaque="d8ea7aa61a1693024c4cc3a516f49b3c"', $result);
+        $this->assertStringContainsString('opaque="d8ea7aa61a1693024c4cc3a516f49b3c"', $result);
     }
 }

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -18,6 +20,7 @@ use Cake\Chronos\Date;
 use Cake\Database\Type\DateType;
 use Cake\I18n\Time;
 use Cake\TestSuite\TestCase;
+use DateTimeImmutable;
 
 /**
  * Test for the Date type.
@@ -27,19 +30,19 @@ class DateTypeTest extends TestCase
     /**
      * @var \Cake\Database\Type\DateType
      */
-    public $type;
+    protected $type;
 
     /**
      * @var \Cake\Database\Driver
      */
-    public $driver;
+    protected $driver;
 
     /**
      * Setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->type = new DateType();
@@ -57,10 +60,10 @@ class DateTypeTest extends TestCase
         $this->assertNull($this->type->toPHP('0000-00-00', $this->driver));
 
         $result = $this->type->toPHP('2001-01-04', $this->driver);
-        $this->assertInstanceOf('DateTime', $result);
-        $this->assertEquals('2001', $result->format('Y'));
-        $this->assertEquals('01', $result->format('m'));
-        $this->assertEquals('04', $result->format('d'));
+        $this->assertInstanceOf(DateTimeImmutable::class, $result);
+        $this->assertSame('2001', $result->format('Y'));
+        $this->assertSame('01', $result->format('m'));
+        $this->assertSame('04', $result->format('d'));
     }
 
     /**
@@ -99,11 +102,11 @@ class DateTypeTest extends TestCase
 
         $date = new Time('2013-08-12');
         $result = $this->type->toDatabase($date, $this->driver);
-        $this->assertEquals('2013-08-12', $result);
+        $this->assertSame('2013-08-12', $result);
 
         $date = new Time('2013-08-12 15:16:18');
         $result = $this->type->toDatabase($date, $this->driver);
-        $this->assertEquals('2013-08-12', $result);
+        $this->assertSame('2013-08-12', $result);
     }
 
     /**
@@ -121,10 +124,9 @@ class DateTypeTest extends TestCase
             [false, null],
             [true, null],
             ['', null],
-            ['derpy', 'derpy'],
-            ['2013-nope!', '2013-nope!'],
-            ['14-02-14', '14-02-14'],
-            ['2014-02-14 13:14:15', '2014-02-14 13:14:15'],
+            ['derpy', null],
+            ['2013-nope!', null],
+            ['2014-02-14 13:14:15', null],
 
             // valid string types
             ['1392387900', $date],
@@ -138,46 +140,46 @@ class DateTypeTest extends TestCase
             ],
             [
                 ['year' => 2014, 'month' => 2, 'day' => 14, 'hour' => 13, 'minute' => 14, 'second' => 15],
-                new Date('2014-02-14')
+                new Date('2014-02-14'),
             ],
             [
                 [
                     'year' => 2014, 'month' => 2, 'day' => 14,
                     'hour' => 1, 'minute' => 14, 'second' => 15,
-                    'meridian' => 'am'
+                    'meridian' => 'am',
                 ],
-                new Date('2014-02-14')
+                new Date('2014-02-14'),
             ],
             [
                 [
                     'year' => 2014, 'month' => 2, 'day' => 14,
                     'hour' => 1, 'minute' => 14, 'second' => 15,
-                    'meridian' => 'pm'
+                    'meridian' => 'pm',
                 ],
-                new Date('2014-02-14')
+                new Date('2014-02-14'),
             ],
             [
                 [
                     'year' => 2014, 'month' => 2, 'day' => 14,
                 ],
-                new Date('2014-02-14')
+                new Date('2014-02-14'),
             ],
 
             // Invalid array types
             [
                 ['year' => 'farts', 'month' => 'derp'],
-                new Date(date('Y-m-d'))
+                new Date(date('Y-m-d')),
             ],
             [
                 ['year' => 'farts', 'month' => 'derp', 'day' => 'farts'],
-                new Date(date('Y-m-d'))
+                new Date(date('Y-m-d')),
             ],
             [
                 [
                     'year' => '2014', 'month' => '02', 'day' => '14',
-                    'hour' => 'farts', 'minute' => 'farts'
+                    'hour' => 'farts', 'minute' => 'farts',
                 ],
-                new Date('2014-02-14')
+                new Date('2014-02-14'),
             ],
         ];
     }
@@ -206,11 +208,13 @@ class DateTypeTest extends TestCase
     public function testMarshalWithLocaleParsing()
     {
         $this->type->useLocaleParser();
+
         $expected = new Date('13-10-2013');
         $result = $this->type->marshal('10/13/2013');
         $this->assertEquals($expected->format('Y-m-d'), $result->format('Y-m-d'));
-
         $this->assertNull($this->type->marshal('11/derp/2013'));
+
+        $this->type->useLocaleParser(false);
     }
 
     /**
@@ -221,9 +225,12 @@ class DateTypeTest extends TestCase
     public function testMarshalWithLocaleParsingWithFormat()
     {
         $this->type->useLocaleParser()->setLocaleFormat('dd MMM, y');
+
         $expected = new Date('13-10-2013');
         $result = $this->type->marshal('13 Oct, 2013');
         $this->assertEquals($expected->format('Y-m-d'), $result->format('Y-m-d'));
+
+        $this->type->useLocaleParser(false)->setLocaleFormat(null);
     }
 
     /**

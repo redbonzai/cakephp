@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -21,9 +23,8 @@ use Cake\TestSuite\TestCase;
 /**
  * Tests the Cake\Event\EvenList class functionality
  */
-class EvenListTest extends TestCase
+class EventListTest extends TestCase
 {
-
     /**
      * testAddEventAndFlush
      *

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -20,7 +22,9 @@ namespace Cake\TestSuite\Constraint\Response;
  */
 class StatusOk extends StatusCodeBase
 {
-
+    /**
+     * @var int[]
+     */
     protected $code = [200, 204];
 
     /**
@@ -28,7 +32,7 @@ class StatusOk extends StatusCodeBase
      *
      * @return string
      */
-    public function toString()
+    public function toString(): string
     {
         return sprintf('%d is between 200 and 204', $this->response->getStatusCode());
     }

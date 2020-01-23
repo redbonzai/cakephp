@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -13,34 +15,13 @@
  */
 namespace TestApp\Controller\Admin;
 
-use Cake\Controller\Controller;
-use Cake\Event\Event;
+use Cake\Controller\ErrorController as CoreErrorController;
 
 /**
  * Error Handling Controller
  *
  * Controller used by ErrorHandler to render error views.
  */
-class ErrorController extends Controller
+class ErrorController extends CoreErrorController
 {
-    /**
-     * Initialization hook method.
-     *
-     * @return void
-     */
-    public function initialize()
-    {
-        $this->loadComponent('RequestHandler');
-    }
-
-    /**
-     * beforeRender callback.
-     *
-     * @param \Cake\Event\Event $event Event.
-     * @return void
-     */
-    public function beforeRender(Event $event)
-    {
-        $this->viewBuilder()->setTemplatePath('Error');
-    }
 }

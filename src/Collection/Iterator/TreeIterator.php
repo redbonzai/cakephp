@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,6 +16,7 @@
  */
 namespace Cake\Collection\Iterator;
 
+use Cake\Collection\CollectionInterface;
 use Cake\Collection\CollectionTrait;
 use RecursiveIterator;
 use RecursiveIteratorIterator;
@@ -22,9 +25,8 @@ use RecursiveIteratorIterator;
  * A Recursive iterator used to flatten nested structures and also exposes
  * all Collection methods
  */
-class TreeIterator extends RecursiveIteratorIterator
+class TreeIterator extends RecursiveIteratorIterator implements CollectionInterface
 {
-
     use CollectionTrait;
 
     /**
@@ -41,8 +43,11 @@ class TreeIterator extends RecursiveIteratorIterator
      * @param int $mode Iterator mode.
      * @param int $flags Iterator flags.
      */
-    public function __construct(RecursiveIterator $items, $mode = RecursiveIteratorIterator::SELF_FIRST, $flags = 0)
-    {
+    public function __construct(
+        RecursiveIterator $items,
+        int $mode = RecursiveIteratorIterator::SELF_FIRST,
+        int $flags = 0
+    ) {
         parent::__construct($items, $mode, $flags);
         $this->_mode = $mode;
     }

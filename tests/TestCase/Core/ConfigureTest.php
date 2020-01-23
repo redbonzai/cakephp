@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -17,7 +19,6 @@ namespace Cake\Test\TestCase\Core;
 use Cake\Cache\Cache;
 use Cake\Core\Configure;
 use Cake\Core\Configure\Engine\PhpConfig;
-use Cake\Core\Plugin;
 use Cake\TestSuite\TestCase;
 
 /**
@@ -25,13 +26,12 @@ use Cake\TestSuite\TestCase;
  */
 class ConfigureTest extends TestCase
 {
-
     /**
      * setUp method
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         Cache::disable();
@@ -42,7 +42,7 @@ class ConfigureTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         if (file_exists(TMP . 'cache/persistent/cake_core_core_paths')) {
@@ -106,13 +106,13 @@ class ConfigureTest extends TestCase
         $this->assertEquals($expected, $result);
 
         $result = Configure::read('level1.level2.level3_2');
-        $this->assertEquals('something_else', $result);
+        $this->assertSame('something_else', $result);
 
         $result = Configure::read('debug');
         $this->assertGreaterThanOrEqual(0, $result);
 
         $result = Configure::read();
-        $this->assertInternalType('array', $result);
+        $this->assertIsArray($result);
         $this->assertArrayHasKey('debug', $result);
         $this->assertArrayHasKey('level1', $result);
 
@@ -135,19 +135,16 @@ class ConfigureTest extends TestCase
      */
     public function testWrite()
     {
-        $writeResult = Configure::write('SomeName.someKey', 'myvalue');
-        $this->assertTrue($writeResult);
+        Configure::write('SomeName.someKey', 'myvalue');
         $result = Configure::read('SomeName.someKey');
-        $this->assertEquals('myvalue', $result);
+        $this->assertSame('myvalue', $result);
 
-        $writeResult = Configure::write('SomeName.someKey', null);
-        $this->assertTrue($writeResult);
+        Configure::write('SomeName.someKey', null);
         $result = Configure::read('SomeName.someKey');
         $this->assertNull($result);
 
         $expected = ['One' => ['Two' => ['Three' => ['Four' => ['Five' => 'cool']]]]];
-        $writeResult = Configure::write('Key', $expected);
-        $this->assertTrue($writeResult);
+        Configure::write('Key', $expected);
 
         $result = Configure::read('Key');
         $this->assertEquals($expected, $result);
@@ -159,11 +156,11 @@ class ConfigureTest extends TestCase
         $this->assertEquals($expected['One']['Two'], $result);
 
         $result = Configure::read('Key.One.Two.Three.Four.Five');
-        $this->assertEquals('cool', $result);
+        $this->assertSame('cool', $result);
 
         Configure::write('one.two.three.four', '4');
         $result = Configure::read('one.two.three.four');
-        $this->assertEquals('4', $result);
+        $this->assertSame('4', $result);
     }
 
     /**
@@ -179,11 +176,11 @@ class ConfigureTest extends TestCase
         );
         Configure::write('debug', false);
         $result = ini_get('display_errors');
-        $this->assertEquals(0, $result);
+        $this->assertSame('0', $result);
 
         Configure::write('debug', true);
         $result = ini_get('display_errors');
-        $this->assertEquals(1, $result);
+        $this->assertEquals('1', $result);
     }
 
     /**
@@ -195,7 +192,7 @@ class ConfigureTest extends TestCase
     {
         Configure::write('SomeName.someKey', 'myvalue');
         $result = Configure::read('SomeName.someKey');
-        $this->assertEquals('myvalue', $result);
+        $this->assertSame('myvalue', $result);
 
         Configure::delete('SomeName.someKey');
         $result = Configure::read('SomeName.someKey');
@@ -204,10 +201,10 @@ class ConfigureTest extends TestCase
         Configure::write('SomeName', ['someKey' => 'myvalue', 'otherKey' => 'otherValue']);
 
         $result = Configure::read('SomeName.someKey');
-        $this->assertEquals('myvalue', $result);
+        $this->assertSame('myvalue', $result);
 
         $result = Configure::read('SomeName.otherKey');
-        $this->assertEquals('otherValue', $result);
+        $this->assertSame('otherValue', $result);
 
         Configure::delete('SomeName');
 
@@ -238,16 +235,16 @@ class ConfigureTest extends TestCase
      */
     public function testCheckingSavedEmpty()
     {
-        $this->assertTrue(Configure::write('ConfigureTestCase', 0));
+        Configure::write('ConfigureTestCase', 0);
         $this->assertTrue(Configure::check('ConfigureTestCase'));
 
-        $this->assertTrue(Configure::write('ConfigureTestCase', '0'));
+        Configure::write('ConfigureTestCase', '0');
         $this->assertTrue(Configure::check('ConfigureTestCase'));
 
-        $this->assertTrue(Configure::write('ConfigureTestCase', false));
+        Configure::write('ConfigureTestCase', false);
         $this->assertTrue(Configure::check('ConfigureTestCase'));
 
-        $this->assertTrue(Configure::write('ConfigureTestCase', null));
+        Configure::write('ConfigureTestCase', null);
         $this->assertFalse(Configure::check('ConfigureTestCase'));
     }
 
@@ -258,11 +255,11 @@ class ConfigureTest extends TestCase
      */
     public function testCheckKeyWithSpaces()
     {
-        $this->assertTrue(Configure::write('Configure Test', 'test'));
+        Configure::write('Configure Test', 'test');
         $this->assertTrue(Configure::check('Configure Test'));
         Configure::delete('Configure Test');
 
-        $this->assertTrue(Configure::write('Configure Test.Test Case', 'test'));
+        Configure::write('Configure Test.Test Case', 'test');
         $this->assertTrue(Configure::check('Configure Test.Test Case'));
     }
 
@@ -274,7 +271,6 @@ class ConfigureTest extends TestCase
     public function testCheckEmpty()
     {
         $this->assertFalse(Configure::check(''));
-        $this->assertFalse(Configure::check(null));
     }
 
     /**
@@ -316,16 +312,16 @@ class ConfigureTest extends TestCase
         $result = Configure::load('var_test', 'test');
         $this->assertTrue($result);
 
-        $this->assertEquals('value', Configure::read('Read'));
+        $this->assertSame('value', Configure::read('Read'));
 
         $result = Configure::load('var_test2', 'test', true);
         $this->assertTrue($result);
 
-        $this->assertEquals('value2', Configure::read('Read'));
-        $this->assertEquals('buried2', Configure::read('Deep.Second.SecondDeepest'));
-        $this->assertEquals('buried', Configure::read('Deep.Deeper.Deepest'));
-        $this->assertEquals('Overwrite', Configure::read('TestAcl.classname'));
-        $this->assertEquals('one', Configure::read('TestAcl.custom'));
+        $this->assertSame('value2', Configure::read('Read'));
+        $this->assertSame('buried2', Configure::read('Deep.Second.SecondDeepest'));
+        $this->assertSame('buried', Configure::read('Deep.Deeper.Deepest'));
+        $this->assertSame('Overwrite', Configure::read('TestAcl.classname'));
+        $this->assertSame('one', Configure::read('TestAcl.custom'));
     }
 
     /**
@@ -340,13 +336,13 @@ class ConfigureTest extends TestCase
         $result = Configure::load('var_test', 'test');
         $this->assertTrue($result);
 
-        $this->assertEquals('value', Configure::read('Read'));
+        $this->assertSame('value', Configure::read('Read'));
 
         $result = Configure::load('var_test2', 'test', false);
         $this->assertTrue($result);
 
-        $this->assertEquals('value2', Configure::read('Read'));
-        $this->assertEquals('buried2', Configure::read('Deep.Second.SecondDeepest'));
+        $this->assertSame('value2', Configure::read('Read'));
+        $this->assertSame('buried2', Configure::read('Deep.Second.SecondDeepest'));
         $this->assertNull(Configure::read('Deep.Deeper.Deepest'));
     }
 
@@ -361,8 +357,8 @@ class ConfigureTest extends TestCase
         Configure::write('my_key', 'value');
 
         Configure::load('var_test', 'test');
-        $this->assertEquals('value', Configure::read('my_key'), 'Should not overwrite existing data.');
-        $this->assertEquals('value', Configure::read('Read'), 'Should load new data.');
+        $this->assertSame('value', Configure::read('my_key'), 'Should not overwrite existing data.');
+        $this->assertSame('value', Configure::read('Read'), 'Should load new data.');
     }
 
     /**
@@ -379,11 +375,11 @@ class ConfigureTest extends TestCase
         Configure::write('TestAcl.classname', 'old');
 
         Configure::load('var_test', 'test', true);
-        $this->assertEquals('value', Configure::read('Read'), 'Should load new data.');
-        $this->assertEquals('buried', Configure::read('Deep.Deeper.Deepest'), 'Should load new data');
-        $this->assertEquals('old', Configure::read('Deep.old'), 'Should not destroy old data.');
-        $this->assertEquals('value', Configure::read('my_key'), 'Should not destroy data.');
-        $this->assertEquals('Original', Configure::read('TestAcl.classname'), 'No arrays');
+        $this->assertSame('value', Configure::read('Read'), 'Should load new data.');
+        $this->assertSame('buried', Configure::read('Deep.Deeper.Deepest'), 'Should load new data');
+        $this->assertSame('old', Configure::read('Deep.old'), 'Should not destroy old data.');
+        $this->assertSame('value', Configure::read('my_key'), 'Should not destroy data.');
+        $this->assertSame('Original', Configure::read('TestAcl.classname'), 'No arrays');
     }
 
     /**
@@ -419,7 +415,7 @@ class ConfigureTest extends TestCase
         Cache::enable();
         Cache::setConfig('configure', [
             'className' => 'File',
-            'path' => TMP . 'tests'
+            'path' => TMP . 'tests',
         ]);
 
         Configure::write('Testing', 'yummy');
@@ -429,7 +425,7 @@ class ConfigureTest extends TestCase
         $this->assertNull(Configure::read('Testing'));
 
         Configure::restore('store_test', 'configure');
-        $this->assertEquals('yummy', Configure::read('Testing'));
+        $this->assertSame('yummy', Configure::read('Testing'));
 
         Cache::delete('store_test', 'configure');
         Cache::drop('configure');
@@ -445,7 +441,7 @@ class ConfigureTest extends TestCase
         Cache::enable();
         Cache::setConfig('configure', [
             'className' => 'File',
-            'path' => TMP . 'tests'
+            'path' => TMP . 'tests',
         ]);
 
         Configure::write('testing', 'value');
@@ -454,7 +450,7 @@ class ConfigureTest extends TestCase
         $this->assertNull(Configure::read('store_test'), 'Calling store with data shouldn\'t modify runtime.');
 
         Configure::restore('store_test', 'configure');
-        $this->assertEquals('one', Configure::read('store_test'));
+        $this->assertSame('one', Configure::read('store_test'));
         $this->assertNull(Configure::read('testing'), 'Values that were not stored are not restored.');
 
         Cache::delete('store_test', 'configure');
@@ -468,12 +464,18 @@ class ConfigureTest extends TestCase
      */
     public function testVersion()
     {
-        $result = Configure::version();
-        $this->assertTrue(version_compare($result, '1.2', '>='));
+        $original = Configure::version();
+        $this->assertTrue(version_compare($original, '4.0', '>='));
+
+        Configure::write('Cake.version', 'banana');
+        $this->assertSame('banana', Configure::version());
+
+        Configure::delete('Cake.version');
+        $this->assertSame($original, Configure::version());
     }
 
     /**
-     * test adding new engines.
+     * Tests adding new engines.
      *
      * @return void
      */
@@ -493,22 +495,22 @@ class ConfigureTest extends TestCase
     }
 
     /**
-     * test deprecated behavior of configured
+     * Tests adding new engines as numeric strings.
      *
-     * @deprecated
      * @return void
      */
-    public function testConfigured()
+    public function testEngineSetupNumeric()
     {
-        $this->deprecated(function () {
-            $engine = new PhpConfig();
-            Configure::config('test', $engine);
+        $engine = new PhpConfig();
+        Configure::config('123', $engine);
+        $configured = Configure::configured();
 
-            $configured = Configure::configured();
-            $this->assertContains('test', $configured);
-            $this->assertTrue(Configure::configured('test'));
-            $this->assertTrue(Configure::configured('default'));
-        });
+        $this->assertContains('123', $configured);
+
+        $this->assertTrue(Configure::isConfigured('123'));
+
+        $this->assertTrue(Configure::drop('123'));
+        $this->assertFalse(Configure::drop('123'), 'dropping things that do not exist should return false.');
     }
 
     /**
@@ -519,7 +521,7 @@ class ConfigureTest extends TestCase
     public function testClear()
     {
         Configure::write('test', 'value');
-        $this->assertTrue(Configure::clear());
+        Configure::clear();
         $this->assertNull(Configure::read('debug'));
         $this->assertNull(Configure::read('test'));
     }
@@ -545,8 +547,8 @@ class ConfigureTest extends TestCase
         $result = Configure::dump('config_test', 'test_Engine');
         $this->assertGreaterThan(0, $result);
         $result = file_get_contents(TMP . 'config_test.php');
-        $this->assertContains('<?php', $result);
-        $this->assertContains('return ', $result);
+        $this->assertStringContainsString('<?php', $result);
+        $this->assertStringContainsString('return ', $result);
         if (file_exists(TMP . 'config_test.php')) {
             unlink(TMP . 'config_test.php');
         }
@@ -565,10 +567,10 @@ class ConfigureTest extends TestCase
         $result = Configure::dump('config_test', 'test_Engine', ['Error']);
         $this->assertGreaterThan(0, $result);
         $result = file_get_contents(TMP . 'config_test.php');
-        $this->assertContains('<?php', $result);
-        $this->assertContains('return ', $result);
-        $this->assertContains('Error', $result);
-        $this->assertNotContains('debug', $result);
+        $this->assertStringContainsString('<?php', $result);
+        $this->assertStringContainsString('return ', $result);
+        $this->assertStringContainsString('Error', $result);
+        $this->assertStringNotContainsString('debug', $result);
 
         if (file_exists(TMP . 'config_test.php')) {
             unlink(TMP . 'config_test.php');
@@ -586,10 +588,10 @@ class ConfigureTest extends TestCase
         Configure::write('Test', ['key' => 'value', 'key2' => 'value2']);
 
         $result = Configure::consume('Test.key');
-        $this->assertEquals('value', $result);
+        $this->assertSame('value', $result);
 
         $result = Configure::read('Test.key2');
-        $this->assertEquals('value2', $result, 'Other values should remain.');
+        $this->assertSame('value2', $result, 'Other values should remain.');
 
         $result = Configure::consume('Test');
         $expected = ['key2' => 'value2'];
@@ -606,9 +608,6 @@ class ConfigureTest extends TestCase
         Configure::write('Test', ['key' => 'value', 'key2' => 'value2']);
 
         $result = Configure::consume('');
-        $this->assertNull($result);
-
-        $result = Configure::consume(null);
         $this->assertNull($result);
     }
 

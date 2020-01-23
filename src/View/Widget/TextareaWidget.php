@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -19,11 +21,24 @@ use Cake\View\Form\ContextInterface;
 /**
  * Input widget class for generating a textarea control.
  *
- * This class is intended as an internal implementation detail
- * of Cake\View\Helper\FormHelper and is not intended for direct use.
+ * This class is usually used internally by `Cake\View\Helper\FormHelper`,
+ * it but can be used to generate standalone text areas.
  */
 class TextareaWidget extends BasicWidget
 {
+    /**
+     * Data defaults.
+     *
+     * @var array
+     */
+    protected $defaults = [
+        'val' => '',
+        'name' => '',
+        'escape' => true,
+        'rows' => 5,
+        'templateVars' => [],
+    ];
+
     /**
      * Render a text area form widget.
      *
@@ -39,15 +54,16 @@ class TextareaWidget extends BasicWidget
      * @param \Cake\View\Form\ContextInterface $context The current form context.
      * @return string HTML elements.
      */
-    public function render(array $data, ContextInterface $context)
+    public function render(array $data, ContextInterface $context): string
     {
-        $data += [
-            'val' => '',
-            'name' => '',
-            'escape' => true,
-            'rows' => 5,
-            'templateVars' => []
-        ];
+        $data += $this->mergeDefaults($data, $context);
+
+        if (
+            !array_key_exists('maxlength', $data)
+            && isset($data['fieldName'])
+        ) {
+            $data = $this->setMaxLength($data, $context, $data['fieldName']);
+        }
 
         return $this->_templates->format('textarea', [
             'name' => $data['name'],
@@ -56,7 +72,7 @@ class TextareaWidget extends BasicWidget
             'attrs' => $this->_templates->formatAttributes(
                 $data,
                 ['name', 'val']
-            )
+            ),
         ]);
     }
 }

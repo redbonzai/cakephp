@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,7 +17,6 @@
 namespace Cake\Test\TestCase\Core\Configure\Engine;
 
 use Cake\Core\Configure\Engine\PhpConfig;
-use Cake\Core\Plugin;
 use Cake\TestSuite\TestCase;
 
 /**
@@ -23,24 +24,28 @@ use Cake\TestSuite\TestCase;
  */
 class PhpConfigTest extends TestCase
 {
+    /**
+     * @var string
+     */
+    protected $path;
 
     /**
      * Test data to serialize and unserialize.
      *
      * @var array
      */
-    public $testData = [
+    protected $testData = [
         'One' => [
             'two' => 'value',
             'three' => [
-                'four' => 'value four'
+                'four' => 'value four',
             ],
             'is_null' => null,
             'bool_false' => false,
             'bool_true' => true,
         ],
         'Asset' => [
-            'timestamp' => 'force'
+            'timestamp' => 'force',
         ],
     ];
 
@@ -49,7 +54,7 @@ class PhpConfigTest extends TestCase
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->path = CONFIG;
@@ -64,8 +69,8 @@ class PhpConfigTest extends TestCase
     {
         $engine = new PhpConfig($this->path);
         $values = $engine->read('var_test');
-        $this->assertEquals('value', $values['Read']);
-        $this->assertEquals('buried', $values['Deep']['Deeper']['Deepest']);
+        $this->assertSame('value', $values['Read']);
+        $this->assertSame('buried', $values['Deep']['Deeper']['Deepest']);
     }
 
     /**
@@ -141,26 +146,8 @@ class PhpConfigTest extends TestCase
         $engine = new PhpConfig(TMP);
         $result = $engine->dump('test', $this->testData);
         $this->assertGreaterThan(0, $result);
-        $expected = <<<PHP
-<?php
-return array (
-  'One' => 
-  array (
-    'two' => 'value',
-    'three' => 
-    array (
-      'four' => 'value four',
-    ),
-    'is_null' => NULL,
-    'bool_false' => false,
-    'bool_true' => true,
-  ),
-  'Asset' => 
-  array (
-    'timestamp' => 'force',
-  ),
-);
-PHP;
+        $expected = trim(file_get_contents(CONFIG . 'dump_test.txt'));
+
         $file = TMP . 'test.php';
         $contents = file_get_contents($file);
 

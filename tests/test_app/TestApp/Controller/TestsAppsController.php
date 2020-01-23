@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * TestsAppsController file
  *
@@ -22,12 +24,6 @@ namespace TestApp\Controller;
 
 class TestsAppsController extends AppController
 {
-    public $components = [
-        'RequestHandler' => [
-           'enableBeforeRedirect' => false
-        ]
-    ];
-
     public function index()
     {
         $var = '';
@@ -39,7 +35,7 @@ class TestsAppsController extends AppController
 
     public function some_method()
     {
-        return $this->response->withStringBody(5);
+        return $this->response->withStringBody('5');
     }
 
     public function set_action()

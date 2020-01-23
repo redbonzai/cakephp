@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -18,6 +20,8 @@ use Cake\Core\Configure;
 use Cake\Http\ServerRequestFactory;
 use Cake\Http\Session;
 use Cake\TestSuite\TestCase;
+use Laminas\Diactoros\UploadedFile;
+use Psr\Http\Message\UploadedFileInterface;
 
 /**
  * Test case for the server factory.
@@ -27,34 +31,34 @@ class ServerRequestFactoryTest extends TestCase
     /**
      * @var array|null
      */
-    protected $server = null;
+    protected $server;
 
     /**
      * @var array|null
      */
-    protected $post = null;
+    protected $post;
 
     /**
      * @var array|null
      */
-    protected $files = null;
+    protected $files;
 
     /**
      * @var array|null
      */
-    protected $cookies = null;
+    protected $cookies;
 
     /**
      * @var array|null
      */
-    protected $get = null;
+    protected $get;
 
     /**
      * setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->server = $_SERVER;
@@ -69,7 +73,7 @@ class ServerRequestFactoryTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         $_SERVER = $this->server;
@@ -87,7 +91,7 @@ class ServerRequestFactoryTest extends TestCase
     public function testFromGlobalsSuperGlobals()
     {
         $_POST = [
-            'title' => 'custom'
+            'title' => 'custom',
         ];
         $_FILES = [
             'image' => [
@@ -95,8 +99,8 @@ class ServerRequestFactoryTest extends TestCase
                 'error' => 0,
                 'name' => 'cats.png',
                 'type' => 'image/png',
-                'size' => 2112
-            ]
+                'size' => 2112,
+            ],
         ];
         $_COOKIE = ['key' => 'value'];
         $_GET = ['query' => 'string'];
@@ -105,8 +109,15 @@ class ServerRequestFactoryTest extends TestCase
         $this->assertSame($_GET['query'], $res->getQuery('query'));
         $this->assertArrayHasKey('title', $res->getData());
         $this->assertArrayHasKey('image', $res->getData());
-        $this->assertSame($_FILES['image'], $res->getData('image'));
         $this->assertCount(1, $res->getUploadedFiles());
+
+        /** @var \Laminas\Diactoros\UploadedFile $expected */
+        $expected = $res->getData('image');
+        $this->assertInstanceOf(UploadedFileInterface::class, $expected);
+        $this->assertSame($_FILES['image']['size'], $expected->getSize());
+        $this->assertSame($_FILES['image']['error'], $expected->getError());
+        $this->assertSame($_FILES['image']['name'], $expected->getClientFilename());
+        $this->assertSame($_FILES['image']['type'], $expected->getClientMediaType());
     }
 
     /**
@@ -138,7 +149,7 @@ class ServerRequestFactoryTest extends TestCase
         $res = ServerRequestFactory::fromGlobals($server);
         $session = $res->getAttribute('session');
         $this->assertInstanceOf(Session::class, $session);
-        $this->assertEquals('/basedir/', ini_get('session.cookie_path'), 'Needs trailing / for cookie to work');
+        $this->assertSame('/basedir/', ini_get('session.cookie_path'), 'Needs trailing / for cookie to work');
     }
 
     /**
@@ -155,9 +166,9 @@ class ServerRequestFactoryTest extends TestCase
             'REQUEST_URI' => '/posts/add',
         ];
         $res = ServerRequestFactory::fromGlobals($server);
-        $this->assertEquals('basedir', $res->getAttribute('base'));
-        $this->assertEquals('basedir/', $res->getAttribute('webroot'));
-        $this->assertEquals('/posts/add', $res->getUri()->getPath());
+        $this->assertSame('basedir', $res->getAttribute('base'));
+        $this->assertSame('basedir/', $res->getAttribute('webroot'));
+        $this->assertSame('/posts/add', $res->getUri()->getPath());
     }
 
     /**
@@ -176,9 +187,9 @@ class ServerRequestFactoryTest extends TestCase
         ];
         $res = ServerRequestFactory::fromGlobals($server);
 
-        $this->assertEquals('/urlencode%20me', $res->getAttribute('base'));
-        $this->assertEquals('/urlencode%20me/', $res->getAttribute('webroot'));
-        $this->assertEquals('/posts/view/1', $res->getUri()->getPath());
+        $this->assertSame('/urlencode%20me', $res->getAttribute('base'));
+        $this->assertSame('/urlencode%20me/', $res->getAttribute('webroot'));
+        $this->assertSame('/posts/view/1', $res->getUri()->getPath());
     }
 
     /**
@@ -195,9 +206,9 @@ class ServerRequestFactoryTest extends TestCase
         ];
         $res = ServerRequestFactory::fromGlobals($server);
 
-        $this->assertEquals('', $res->getAttribute('base'));
-        $this->assertEquals('/', $res->getAttribute('webroot'));
-        $this->assertEquals('/posts/add', $res->getUri()->getPath());
+        $this->assertSame('', $res->getAttribute('base'));
+        $this->assertSame('/', $res->getAttribute('webroot'));
+        $this->assertSame('/posts/add', $res->getUri()->getPath());
     }
 
     /**
@@ -212,7 +223,7 @@ class ServerRequestFactoryTest extends TestCase
             'dir' => 'app',
             'webroot' => 'www',
             'base' => false,
-            'baseUrl' => '/cake/index.php'
+            'baseUrl' => '/cake/index.php',
         ]);
         $server = [
             'DOCUMENT_ROOT' => '/Users/markstory/Sites',
@@ -239,7 +250,7 @@ class ServerRequestFactoryTest extends TestCase
             'dir' => 'app',
             'webroot' => 'webroot',
             'base' => false,
-            'baseUrl' => '/cake/index.php'
+            'baseUrl' => '/cake/index.php',
         ]);
         $server = [
             'DOCUMENT_ROOT' => '/Users/markstory/Sites',
@@ -266,7 +277,7 @@ class ServerRequestFactoryTest extends TestCase
             'dir' => 'cake',
             'webroot' => 'webroot',
             'base' => false,
-            'baseUrl' => '/index.php'
+            'baseUrl' => '/index.php',
         ]);
         $server = [
             'DOCUMENT_ROOT' => '/Users/markstory/Sites/cake',
@@ -276,8 +287,100 @@ class ServerRequestFactoryTest extends TestCase
         ];
         $res = ServerRequestFactory::fromGlobals($server);
 
-        $this->assertEquals('/webroot/', $res->getAttribute('webroot'));
-        $this->assertEquals('/index.php', $res->getAttribute('base'));
-        $this->assertEquals('/posts/add', $res->getUri()->getPath());
+        $this->assertSame('/webroot/', $res->getAttribute('webroot'));
+        $this->assertSame('/index.php', $res->getAttribute('base'));
+        $this->assertSame('/posts/add', $res->getUri()->getPath());
+    }
+
+    /**
+     * Tests the default file upload merging behavior.
+     *
+     * @return void
+     */
+    public function testFromGlobalsWithFilesAsObjectsDefault()
+    {
+        $this->assertNull(Configure::read('App.uploadedFilesAsObjects'));
+
+        $files = [
+            'file' => [
+                'name' => 'file.txt',
+                'type' => 'text/plain',
+                'tmp_name' => __FILE__,
+                'error' => 0,
+                'size' => 1234,
+            ],
+        ];
+        $request = ServerRequestFactory::fromGlobals(null, null, null, null, $files);
+
+        /** @var \Laminas\Diactoros\UploadedFile $expected */
+        $expected = $request->getData('file');
+        $this->assertSame($files['file']['size'], $expected->getSize());
+        $this->assertSame($files['file']['error'], $expected->getError());
+        $this->assertSame($files['file']['name'], $expected->getClientFilename());
+        $this->assertSame($files['file']['type'], $expected->getClientMediaType());
+    }
+
+    /**
+     * Tests the "as arrays" file upload merging behavior.
+     *
+     * @return void
+     */
+    public function testFromGlobalsWithFilesAsObjectsDisabled()
+    {
+        Configure::write('App.uploadedFilesAsObjects', false);
+
+        $files = [
+            'file' => [
+                'name' => 'file.txt',
+                'type' => 'text/plain',
+                'tmp_name' => __FILE__,
+                'error' => 0,
+                'size' => 1234,
+            ],
+        ];
+        $request = ServerRequestFactory::fromGlobals(null, null, null, null, $files);
+
+        $expected = [
+            'file' => [
+                'tmp_name' => __FILE__,
+                'error' => 0,
+                'name' => 'file.txt',
+                'type' => 'text/plain',
+                'size' => 1234,
+            ],
+        ];
+        $this->assertEquals($expected, $request->getData());
+    }
+
+    /**
+     * Tests the "as objects" file upload merging behavior.
+     *
+     * @return void
+     */
+    public function testFromGlobalsWithFilesAsObjectsEnabled()
+    {
+        Configure::write('App.uploadedFilesAsObjects', true);
+
+        $files = [
+            'file' => [
+                'name' => 'file.txt',
+                'type' => 'text/plain',
+                'tmp_name' => __FILE__,
+                'error' => 0,
+                'size' => 1234,
+            ],
+        ];
+        $request = ServerRequestFactory::fromGlobals(null, null, null, null, $files);
+
+        $expected = [
+            'file' => new UploadedFile(
+                __FILE__,
+                1234,
+                0,
+                'file.txt',
+                'text/plain'
+            ),
+        ];
+        $this->assertEquals($expected, $request->getData());
     }
 }

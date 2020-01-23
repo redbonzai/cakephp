@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -23,14 +25,13 @@ use PDO;
  */
 class MysqlStatement extends PDOStatement
 {
-
     use BufferResultsTrait;
 
     /**
      * {@inheritDoc}
      *
      */
-    public function execute($params = null)
+    public function execute(?array $params = null): bool
     {
         $connection = $this->_driver->getConnection();
 

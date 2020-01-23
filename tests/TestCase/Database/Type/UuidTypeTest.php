@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,7 +16,7 @@
  */
 namespace Cake\Test\TestCase\Database\Type;
 
-use Cake\Database\Type;
+use Cake\Database\TypeFactory;
 use Cake\TestSuite\TestCase;
 use PDO;
 
@@ -26,22 +28,22 @@ class UuidTypeTest extends TestCase
     /**
      * @var \Cake\Database\Type\UuidType
      */
-    public $type;
+    protected $type;
 
     /**
      * @var \Cake\Database\Driver
      */
-    public $driver;
+    protected $driver;
 
     /**
      * Setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
-        $this->type = Type::build('uuid');
+        $this->type = TypeFactory::build('uuid');
         $this->driver = $this->getMockBuilder('Cake\Database\Driver')->getMock();
     }
 
@@ -78,6 +80,9 @@ class UuidTypeTest extends TestCase
         $this->assertNull($result);
 
         $result = $this->type->toDatabase('', $this->driver);
+        $this->assertNull($result);
+
+        $result = $this->type->toDatabase(false, $this->driver);
         $this->assertNull($result);
     }
 

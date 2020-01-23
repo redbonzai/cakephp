@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -14,14 +16,15 @@ namespace Cake\Test\TestCase\Http\Cookie;
 
 use Cake\Chronos\Chronos;
 use Cake\Http\Cookie\Cookie;
+use Cake\Http\Cookie\CookieInterface;
 use Cake\TestSuite\TestCase;
+use DateTimeInterface;
 
 /**
  * HTTP cookies test.
  */
 class CookieTest extends TestCase
 {
-
     /**
      * Generate invalid cookie names.
      *
@@ -72,7 +75,7 @@ class CookieTest extends TestCase
     {
         $cookie = new Cookie('cakephp', 'cakephp-rocks');
         $result = $cookie->toHeaderValue();
-        $this->assertEquals('cakephp=cakephp-rocks; path=/', $result);
+        $this->assertSame('cakephp=cakephp-rocks; path=/', $result);
 
         $date = Chronos::createFromFormat('m/d/Y h:i:s', '12/1/2027 12:00:00');
 
@@ -80,10 +83,11 @@ class CookieTest extends TestCase
         $cookie = $cookie->withDomain('cakephp.org')
             ->withExpiry($date)
             ->withHttpOnly(true)
+            ->withSameSite(CookieInterface::SAMESITE_STRICT)
             ->withSecure(true);
         $result = $cookie->toHeaderValue();
 
-        $expected = 'cakephp=cakephp-rocks; expires=Wed, 01-Dec-2027 12:00:00 GMT; path=/; domain=cakephp.org; secure; httponly';
+        $expected = 'cakephp=cakephp-rocks; expires=Wed, 01-Dec-2027 12:00:00 GMT; path=/; domain=cakephp.org; samesite=Strict; secure; httponly';
         $this->assertEquals($expected, $result);
     }
 
@@ -96,11 +100,11 @@ class CookieTest extends TestCase
     {
         $cookie = new Cookie('cakephp', 'cakephp-rocks');
         $result = $cookie->getValue();
-        $this->assertEquals('cakephp-rocks', $result);
+        $this->assertSame('cakephp-rocks', $result);
 
         $cookie = new Cookie('cakephp', '');
         $result = $cookie->getValue();
-        $this->assertEquals('', $result);
+        $this->assertSame('', $result);
     }
 
     /**
@@ -139,63 +143,13 @@ class CookieTest extends TestCase
      *
      * @return void
      */
-    public function testWithDomainInvalidConstructor()
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('The provided arg must be of type `string` but `integer` given');
-        new Cookie('cakephp', 'rocks', null, '', 1234);
-    }
-
-    /**
-     * Test setting domain in cookies
-     *
-     * @return void
-     */
-    public function testWithDomainInvalid()
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('The provided arg must be of type `string` but `array` given');
-        $cookie = new Cookie('cakephp', 'rocks');
-        $cookie->withDomain(['oops']);
-    }
-
-    /**
-     * Test setting domain in cookies
-     *
-     * @return void
-     */
     public function testWithDomain()
     {
         $cookie = new Cookie('cakephp', 'cakephp-rocks');
         $new = $cookie->withDomain('example.com');
         $this->assertNotSame($new, $cookie, 'Should make a clone');
-        $this->assertNotContains('example.com', $cookie->toHeaderValue(), 'old instance not modified');
-        $this->assertContains('domain=example.com', $new->toHeaderValue());
-    }
-
-    /**
-     * Test setting path in cookies
-     *
-     * @return void
-     */
-    public function testWithPathInvalid()
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('The provided arg must be of type `string` but `array` given');
-        $cookie = new Cookie('cakephp', 'rocks');
-        $cookie->withPath(['oops']);
-    }
-
-    /**
-     * Test setting path in cookies
-     *
-     * @return void
-     */
-    public function testWithPathInvalidConstructor()
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('The provided arg must be of type `string` but `integer` given');
-        new Cookie('cakephp', 'rocks', null, 123);
+        $this->assertStringNotContainsString('example.com', $cookie->toHeaderValue(), 'old instance not modified');
+        $this->assertStringContainsString('domain=example.com', $new->toHeaderValue());
     }
 
     /**
@@ -208,8 +162,36 @@ class CookieTest extends TestCase
         $cookie = new Cookie('cakephp', 'cakephp-rocks');
         $new = $cookie->withPath('/api');
         $this->assertNotSame($new, $cookie, 'Should make a clone');
-        $this->assertNotContains('path=/api', $cookie->toHeaderValue(), 'old instance not modified');
-        $this->assertContains('path=/api', $new->toHeaderValue());
+        $this->assertStringNotContainsString('path=/api', $cookie->toHeaderValue(), 'old instance not modified');
+        $this->assertStringContainsString('path=/api', $new->toHeaderValue());
+    }
+
+    /**
+     * Test setting SameSite in cookies
+     *
+     * @return void
+     */
+    public function testWithSameSite()
+    {
+        $cookie = new Cookie('cakephp', 'cakephp-rocks');
+        $new = $cookie->withSameSite(CookieInterface::SAMESITE_LAX);
+        $this->assertNotSame($new, $cookie, 'Should make a clone');
+        $this->assertStringNotContainsString('samesite=Lax', $cookie->toHeaderValue(), 'old instance not modified');
+        $this->assertStringContainsString('samesite=Lax', $new->toHeaderValue());
+    }
+
+    /**
+     * Test setting SameSite in cookies
+     *
+     * @return void
+     */
+    public function testWithSameSiteException()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Samesite value must be either of: ' . implode(', ', CookieInterface::SAMESITE_VALUES));
+
+        $cookie = new Cookie('cakephp', 'cakephp-rocks');
+        $cookie->withSameSite('invalid');
     }
 
     /**
@@ -220,32 +202,7 @@ class CookieTest extends TestCase
     public function testDefaultPath()
     {
         $cookie = new Cookie('cakephp', 'cakephp-rocks');
-        $this->assertContains('path=/', $cookie->toHeaderValue());
-    }
-
-    /**
-     * Test setting httponly in cookies
-     *
-     * @return void
-     */
-    public function testWithHttpOnlyInvalidConstructor()
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('The provided arg must be of type `bool` but `string` given');
-        new Cookie('cakephp', 'cakephp-rocks', null, '', '', false, 'invalid');
-    }
-
-    /**
-     * Test setting httponly in cookies
-     *
-     * @return void
-     */
-    public function testWithHttpOnlyInvalid()
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('The provided arg must be of type `bool` but `string` given');
-        $cookie = new Cookie('cakephp', 'cakephp-rocks');
-        $cookie->withHttpOnly('no');
+        $this->assertStringContainsString('path=/', $cookie->toHeaderValue());
     }
 
     /**
@@ -260,31 +217,6 @@ class CookieTest extends TestCase
         $this->assertNotSame($new, $cookie, 'Should clone');
         $this->assertFalse($cookie->isHttpOnly());
         $this->assertTrue($new->isHttpOnly());
-    }
-
-    /**
-     * Test setting secure in cookies
-     *
-     * @return void
-     */
-    public function testWithSecureInvalidConstructor()
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('The provided arg must be of type `bool` but `string` given');
-        new Cookie('cakephp', 'cakephp-rocks', null, '', '', 'invalid');
-    }
-
-    /**
-     * Test setting secure in cookies
-     *
-     * @return void
-     */
-    public function testWithSecureInvalid()
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('The provided arg must be of type `bool` but `string` given');
-        $cookie = new Cookie('cakephp', 'cakephp-rocks');
-        $cookie->withSecure('no');
     }
 
     /**
@@ -311,7 +243,7 @@ class CookieTest extends TestCase
         $cookie = new Cookie('cakephp', 'cakephp-rocks');
         $new = $cookie->withNeverExpire();
         $this->assertNotSame($new, $cookie, 'Should clone');
-        $this->assertContains('01-Jan-2038', $new->toHeaderValue());
+        $this->assertStringContainsString('01-Jan-2038', $new->toHeaderValue());
     }
 
     /**
@@ -324,9 +256,9 @@ class CookieTest extends TestCase
         $cookie = new Cookie('cakephp', 'cakephp-rocks');
         $new = $cookie->withExpired();
         $this->assertNotSame($new, $cookie, 'Should clone');
-        $this->assertNotContains('expiry', $cookie->toHeaderValue());
+        $this->assertStringNotContainsString('expiry', $cookie->toHeaderValue());
 
-        $this->assertContains('01-Jan-1970', $new->toHeaderValue());
+        $this->assertStringContainsString('01-Jan-1970', $new->toHeaderValue());
     }
 
     /**
@@ -339,9 +271,9 @@ class CookieTest extends TestCase
         $cookie = new Cookie('cakephp', 'cakephp-rocks');
         $new = $cookie->withExpiry(Chronos::createFromDate(2022, 6, 15));
         $this->assertNotSame($new, $cookie, 'Should clone');
-        $this->assertNotContains('expires', $cookie->toHeaderValue());
+        $this->assertStringNotContainsString('expires', $cookie->toHeaderValue());
 
-        $this->assertContains('expires=Wed, 15-Jun-2022', $new->toHeaderValue());
+        $this->assertStringContainsString('expires=Wed, 15-Jun-2022', $new->toHeaderValue());
     }
 
     /**
@@ -357,11 +289,11 @@ class CookieTest extends TestCase
 
         $new = $cookie->withExpiry($date);
         $this->assertNotSame($new, $cookie, 'Should clone');
-        $this->assertNotContains('expires', $cookie->toHeaderValue());
+        $this->assertStringNotContainsString('expires', $cookie->toHeaderValue());
 
-        $this->assertContains('expires=Wed, 15-Jun-2022', $new->toHeaderValue());
-        $this->assertContains('GMT', $new->toHeaderValue());
-        $this->assertSame($date->format('U'), $new->getExpiresTimestamp());
+        $this->assertStringContainsString('expires=Wed, 15-Jun-2022', $new->toHeaderValue());
+        $this->assertStringContainsString('GMT', $new->toHeaderValue());
+        $this->assertSame((int)$date->format('U'), $new->getExpiresTimestamp());
     }
 
     /**
@@ -455,7 +387,7 @@ class CookieTest extends TestCase
     {
         $data = [
             'type' => 'mvc',
-            'user' => ['name' => 'mark']
+            'user' => ['name' => 'mark'],
         ];
         $cookie = new Cookie('cakephp', $data);
         $this->assertTrue($cookie->check('type'));
@@ -474,12 +406,12 @@ class CookieTest extends TestCase
         $data = [
             'username' => 'florian',
             'profile' => [
-                'profession' => 'developer'
-            ]
+                'profession' => 'developer',
+            ],
         ];
         $cookie = new Cookie('cakephp', json_encode($data));
         $this->assertFalse($cookie->isExpanded());
-        $this->assertEquals('developer', $cookie->read('profile.profession'));
+        $this->assertSame('developer', $cookie->read('profile.profession'));
         $this->assertTrue($cookie->isExpanded(), 'Cookies expand when read.');
 
         $cookie = $cookie->withValue(json_encode($data));
@@ -502,8 +434,8 @@ class CookieTest extends TestCase
         $data = [
             'username' => 'florian',
             'profile' => [
-                'profession' => 'developer'
-            ]
+                'profession' => 'developer',
+            ],
         ];
         $cookie = new Cookie('cakephp', $data);
 
@@ -517,7 +449,7 @@ class CookieTest extends TestCase
         $this->assertEquals($data, $result);
 
         $result = $cookie->read('profile.profession');
-        $this->assertEquals('developer', $result);
+        $this->assertSame('developer', $result);
     }
 
     /**
@@ -529,7 +461,7 @@ class CookieTest extends TestCase
     {
         $data = 'key|value,key2|value2';
         $cookie = new Cookie('cakephp', $data);
-        $this->assertEquals('value', $cookie->read('key'));
+        $this->assertSame('value', $cookie->read('key'));
         $this->assertNull($cookie->read('nope'));
     }
 
@@ -543,14 +475,14 @@ class CookieTest extends TestCase
         $data = [
             'username' => 'florian',
             'profile' => [
-                'profession' => 'developer'
-            ]
+                'profession' => 'developer',
+            ],
         ];
         $cookie = new Cookie('cakephp', $data);
-        $this->assertEquals('developer', $cookie->read('profile.profession'));
+        $this->assertSame('developer', $cookie->read('profile.profession'));
 
         $expected = '{"username":"florian","profile":{"profession":"developer"}}';
-        $this->assertContains(urlencode($expected), $cookie->toHeaderValue());
+        $this->assertStringContainsString(urlencode($expected), $cookie->toHeaderValue());
     }
 
     /**
@@ -561,12 +493,53 @@ class CookieTest extends TestCase
     public function testGetId()
     {
         $cookie = new Cookie('cakephp', 'cakephp-rocks');
-        $this->assertEquals('cakephp;;/', $cookie->getId());
+        $this->assertSame('cakephp;;/', $cookie->getId());
 
         $cookie = new Cookie('CAKEPHP', 'cakephp-rocks');
-        $this->assertEquals('CAKEPHP;;/', $cookie->getId());
+        $this->assertSame('CAKEPHP;;/', $cookie->getId());
 
         $cookie = new Cookie('test', 'val', null, '/path', 'example.com');
-        $this->assertEquals('test;example.com;/path', $cookie->getId());
+        $this->assertSame('test;example.com;/path', $cookie->getId());
+    }
+
+    public function testCreateFromHeaderString()
+    {
+        $header = 'cakephp=cakephp-rocks; expires=Wed, 01-Dec-2027 12:00:00 GMT; path=/; domain=cakephp.org; samesite=invalid; secure; httponly';
+        $result = Cookie::createFromHeaderString($header);
+
+        // Ignore invalid value when parsing headers
+        // https://tools.ietf.org/html/draft-west-first-party-cookies-07#section-4.1
+        $this->assertNull($result->getSameSite());
+    }
+
+    public function testDefaults()
+    {
+        Cookie::setDefaults(['path' => '/cakephp', 'expires' => time()]);
+        $cookie = new Cookie('cakephp', 'cakephp-rocks');
+        $this->assertSame('/cakephp', $cookie->getPath());
+        $this->assertInstanceOf(DateTimeInterface::class, $cookie->getExpiry());
+
+        Cookie::setDefaults(['path' => '/', 'expires' => null]);
+        $cookie = new Cookie('cakephp', 'cakephp-rocks');
+        $this->assertSame('/', $cookie->getPath());
+        $this->assertNull($cookie->getExpiry());
+    }
+
+    public function testInvalidExpiresForDefaults()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid type `array` for expire');
+
+        Cookie::setDefaults(['expires' => ['ompalompa']]);
+        $cookie = new Cookie('cakephp', 'cakephp-rocks');
+    }
+
+    public function testInvalidSameSiteForDefaults()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Samesite value must be either of: ' . implode(', ', CookieInterface::SAMESITE_VALUES));
+
+        Cookie::setDefaults(['samesite' => 'ompalompa']);
+        $cookie = new Cookie('cakephp', 'cakephp-rocks');
     }
 }

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -29,23 +31,39 @@ use Cake\Collection\Iterator\TreeIterator;
 use Cake\Collection\Iterator\UnfoldIterator;
 use Cake\Collection\Iterator\ZipIterator;
 use Countable;
+use InvalidArgumentException;
 use LimitIterator;
 use LogicException;
+use OuterIterator;
 use RecursiveIteratorIterator;
+use RuntimeException;
 use Traversable;
 
 /**
- * Offers a handful of method to manipulate iterators
+ * Offers a handful of methods to manipulate iterators
  */
 trait CollectionTrait
 {
-
     use ExtractTrait;
 
     /**
-     * {@inheritDoc}
+     * Returns a new collection.
+     *
+     * Allows classes which use this trait to determine their own
+     * type of returned collection interface
+     *
+     * @param mixed ...$args Constructor arguments.
+     * @return \Cake\Collection\CollectionInterface
      */
-    public function each(callable $c)
+    protected function newCollection(...$args): CollectionInterface
+    {
+        return new Collection(...$args);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function each(callable $c): CollectionInterface
     {
         foreach ($this->optimizeUnwrap() as $k => $v) {
             $c($v, $k);
@@ -57,9 +75,9 @@ trait CollectionTrait
     /**
      * {@inheritDoc}
      *
-     * @return \Cake\Collection\Iterator\FilterIterator
+     * @return \Cake\Collection\CollectionInterface
      */
-    public function filter(callable $c = null)
+    public function filter(?callable $c = null): CollectionInterface
     {
         if ($c === null) {
             $c = function ($v) {
@@ -73,9 +91,9 @@ trait CollectionTrait
     /**
      * {@inheritDoc}
      *
-     * @return \Cake\Collection\Iterator\FilterIterator
+     * @return \Cake\Collection\CollectionInterface
      */
-    public function reject(callable $c)
+    public function reject(callable $c): CollectionInterface
     {
         return new FilterIterator($this->unwrap(), function ($key, $value, $items) use ($c) {
             return !$c($key, $value, $items);
@@ -83,9 +101,9 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function every(callable $c)
+    public function every(callable $c): bool
     {
         foreach ($this->optimizeUnwrap() as $key => $value) {
             if (!$c($value, $key)) {
@@ -97,9 +115,9 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function some(callable $c)
+    public function some(callable $c): bool
     {
         foreach ($this->optimizeUnwrap() as $key => $value) {
             if ($c($value, $key) === true) {
@@ -111,9 +129,9 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function contains($value)
+    public function contains($value): bool
     {
         foreach ($this->optimizeUnwrap() as $v) {
             if ($value === $v) {
@@ -127,15 +145,15 @@ trait CollectionTrait
     /**
      * {@inheritDoc}
      *
-     * @return \Cake\Collection\Iterator\ReplaceIterator
+     * @return \Cake\Collection\CollectionInterface
      */
-    public function map(callable $c)
+    public function map(callable $c): CollectionInterface
     {
         return new ReplaceIterator($this->unwrap(), $c);
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function reduce(callable $c, $zero = null)
     {
@@ -158,9 +176,9 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function extract($matcher)
+    public function extract($matcher): CollectionInterface
     {
         $extractor = new ExtractIterator($this->unwrap(), $matcher);
         if (is_string($matcher) && strpos($matcher, '{*}') !== false) {
@@ -175,33 +193,33 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function max($callback, $type = \SORT_NUMERIC)
+    public function max($callback, int $type = \SORT_NUMERIC)
     {
         return (new SortIterator($this->unwrap(), $callback, \SORT_DESC, $type))->first();
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function min($callback, $type = \SORT_NUMERIC)
+    public function min($callback, int $type = \SORT_NUMERIC)
     {
         return (new SortIterator($this->unwrap(), $callback, \SORT_ASC, $type))->first();
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function avg($matcher = null)
     {
         $result = $this;
-        if ($matcher != null) {
+        if ($matcher !== null) {
             $result = $result->extract($matcher);
         }
         $result = $result
             ->reduce(function ($acc, $current) {
-                list($count, $sum) = $acc;
+                [$count, $sum] = $acc;
 
                 return [$count + 1, $sum + $current];
             }, [0, 0]);
@@ -214,12 +232,12 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function median($matcher = null)
     {
         $elements = $this;
-        if ($matcher != null) {
+        if ($matcher !== null) {
             $elements = $elements->extract($matcher);
         }
         $values = $elements->toList();
@@ -240,17 +258,17 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function sortBy($callback, $dir = \SORT_DESC, $type = \SORT_NUMERIC)
+    public function sortBy($callback, int $dir = \SORT_DESC, int $type = \SORT_NUMERIC): CollectionInterface
     {
         return new SortIterator($this->unwrap(), $callback, $dir, $type);
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function groupBy($callback)
+    public function groupBy($callback): CollectionInterface
     {
         $callback = $this->_propertyExtractor($callback);
         $group = [];
@@ -258,13 +276,13 @@ trait CollectionTrait
             $group[$callback($value)][] = $value;
         }
 
-        return new Collection($group);
+        return $this->newCollection($group);
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function indexBy($callback)
+    public function indexBy($callback): CollectionInterface
     {
         $callback = $this->_propertyExtractor($callback);
         $group = [];
@@ -272,31 +290,31 @@ trait CollectionTrait
             $group[$callback($value)] = $value;
         }
 
-        return new Collection($group);
+        return $this->newCollection($group);
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function countBy($callback)
+    public function countBy($callback): CollectionInterface
     {
         $callback = $this->_propertyExtractor($callback);
 
-        $mapper = function ($value, $key, $mr) use ($callback) {
+        $mapper = function ($value, $key, $mr) use ($callback): void {
             /** @var \Cake\Collection\Iterator\MapReduce $mr */
             $mr->emitIntermediate($value, $callback($value));
         };
 
-        $reducer = function ($values, $key, $mr) {
+        $reducer = function ($values, $key, $mr): void {
             /** @var \Cake\Collection\Iterator\MapReduce $mr */
             $mr->emit(count($values), $key);
         };
 
-        return new Collection(new MapReduce($this->unwrap(), $mapper, $reducer));
+        return $this->newCollection(new MapReduce($this->unwrap(), $mapper, $reducer));
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function sumOf($matcher = null)
     {
@@ -314,50 +332,50 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function shuffle()
+    public function shuffle(): CollectionInterface
     {
         $elements = $this->toArray();
         shuffle($elements);
 
-        return new Collection($elements);
+        return $this->newCollection($elements);
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function sample($size = 10)
+    public function sample(int $size = 10): CollectionInterface
     {
-        return new Collection(new LimitIterator($this->shuffle(), 0, $size));
+        return $this->newCollection(new LimitIterator($this->shuffle(), 0, $size));
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function take($size = 1, $from = 0)
+    public function take(int $size = 1, int $from = 0): CollectionInterface
     {
-        return new Collection(new LimitIterator($this, $from, $size));
+        return $this->newCollection(new LimitIterator($this, $from, $size));
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function skip($howMany)
+    public function skip(int $howMany): CollectionInterface
     {
-        return new Collection(new LimitIterator($this, $howMany));
+        return $this->newCollection(new LimitIterator($this, $howMany));
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function match(array $conditions)
+    public function match(array $conditions): CollectionInterface
     {
         return $this->filter($this->_createMatcherFilter($conditions));
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function firstMatch(array $conditions)
     {
@@ -365,7 +383,7 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function first()
     {
@@ -376,7 +394,7 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function last()
     {
@@ -390,6 +408,7 @@ trait CollectionTrait
             if ($count === 0) {
                 return null;
             }
+            /** @var iterable $iterator */
             $iterator = new LimitIterator($iterator, $count - 1, 1);
         }
 
@@ -402,29 +421,29 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function takeLast($howMany)
+    public function takeLast(int $howMany): CollectionInterface
     {
         if ($howMany < 1) {
-            throw new \InvalidArgumentException("The takeLast method requires a number greater than 0.");
+            throw new InvalidArgumentException("The takeLast method requires a number greater than 0.");
         }
 
         $iterator = $this->optimizeUnwrap();
         if (is_array($iterator)) {
-            return new Collection(array_slice($iterator, $howMany * -1));
+            return $this->newCollection(array_slice($iterator, $howMany * -1));
         }
 
         if ($iterator instanceof Countable) {
             $count = count($iterator);
 
             if ($count === 0) {
-                return new Collection([]);
+                return $this->newCollection([]);
             }
 
             $iterator = new LimitIterator($iterator, max(0, $count - $howMany), $howMany);
 
-            return new Collection($iterator);
+            return $this->newCollection($iterator);
         }
 
         $generator = function ($iterator, $howMany) {
@@ -497,25 +516,25 @@ trait CollectionTrait
             }
         };
 
-        return new Collection($generator($iterator, $howMany));
+        return $this->newCollection($generator($iterator, $howMany));
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function append($items)
+    public function append($items): CollectionInterface
     {
         $list = new AppendIterator();
         $list->append($this->unwrap());
-        $list->append((new Collection($items))->unwrap());
+        $list->append($this->newCollection($items)->unwrap());
 
-        return new Collection($list);
+        return $this->newCollection($list);
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function appendItem($item, $key = null)
+    public function appendItem($item, $key = null): CollectionInterface
     {
         if ($key !== null) {
             $data = [$key => $item];
@@ -527,17 +546,17 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function prepend($items)
+    public function prepend($items): CollectionInterface
     {
-        return (new Collection($items))->append($this);
+        return $this->newCollection($items)->append($this);
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function prependItem($item, $key = null)
+    public function prependItem($item, $key = null): CollectionInterface
     {
         if ($key !== null) {
             $data = [$key => $item];
@@ -549,18 +568,17 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function combine($keyPath, $valuePath, $groupPath = null)
+    public function combine($keyPath, $valuePath, $groupPath = null): CollectionInterface
     {
         $options = [
             'keyPath' => $this->_propertyExtractor($keyPath),
             'valuePath' => $this->_propertyExtractor($valuePath),
-            'groupPath' => $groupPath ? $this->_propertyExtractor($groupPath) : null
+            'groupPath' => $groupPath ? $this->_propertyExtractor($groupPath) : null,
         ];
 
-        $mapper = function ($value, $key, $mapReduce) use ($options) {
-            /** @var \Cake\Collection\Iterator\MapReduce $mapReduce */
+        $mapper = function ($value, $key, MapReduce $mapReduce) use ($options) {
             $rowKey = $options['keyPath'];
             $rowVal = $options['valuePath'];
 
@@ -577,38 +595,36 @@ trait CollectionTrait
             );
         };
 
-        $reducer = function ($values, $key, $mapReduce) {
+        $reducer = function ($values, $key, MapReduce $mapReduce): void {
             $result = [];
             foreach ($values as $value) {
                 $result += $value;
             }
-            /** @var \Cake\Collection\Iterator\MapReduce $mapReduce */
             $mapReduce->emit($result, $key);
         };
 
-        return new Collection(new MapReduce($this->unwrap(), $mapper, $reducer));
+        return $this->newCollection(new MapReduce($this->unwrap(), $mapper, $reducer));
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function nest($idPath, $parentPath, $nestingKey = 'children')
+    public function nest($idPath, $parentPath, string $nestingKey = 'children'): CollectionInterface
     {
         $parents = [];
         $idPath = $this->_propertyExtractor($idPath);
         $parentPath = $this->_propertyExtractor($parentPath);
         $isObject = true;
 
-        $mapper = function ($row, $key, $mapReduce) use (&$parents, $idPath, $parentPath, $nestingKey) {
+        $mapper = function ($row, $key, MapReduce $mapReduce) use (&$parents, $idPath, $parentPath, $nestingKey): void {
             $row[$nestingKey] = [];
             $id = $idPath($row, $key);
             $parentId = $parentPath($row, $key);
             $parents[$id] =& $row;
-            /** @var \Cake\Collection\Iterator\MapReduce $mapReduce */
             $mapReduce->emitIntermediate($id, $parentId);
         };
 
-        $reducer = function ($values, $key, $mapReduce) use (&$parents, &$isObject, $nestingKey) {
+        $reducer = function ($values, $key, MapReduce $mapReduce) use (&$parents, &$isObject, $nestingKey) {
             static $foundOutType = false;
             if (!$foundOutType) {
                 $isObject = is_object(current($parents));
@@ -617,7 +633,6 @@ trait CollectionTrait
             if (empty($key) || !isset($parents[$key])) {
                 foreach ($values as $id) {
                     $parents[$id] = $isObject ? $parents[$id] : new ArrayIterator($parents[$id], 1);
-                    /** @var \Cake\Collection\Iterator\MapReduce $mapReduce */
                     $mapReduce->emit($parents[$id]);
                 }
 
@@ -631,7 +646,7 @@ trait CollectionTrait
             $parents[$key][$nestingKey] = $children;
         };
 
-        return (new Collection(new MapReduce($this->unwrap(), $mapper, $reducer)))
+        return $this->newCollection(new MapReduce($this->unwrap(), $mapper, $reducer))
             ->map(function ($value) use (&$isObject) {
                 /** @var \ArrayIterator $value */
                 return $isObject ? $value : $value->getArrayCopy();
@@ -641,17 +656,17 @@ trait CollectionTrait
     /**
      * {@inheritDoc}
      *
-     * @return \Cake\Collection\Iterator\InsertIterator
+     * @return \Cake\Collection\CollectionInterface
      */
-    public function insert($path, $values)
+    public function insert(string $path, $values): CollectionInterface
     {
         return new InsertIterator($this->unwrap(), $path, $values);
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function toArray($preserveKeys = true)
+    public function toArray(bool $preserveKeys = true): array
     {
         $iterator = $this->unwrap();
         if ($iterator instanceof ArrayIterator) {
@@ -661,7 +676,7 @@ trait CollectionTrait
         }
         // RecursiveIteratorIterator can return duplicate key values causing
         // data loss when converted into an array
-        if ($preserveKeys && get_class($iterator) === 'RecursiveIteratorIterator') {
+        if ($preserveKeys && get_class($iterator) === RecursiveIteratorIterator::class) {
             $preserveKeys = false;
         }
 
@@ -669,33 +684,35 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function toList()
+    public function toList(): array
     {
         return $this->toArray(false);
     }
 
     /**
-     * {@inheritDoc}
+     * Return array which should be serialized to JSON.
+     *
+     * @return array
      */
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return $this->toArray();
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function compile($preserveKeys = true)
+    public function compile(bool $preserveKeys = true): CollectionInterface
     {
-        return new Collection($this->toArray($preserveKeys));
+        return $this->newCollection($this->toArray($preserveKeys));
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function lazy()
+    public function lazy(): CollectionInterface
     {
         $generator = function () {
             foreach ($this->unwrap() as $k => $v) {
@@ -703,15 +720,15 @@ trait CollectionTrait
             }
         };
 
-        return new Collection($generator());
+        return $this->newCollection($generator());
     }
 
     /**
      * {@inheritDoc}
      *
-     * @return \Cake\Collection\Iterator\BufferedIterator
+     * @return \Cake\Collection\CollectionInterface
      */
-    public function buffered()
+    public function buffered(): CollectionInterface
     {
         return new BufferedIterator($this->unwrap());
     }
@@ -719,20 +736,30 @@ trait CollectionTrait
     /**
      * {@inheritDoc}
      *
-     * @return \Cake\Collection\Iterator\TreeIterator
+     * @return \Cake\Collection\CollectionInterface
      */
-    public function listNested($dir = 'desc', $nestingKey = 'children')
+    public function listNested($dir = 'desc', $nestingKey = 'children'): CollectionInterface
     {
-        $dir = strtolower($dir);
-        $modes = [
-            'desc' => TreeIterator::SELF_FIRST,
-            'asc' => TreeIterator::CHILD_FIRST,
-            'leaves' => TreeIterator::LEAVES_ONLY
-        ];
+        if (is_string($dir)) {
+            $dir = strtolower($dir);
+            $modes = [
+                'desc' => RecursiveIteratorIterator::SELF_FIRST,
+                'asc' => RecursiveIteratorIterator::CHILD_FIRST,
+                'leaves' => RecursiveIteratorIterator::LEAVES_ONLY,
+            ];
+
+            if (!isset($modes[$dir])) {
+                throw new RuntimeException(sprintf(
+                    "Invalid direction `%s` provided. Must be one of: 'desc', 'asc', 'leaves'",
+                    $dir
+                ));
+            }
+            $dir = $modes[$dir];
+        }
 
         return new TreeIterator(
             new NestIterator($this, $nestingKey),
-            isset($modes[$dir]) ? $modes[$dir] : $dir
+            $dir
         );
     }
 
@@ -741,7 +768,7 @@ trait CollectionTrait
      *
      * @return \Cake\Collection\Iterator\StoppableIterator
      */
-    public function stopWhen($condition)
+    public function stopWhen($condition): CollectionInterface
     {
         if (!is_callable($condition)) {
             $condition = $this->_createMatcherFilter($condition);
@@ -751,9 +778,9 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function unfold(callable $transformer = null)
+    public function unfold(?callable $transformer = null): CollectionInterface
     {
         if ($transformer === null) {
             $transformer = function ($item) {
@@ -761,7 +788,7 @@ trait CollectionTrait
             };
         }
 
-        return new Collection(
+        return $this->newCollection(
             new RecursiveIteratorIterator(
                 new UnfoldIterator($this->unwrap(), $transformer),
                 RecursiveIteratorIterator::LEAVES_ONLY
@@ -770,27 +797,27 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function through(callable $handler)
+    public function through(callable $handler): CollectionInterface
     {
         $result = $handler($this);
 
-        return $result instanceof CollectionInterface ? $result : new Collection($result);
+        return $result instanceof CollectionInterface ? $result : $this->newCollection($result);
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function zip($items)
+    public function zip(iterable $items): CollectionInterface
     {
         return new ZipIterator(array_merge([$this->unwrap()], func_get_args()));
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function zipWith($items, $callable)
+    public function zipWith(iterable $items, $callable): CollectionInterface
     {
         if (func_num_args() > 2) {
             $items = func_get_args();
@@ -803,9 +830,9 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function chunk($chunkSize)
+    public function chunk(int $chunkSize): CollectionInterface
     {
         return $this->map(function ($v, $k, $iterator) use ($chunkSize) {
             $values = [$v];
@@ -822,9 +849,9 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function chunkWithKeys($chunkSize, $preserveKeys = true)
+    public function chunkWithKeys(int $chunkSize, bool $preserveKeys = true): CollectionInterface
     {
         return $this->map(function ($v, $k, $iterator) use ($chunkSize, $preserveKeys) {
             $key = 0;
@@ -849,9 +876,9 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function isEmpty()
+    public function isEmpty(): bool
     {
         foreach ($this as $el) {
             return false;
@@ -861,12 +888,15 @@ trait CollectionTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function unwrap()
+    public function unwrap(): Traversable
     {
         $iterator = $this;
-        while (get_class($iterator) === 'Cake\Collection\Collection') {
+        while (
+            get_class($iterator) === Collection::class
+            && $iterator instanceof OuterIterator
+        ) {
             $iterator = $iterator->getInnerIterator();
         }
 
@@ -878,29 +908,15 @@ trait CollectionTrait
     }
 
     /**
-     * Backwards compatible wrapper for unwrap()
+     * {@inheritDoc}
      *
-     * @return \Traversable
-     * @deprecated 3.0.10 Will be removed in 4.0.0
-     */
-    // @codingStandardsIgnoreLine
-    public function _unwrap()
-    {
-        deprecationWarning('CollectionTrait::_unwrap() is deprecated. Use CollectionTrait::unwrap() instead.');
-
-        return $this->unwrap();
-    }
-
-    /**
-     * @param callable|null $operation Operation
-     * @param callable|null $filter Filter
      * @return \Cake\Collection\CollectionInterface
      * @throws \LogicException
      */
-    public function cartesianProduct(callable $operation = null, callable $filter = null)
+    public function cartesianProduct(?callable $operation = null, ?callable $filter = null): CollectionInterface
     {
         if ($this->isEmpty()) {
-            return new Collection([]);
+            return $this->newCollection([]);
         }
 
         $collectionArrays = [];
@@ -931,18 +947,24 @@ trait CollectionTrait
             }, $collectionArrays, $collectionArraysKeys, $currentIndexes);
 
             if ($filter === null || $filter($currentCombination)) {
-                $result[] = ($operation === null) ? $currentCombination : $operation($currentCombination);
+                $result[] = $operation === null ? $currentCombination : $operation($currentCombination);
             }
 
             $currentIndexes[$lastIndex]++;
 
-            for ($changeIndex = $lastIndex; $currentIndexes[$changeIndex] === $collectionArraysCounts[$changeIndex] && $changeIndex > 0; $changeIndex--) {
+            // phpcs:ignore Squiz.ControlStructures.ForLoopDeclaration.SpacingAfterFirst
+            for (
+                $changeIndex = $lastIndex;
+                // phpcs:ignore Squiz.ControlStructures.ForLoopDeclaration.SpacingAfterSecond
+                $currentIndexes[$changeIndex] === $collectionArraysCounts[$changeIndex] && $changeIndex > 0;
+                $changeIndex--
+            ) {
                 $currentIndexes[$changeIndex] = 0;
                 $currentIndexes[$changeIndex - 1]++;
             }
         }
 
-        return new Collection($result);
+        return $this->newCollection($result);
     }
 
     /**
@@ -951,13 +973,13 @@ trait CollectionTrait
      * @return \Cake\Collection\CollectionInterface
      * @throws \LogicException
      */
-    public function transpose()
+    public function transpose(): CollectionInterface
     {
         $arrayValue = $this->toList();
         $length = count(current($arrayValue));
         $result = [];
-        foreach ($arrayValue as $column => $row) {
-            if (count($row) != $length) {
+        foreach ($arrayValue as $row) {
+            if (count($row) !== $length) {
                 throw new LogicException('Child arrays do not have even length');
             }
         }
@@ -966,7 +988,7 @@ trait CollectionTrait
             $result[] = array_column($arrayValue, $column);
         }
 
-        return new Collection($result);
+        return $this->newCollection($result);
     }
 
     /**
@@ -974,7 +996,7 @@ trait CollectionTrait
      *
      * @return int
      */
-    public function count()
+    public function count(): int
     {
         $traversable = $this->optimizeUnwrap();
 
@@ -990,7 +1012,7 @@ trait CollectionTrait
      *
      * @return int
      */
-    public function countKeys()
+    public function countKeys(): int
     {
         return count($this->toArray());
     }
@@ -999,10 +1021,11 @@ trait CollectionTrait
      * Unwraps this iterator and returns the simplest
      * traversable that can be used for getting the data out
      *
-     * @return \Traversable|array
+     * @return iterable
      */
-    protected function optimizeUnwrap()
+    protected function optimizeUnwrap(): iterable
     {
+        /** @var \ArrayObject $iterator */
         $iterator = $this->unwrap();
 
         if (get_class($iterator) === ArrayIterator::class) {

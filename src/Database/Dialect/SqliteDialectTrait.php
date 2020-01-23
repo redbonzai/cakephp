@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,6 +17,8 @@
 namespace Cake\Database\Dialect;
 
 use Cake\Database\Expression\FunctionExpression;
+use Cake\Database\QueryCompiler;
+use Cake\Database\Schema\BaseSchema;
 use Cake\Database\Schema\SqliteSchema;
 use Cake\Database\SqlDialectTrait;
 use Cake\Database\SqliteCompiler;
@@ -26,7 +30,6 @@ use Cake\Database\SqliteCompiler;
  */
 trait SqliteDialectTrait
 {
-
     use SqlDialectTrait;
     use TupleComparisonTranslatorTrait;
 
@@ -63,7 +66,7 @@ trait SqliteDialectTrait
         'minute' => 'M',
         'second' => 'S',
         'week' => 'W',
-        'year' => 'Y'
+        'year' => 'Y',
     ];
 
     /**
@@ -72,13 +75,13 @@ trait SqliteDialectTrait
      *
      * @return array
      */
-    protected function _expressionTranslators()
+    protected function _expressionTranslators(): array
     {
         $namespace = 'Cake\Database\Expression';
 
         return [
             $namespace . '\FunctionExpression' => '_transformFunctionExpression',
-            $namespace . '\TupleComparison' => '_transformTupleComparison'
+            $namespace . '\TupleComparison' => '_transformTupleComparison',
         ];
     }
 
@@ -90,7 +93,7 @@ trait SqliteDialectTrait
      *   to translate for SQLite.
      * @return void
      */
-    protected function _transformFunctionExpression(FunctionExpression $expression)
+    protected function _transformFunctionExpression(FunctionExpression $expression): void
     {
         switch ($expression->getName()) {
             case 'CONCAT':
@@ -162,11 +165,11 @@ trait SqliteDialectTrait
      * Used by Cake\Database\Schema package to reflect schema and
      * generate schema.
      *
-     * @return \Cake\Database\Schema\SqliteSchema
+     * @return \Cake\Database\Schema\BaseSchema
      */
-    public function schemaDialect()
+    public function schemaDialect(): BaseSchema
     {
-        if (!$this->_schemaDialect) {
+        if ($this->_schemaDialect === null) {
             $this->_schemaDialect = new SqliteSchema($this);
         }
 
@@ -174,17 +177,17 @@ trait SqliteDialectTrait
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function disableForeignKeySQL()
+    public function disableForeignKeySQL(): string
     {
         return 'PRAGMA foreign_keys = OFF';
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function enableForeignKeySQL()
+    public function enableForeignKeySQL(): string
     {
         return 'PRAGMA foreign_keys = ON';
     }
@@ -194,7 +197,7 @@ trait SqliteDialectTrait
      *
      * @return \Cake\Database\SqliteCompiler
      */
-    public function newCompiler()
+    public function newCompiler(): QueryCompiler
     {
         return new SqliteCompiler();
     }

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,13 +17,15 @@
 namespace Cake\Database;
 
 use Cake\Database\Expression\Comparison;
+use Cake\Database\Expression\IdentifierExpression;
+use Closure;
+use RuntimeException;
 
 /**
  * Sql dialect trait
  */
 trait SqlDialectTrait
 {
-
     /**
      * Quotes a database identifier (a column name, table name, etc..) to
      * be used safely in queries without the risk of using reserved words
@@ -29,7 +33,7 @@ trait SqlDialectTrait
      * @param string $identifier The identifier to quote.
      * @return string
      */
-    public function quoteIdentifier($identifier)
+    public function quoteIdentifier(string $identifier): string
     {
         $identifier = trim($identifier);
 
@@ -86,9 +90,9 @@ trait SqlDialectTrait
      *
      * @param string $type the type of query to be transformed
      * (select, insert, update, delete)
-     * @return callable
+     * @return \Closure
      */
-    public function queryTranslator($type)
+    public function queryTranslator(string $type): Closure
     {
         return function ($query) use ($type) {
             if ($this->isAutoQuotingEnabled()) {
@@ -102,7 +106,7 @@ trait SqlDialectTrait
                 return $query;
             }
 
-            $query->traverseExpressions(function ($expression) use ($translators, $query) {
+            $query->traverseExpressions(function ($expression) use ($translators, $query): void {
                 foreach ($translators as $class => $method) {
                     if ($expression instanceof $class) {
                         $this->{$method}($expression, $query);
@@ -121,7 +125,7 @@ trait SqlDialectTrait
      *
      * @return array
      */
-    protected function _expressionTranslators()
+    protected function _expressionTranslators(): array
     {
         return [];
     }
@@ -132,7 +136,7 @@ trait SqlDialectTrait
      * @param \Cake\Database\Query $query The query to translate
      * @return \Cake\Database\Query The modified query
      */
-    protected function _selectQueryTranslator($query)
+    protected function _selectQueryTranslator(Query $query): Query
     {
         return $this->_transformDistinct($query);
     }
@@ -144,7 +148,7 @@ trait SqlDialectTrait
      * @param \Cake\Database\Query $query The query to be transformed
      * @return \Cake\Database\Query
      */
-    protected function _transformDistinct($query)
+    protected function _transformDistinct(Query $query): Query
     {
         if (is_array($query->clause('distinct'))) {
             $query->group($query->clause('distinct'), true);
@@ -166,7 +170,7 @@ trait SqlDialectTrait
      * @param \Cake\Database\Query $query The query to translate
      * @return \Cake\Database\Query The modified query
      */
-    protected function _deleteQueryTranslator($query)
+    protected function _deleteQueryTranslator(Query $query): Query
     {
         $hadAlias = false;
         $tables = [];
@@ -198,7 +202,7 @@ trait SqlDialectTrait
      * @param \Cake\Database\Query $query The query to translate
      * @return \Cake\Database\Query The modified query
      */
-    protected function _updateQueryTranslator($query)
+    protected function _updateQueryTranslator(Query $query): Query
     {
         return $this->_removeAliasesFromConditions($query);
     }
@@ -211,10 +215,10 @@ trait SqlDialectTrait
      * @throws \RuntimeException In case the processed query contains any joins, as removing
      *  aliases from the conditions can break references to the joined tables.
      */
-    protected function _removeAliasesFromConditions($query)
+    protected function _removeAliasesFromConditions(Query $query): Query
     {
         if ($query->clause('join')) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 'Aliases are being removed from conditions for UPDATE/DELETE queries, ' .
                 'this can break references to joined tables.'
             );
@@ -222,20 +226,31 @@ trait SqlDialectTrait
 
         $conditions = $query->clause('where');
         if ($conditions) {
-            $conditions->traverse(function ($condition) {
-                if (!($condition instanceof Comparison)) {
-                    return $condition;
+            $conditions->traverse(function ($expression) {
+                if ($expression instanceof Comparison) {
+                    $field = $expression->getField();
+                    if (
+                        is_string($field) &&
+                        strpos($field, '.') !== false
+                    ) {
+                        [, $unaliasedField] = explode('.', $field, 2);
+                        $expression->setField($unaliasedField);
+                    }
+
+                    return $expression;
                 }
 
-                $field = $condition->getField();
-                if ($field instanceof ExpressionInterface || strpos($field, '.') === false) {
-                    return $condition;
+                if ($expression instanceof IdentifierExpression) {
+                    $identifier = $expression->getIdentifier();
+                    if (strpos($identifier, '.') !== false) {
+                        [, $unaliasedIdentifier] = explode('.', $identifier, 2);
+                        $expression->setIdentifier($unaliasedIdentifier);
+                    }
+
+                    return $expression;
                 }
 
-                list(, $field) = explode('.', $field);
-                $condition->setField($field);
-
-                return $condition;
+                return $expression;
             });
         }
 
@@ -248,7 +263,7 @@ trait SqlDialectTrait
      * @param \Cake\Database\Query $query The query to translate
      * @return \Cake\Database\Query The modified query
      */
-    protected function _insertQueryTranslator($query)
+    protected function _insertQueryTranslator(Query $query): Query
     {
         return $query;
     }
@@ -256,10 +271,10 @@ trait SqlDialectTrait
     /**
      * Returns a SQL snippet for creating a new transaction savepoint
      *
-     * @param string $name save point name
+     * @param string|int $name save point name
      * @return string
      */
-    public function savePointSQL($name)
+    public function savePointSQL($name): string
     {
         return 'SAVEPOINT LEVEL' . $name;
     }
@@ -267,10 +282,10 @@ trait SqlDialectTrait
     /**
      * Returns a SQL snippet for releasing a previously created save point
      *
-     * @param string $name save point name
+     * @param string|int $name save point name
      * @return string
      */
-    public function releaseSavePointSQL($name)
+    public function releaseSavePointSQL($name): string
     {
         return 'RELEASE SAVEPOINT LEVEL' . $name;
     }
@@ -278,10 +293,10 @@ trait SqlDialectTrait
     /**
      * Returns a SQL snippet for rollbacking a previously created save point
      *
-     * @param string $name save point name
+     * @param string|int $name save point name
      * @return string
      */
-    public function rollbackSavePointSQL($name)
+    public function rollbackSavePointSQL($name): string
     {
         return 'ROLLBACK TO SAVEPOINT LEVEL' . $name;
     }

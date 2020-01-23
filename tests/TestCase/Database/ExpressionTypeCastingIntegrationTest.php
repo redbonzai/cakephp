@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -13,57 +15,14 @@
  */
 namespace Cake\Test\TestCase\Database;
 
-use Cake\Database\Driver;
 use Cake\Database\Driver\Sqlserver;
-use Cake\Database\Expression\FunctionExpression;
-use Cake\Database\Type;
-use Cake\Database\Type\ExpressionTypeInterface;
+use Cake\Database\Expression\QueryExpression;
+use Cake\Database\Query;
+use Cake\Database\TypeFactory;
 use Cake\Datasource\ConnectionManager;
 use Cake\TestSuite\TestCase;
-
-/**
- * Value object for testing mappings.
- */
-class UuidValue
-{
-    public $value;
-
-    public function __construct($value)
-    {
-        $this->value = $value;
-    }
-}
-
-/**
- * Custom type class that maps between value objects, and SQL expressions.
- */
-class OrderedUuidType extends Type implements ExpressionTypeInterface
-{
-
-    public function toPHP($value, Driver $d)
-    {
-        return new UuidValue($value);
-    }
-
-    public function toExpression($value)
-    {
-        if ($value instanceof UuidValue) {
-            $value = $value->value;
-        }
-        $substr = function ($start, $length = null) use ($value) {
-            return new FunctionExpression(
-                'SUBSTR',
-                $length === null ? [$value, $start] : [$value, $start, $length],
-                ['string', 'integer', 'integer']
-            );
-        };
-
-        return new FunctionExpression(
-            'CONCAT',
-            [$substr(15, 4), $substr(10, 4), $substr(1, 8), $substr(20, 4), $substr(25)]
-        );
-    }
-}
+use TestApp\Database\Type\OrderedUuidType;
+use TestApp\Database\Type\UuidValue;
 
 /**
  * Tests for Expression objects casting values to other expressions
@@ -72,15 +31,19 @@ class OrderedUuidType extends Type implements ExpressionTypeInterface
  */
 class ExpressionTypeCastingIntegrationTest extends TestCase
 {
+    protected $fixtures = ['core.OrderedUuidItems'];
 
-    public $fixtures = ['core.OrderedUuidItems'];
+    /**
+     * @var \Cake\Database\Connection
+     */
+    protected $connection;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->connection = ConnectionManager::get('test');
         $this->skipIf($this->connection->getDriver() instanceof Sqlserver, 'This tests uses functions specific to other drivers');
-        Type::map('ordered_uuid', OrderedUuidType::class);
+        TypeFactory::map('ordered_uuid', OrderedUuidType::class);
     }
 
     protected function _insert()
@@ -135,7 +98,7 @@ class ExpressionTypeCastingIntegrationTest extends TestCase
             ->fetchAll('assoc');
 
         $this->assertCount(1, $result);
-        $this->assertEquals('4c2681c048298a29a7fb413140cf8569', $result[0]['id']);
+        $this->assertSame('4c2681c048298a29a7fb413140cf8569', $result[0]['id']);
     }
 
     /**
@@ -154,7 +117,7 @@ class ExpressionTypeCastingIntegrationTest extends TestCase
             ->fetchAll('assoc');
 
         $this->assertCount(1, $result);
-        $this->assertEquals('4c2681c048298a29a7fb413140cf8569', $result[0]['id']);
+        $this->assertSame('4c2681c048298a29a7fb413140cf8569', $result[0]['id']);
     }
 
     /**
@@ -177,8 +140,8 @@ class ExpressionTypeCastingIntegrationTest extends TestCase
             ->fetchAll('assoc');
 
         $this->assertCount(2, $result);
-        $this->assertEquals('419a8da0482b7756b21f27da40cf8569', $result[0]['id']);
-        $this->assertEquals('419a8da0482b7756b21f27da40cf8569', $result[0]['id']);
+        $this->assertSame('419a8da0482b7756b21f27da40cf8569', $result[0]['id']);
+        $this->assertSame('419a8da0482b7756b21f27da40cf8569', $result[0]['id']);
     }
 
     /**
@@ -192,7 +155,7 @@ class ExpressionTypeCastingIntegrationTest extends TestCase
         $result = $this->connection->newQuery()
             ->select('id')
             ->from('ordered_uuid_items')
-            ->where(function ($exp) {
+            ->where(function (QueryExpression $exp) {
                 return $exp->between(
                     'id',
                     '482b7756-8da0-419a-b21f-27da40cf8569',
@@ -217,7 +180,7 @@ class ExpressionTypeCastingIntegrationTest extends TestCase
         $result = $this->connection->newQuery()
             ->select('id')
             ->from('ordered_uuid_items')
-            ->where(function ($exp, $q) {
+            ->where(function (QueryExpression $exp, Query $q) {
                 return $exp->eq(
                     'id',
                     $q->func()->concat(['48298a29-81c0-4c26-a7fb', '-413140cf8569'], []),
@@ -228,6 +191,6 @@ class ExpressionTypeCastingIntegrationTest extends TestCase
             ->fetchAll('assoc');
 
         $this->assertCount(1, $result);
-        $this->assertEquals('4c2681c048298a29a7fb413140cf8569', $result[0]['id']);
+        $this->assertSame('4c2681c048298a29a7fb413140cf8569', $result[0]['id']);
     }
 }

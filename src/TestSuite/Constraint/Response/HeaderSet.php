@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -13,7 +15,7 @@
  */
 namespace Cake\TestSuite\Constraint\Response;
 
-use Cake\Http\Response;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * HeaderSet
@@ -30,10 +32,10 @@ class HeaderSet extends ResponseBase
     /**
      * Constructor.
      *
-     * @param Response $response Response
+     * @param \Psr\Http\Message\ResponseInterface|null $response A response instance.
      * @param string $headerName Header name
      */
-    public function __construct($response, $headerName)
+    public function __construct(?ResponseInterface $response, string $headerName)
     {
         parent::__construct($response);
 
@@ -46,7 +48,7 @@ class HeaderSet extends ResponseBase
      * @param mixed $other Expected content
      * @return bool
      */
-    public function matches($other)
+    public function matches($other): bool
     {
         return $this->response->hasHeader($this->headerName);
     }
@@ -56,7 +58,7 @@ class HeaderSet extends ResponseBase
      *
      * @return string
      */
-    public function toString()
+    public function toString(): string
     {
         return sprintf('response has header \'%s\'', $this->headerName);
     }
@@ -67,7 +69,7 @@ class HeaderSet extends ResponseBase
      * @param mixed $other Value
      * @return string
      */
-    protected function failureDescription($other)
+    protected function failureDescription($other): string
     {
         return $this->toString();
     }

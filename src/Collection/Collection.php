@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,10 +17,8 @@
 namespace Cake\Collection;
 
 use ArrayIterator;
-use InvalidArgumentException;
 use IteratorIterator;
 use Serializable;
-use Traversable;
 
 /**
  * A collection is an immutable list of elements with a handful of functions to
@@ -26,24 +26,18 @@ use Traversable;
  */
 class Collection extends IteratorIterator implements CollectionInterface, Serializable
 {
-
     use CollectionTrait;
 
     /**
      * Constructor. You can provide an array or any traversable object
      *
-     * @param array|\Traversable $items Items.
+     * @param iterable $items Items.
      * @throws \InvalidArgumentException If passed incorrect type for items.
      */
-    public function __construct($items)
+    public function __construct(iterable $items)
     {
         if (is_array($items)) {
             $items = new ArrayIterator($items);
-        }
-
-        if (!($items instanceof Traversable)) {
-            $msg = 'Only an array or \Traversable is allowed for Collection';
-            throw new InvalidArgumentException($msg);
         }
 
         parent::__construct($items);
@@ -55,7 +49,7 @@ class Collection extends IteratorIterator implements CollectionInterface, Serial
      *
      * @return string
      */
-    public function serialize()
+    public function serialize(): string
     {
         return serialize($this->buffered());
     }
@@ -66,7 +60,7 @@ class Collection extends IteratorIterator implements CollectionInterface, Serial
      * @param string $collection The serialized collection
      * @return void
      */
-    public function unserialize($collection)
+    public function unserialize($collection): void
     {
         $this->__construct(unserialize($collection));
     }
@@ -76,7 +70,7 @@ class Collection extends IteratorIterator implements CollectionInterface, Serial
      *
      * @return int
      */
-    public function count()
+    public function count(): int
     {
         $traversable = $this->optimizeUnwrap();
 
@@ -92,7 +86,7 @@ class Collection extends IteratorIterator implements CollectionInterface, Serial
      *
      * @return int
      */
-    public function countKeys()
+    public function countKeys(): int
     {
         return count($this->toArray());
     }
@@ -103,7 +97,7 @@ class Collection extends IteratorIterator implements CollectionInterface, Serial
      *
      * @return array
      */
-    public function __debugInfo()
+    public function __debugInfo(): array
     {
         return [
             'count' => $this->count(),

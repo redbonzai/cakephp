@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -27,7 +29,7 @@ class TestEmailTransportTest extends TestCase
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -37,10 +39,10 @@ class TestEmailTransportTest extends TestCase
         TransportFactory::drop('transport_alternate');
 
         TransportFactory::setConfig('transport_default', [
-            'className' => DebugTransport::class
+            'className' => DebugTransport::class,
         ]);
         TransportFactory::setConfig('transport_alternate', [
-            'className' => DebugTransport::class
+            'className' => DebugTransport::class,
         ]);
 
         Email::setConfig('default', [
@@ -58,7 +60,7 @@ class TestEmailTransportTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
 
@@ -96,9 +98,9 @@ class TestEmailTransportTest extends TestCase
         (new Email())
             ->setTo('test@example.com')
             ->send('test');
-        $this->assertCount(1, TestEmailTransport::getEmails());
+        $this->assertCount(1, TestEmailTransport::getMessages());
 
-        TestEmailTransport::clearEmails();
-        $this->assertCount(0, TestEmailTransport::getEmails());
+        TestEmailTransport::clearMessages();
+        $this->assertCount(0, TestEmailTransport::getMessages());
     }
 }

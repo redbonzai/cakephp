@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,7 +16,6 @@
  */
 namespace Cake\Test\TestCase\ORM;
 
-use Cake\Datasource\ConnectionManager;
 use Cake\ORM\Entity;
 use Cake\TestSuite\TestCase;
 use Cake\Utility\Text;
@@ -24,13 +25,12 @@ use Cake\Utility\Text;
  */
 class TableUuidTest extends TestCase
 {
-
     /**
      * Fixtures
      *
      * @var array
      */
-    public $fixtures = [
+    protected $fixtures = [
         'core.BinaryUuiditems',
         'core.Uuiditems',
     ];
@@ -40,22 +40,10 @@ class TableUuidTest extends TestCase
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
-        $this->connection = ConnectionManager::get('test');
         static::setAppNamespace();
-    }
-
-    /**
-     * teardown
-     *
-     * @return void
-     */
-    public function tearDown()
-    {
-        parent::tearDown();
-        $this->getTableLocator()->clear();
     }
 
     /**

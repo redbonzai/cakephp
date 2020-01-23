@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -31,7 +33,7 @@ class SessionStorage implements StorageInterface
      * Stores user record array if fetched from session or false if session
      * does not have user record.
      *
-     * @var \ArrayAccess|array|false
+     * @var \ArrayAccess|array|false|null
      */
     protected $_user;
 
@@ -54,7 +56,7 @@ class SessionStorage implements StorageInterface
      */
     protected $_defaultConfig = [
         'key' => 'Auth.User',
-        'redirect' => 'Auth.redirect'
+        'redirect' => 'Auth.redirect',
     ];
 
     /**
@@ -73,7 +75,8 @@ class SessionStorage implements StorageInterface
     /**
      * Read user record from session.
      *
-     * @return array|null User record if available else null.
+     * @return \ArrayAccess|array|null User record if available else null.
+     * @psalm-suppress InvalidReturnType
      */
     public function read()
     {
@@ -81,8 +84,10 @@ class SessionStorage implements StorageInterface
             return $this->_user ?: null;
         }
 
+        /** @psalm-suppress PossiblyInvalidPropertyAssignmentValue */
         $this->_user = $this->_session->read($this->_config['key']) ?: false;
 
+        /** @psalm-suppress InvalidReturnStatement */
         return $this->_user ?: null;
     }
 
@@ -94,7 +99,7 @@ class SessionStorage implements StorageInterface
      * @param array|\ArrayAccess $user User record.
      * @return void
      */
-    public function write($user)
+    public function write($user): void
     {
         $this->_user = $user;
 
@@ -109,7 +114,7 @@ class SessionStorage implements StorageInterface
      *
      * @return void
      */
-    public function delete()
+    public function delete(): void
     {
         $this->_user = false;
 
@@ -118,7 +123,7 @@ class SessionStorage implements StorageInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function redirectUrl($url = null)
     {

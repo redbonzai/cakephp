@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -20,14 +22,13 @@ namespace Cake\TestSuite\Constraint\Response;
  */
 class BodyNotEmpty extends BodyEmpty
 {
-
     /**
      * Checks assertion
      *
      * @param mixed $other Expected type
      * @return bool
      */
-    public function matches($other)
+    public function matches($other): bool
     {
         return parent::matches($other) === false;
     }
@@ -37,7 +38,7 @@ class BodyNotEmpty extends BodyEmpty
      *
      * @return string
      */
-    public function toString()
+    public function toString(): string
     {
         return 'response body is not empty';
     }

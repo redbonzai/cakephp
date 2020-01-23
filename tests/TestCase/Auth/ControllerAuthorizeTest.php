@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * ControllerAuthorizeTest file
  *
@@ -27,23 +29,24 @@ use Cake\TestSuite\TestCase;
  */
 class ControllerAuthorizeTest extends TestCase
 {
+    /**
+     * @var \Cake\Auth\ControllerAuthorize
+     */
+    protected $auth;
 
     /**
      * setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->controller = $this->getMockBuilder(Controller::class)
             ->setMethods(['isAuthorized'])
             ->disableOriginalConstructor()
             ->getMock();
-        $this->components = $this->getMockBuilder(ComponentRegistry::class)->getMock();
-        $this->components->expects($this->any())
-            ->method('getController')
-            ->will($this->returnValue($this->controller));
+        $this->components = new ComponentRegistry($this->controller);
 
         $this->auth = new ControllerAuthorize($this->components);
     }
@@ -51,10 +54,11 @@ class ControllerAuthorizeTest extends TestCase
     /**
      * @return void
      */
-    public function testControllerErrorOnMissingMethod()
+    public function testControllerErrorOnMissingMethod(): void
     {
         $this->expectException(\Cake\Core\Exception\Exception::class);
         $this->auth->controller(new Controller());
+        $this->auth->authorize([], new ServerRequest());
     }
 
     /**
@@ -62,10 +66,10 @@ class ControllerAuthorizeTest extends TestCase
      *
      * @return void
      */
-    public function testAuthorizeFailure()
+    public function testAuthorizeFailure(): void
     {
         $user = [];
-        $request = new ServerRequest('/posts/index');
+        $request = new ServerRequest(['url' => '/posts/index']);
         $this->assertFalse($this->auth->authorize($user, $request));
     }
 
@@ -74,10 +78,10 @@ class ControllerAuthorizeTest extends TestCase
      *
      * @return void
      */
-    public function testAuthorizeSuccess()
+    public function testAuthorizeSuccess(): void
     {
         $user = ['User' => ['username' => 'mark']];
-        $request = new ServerRequest('/posts/index');
+        $request = new ServerRequest(['url' => '/posts/index']);
 
         $this->controller->expects($this->once())
             ->method('isAuthorized')

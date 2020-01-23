@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,9 +17,10 @@
 namespace Cake\Database\Expression;
 
 use Cake\Database\ExpressionInterface;
+use Cake\Database\Query;
+use Cake\Database\Type\ExpressionTypeCasterTrait;
 use Cake\Database\TypedResultInterface;
 use Cake\Database\TypedResultTrait;
-use Cake\Database\Type\ExpressionTypeCasterTrait;
 use Cake\Database\ValueBinder;
 
 /**
@@ -28,7 +31,6 @@ use Cake\Database\ValueBinder;
  */
 class FunctionExpression extends QueryExpression implements TypedResultInterface
 {
-
     use ExpressionTypeCasterTrait;
     use TypedResultTrait;
 
@@ -64,7 +66,7 @@ class FunctionExpression extends QueryExpression implements TypedResultInterface
      * passed arguments
      * @param string $returnType The return type of this expression
      */
-    public function __construct($name, $params = [], $types = [], $returnType = 'string')
+    public function __construct(string $name, array $params = [], array $types = [], string $returnType = 'string')
     {
         $this->_name = $name;
         $this->_returnType = $returnType;
@@ -77,7 +79,7 @@ class FunctionExpression extends QueryExpression implements TypedResultInterface
      * @param string $name The name of the function
      * @return $this
      */
-    public function setName($name)
+    public function setName(string $name)
     {
         $this->_name = $name;
 
@@ -89,30 +91,9 @@ class FunctionExpression extends QueryExpression implements TypedResultInterface
      *
      * @return string
      */
-    public function getName()
+    public function getName(): string
     {
         return $this->_name;
-    }
-
-    /**
-     * Sets the name of the SQL function to be invoke in this expression,
-     * if no value is passed it will return current name
-     *
-     * @deprecated 3.4.0 Use setName()/getName() instead.
-     * @param string|null $name The name of the function
-     * @return string|$this
-     */
-    public function name($name = null)
-    {
-        deprecationWarning(
-            'FunctionExpression::name() is deprecated. ' .
-            'Use FunctionExpression::setName()/getName() instead.'
-        );
-        if ($name !== null) {
-            return $this->setName($name);
-        }
-
-        return $this->getName();
     }
 
     /**
@@ -125,8 +106,9 @@ class FunctionExpression extends QueryExpression implements TypedResultInterface
      * @param bool $prepend Whether to prepend or append to the list of arguments
      * @see \Cake\Database\Expression\FunctionExpression::__construct() for more details.
      * @return $this
+     * @psalm-suppress MoreSpecificImplementedParamType
      */
-    public function add($params, $types = [], $prepend = false)
+    public function add($params, array $types = [], bool $prepend = false)
     {
         $put = $prepend ? 'array_unshift' : 'array_push';
         $typeMap = $this->getTypeMap()->setTypes($types);
@@ -167,12 +149,14 @@ class FunctionExpression extends QueryExpression implements TypedResultInterface
      * @param \Cake\Database\ValueBinder $generator Placeholder generator object
      * @return string
      */
-    public function sql(ValueBinder $generator)
+    public function sql(ValueBinder $generator): string
     {
         $parts = [];
         foreach ($this->_conditions as $condition) {
-            if ($condition instanceof ExpressionInterface) {
-                $condition = sprintf('%s', $condition->sql($generator));
+            if ($condition instanceof Query) {
+                $condition = sprintf('(%s)', $condition->sql($generator));
+            } elseif ($condition instanceof ExpressionInterface) {
+                $condition = $condition->sql($generator);
             } elseif (is_array($condition)) {
                 $p = $generator->placeholder('param');
                 $generator->bind($p, $condition['value'], $condition['type']);
@@ -193,7 +177,7 @@ class FunctionExpression extends QueryExpression implements TypedResultInterface
      *
      * @return int
      */
-    public function count()
+    public function count(): int
     {
         return 1 + count($this->_conditions);
     }

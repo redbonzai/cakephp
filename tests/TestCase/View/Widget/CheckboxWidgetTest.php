@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,7 +16,9 @@
  */
 namespace Cake\Test\TestCase\View\Widget;
 
+use Cake\Http\ServerRequest;
 use Cake\TestSuite\TestCase;
+use Cake\View\Form\NullContext;
 use Cake\View\StringTemplate;
 use Cake\View\Widget\CheckboxWidget;
 
@@ -23,20 +27,19 @@ use Cake\View\Widget\CheckboxWidget;
  */
 class CheckboxWidgetTest extends TestCase
 {
-
     /**
      * setup method.
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $templates = [
             'checkbox' => '<input type="checkbox" name="{{name}}" value="{{value}}"{{attrs}}>',
         ];
         $this->templates = new StringTemplate($templates);
-        $this->context = $this->getMockBuilder('Cake\View\Form\ContextInterface')->getMock();
+        $this->context = new NullContext(new ServerRequest(), []);
     }
 
     /**
@@ -56,7 +59,7 @@ class CheckboxWidgetTest extends TestCase
                 'type' => 'checkbox',
                 'name' => 'Comment[spam]',
                 'value' => 1,
-            ]
+            ],
         ];
         $this->assertHtml($expected, $result);
 
@@ -70,7 +73,7 @@ class CheckboxWidgetTest extends TestCase
                 'type' => 'checkbox',
                 'name' => 'Comment[spam]',
                 'value' => 99,
-            ]
+            ],
         ];
         $this->assertHtml($expected, $result);
     }
@@ -94,7 +97,7 @@ class CheckboxWidgetTest extends TestCase
                 'name' => 'Comment[spam]',
                 'value' => 1,
                 'disabled' => 'disabled',
-            ]
+            ],
         ];
         $this->assertHtml($expected, $result);
     }
@@ -119,7 +122,7 @@ class CheckboxWidgetTest extends TestCase
                 'name' => 'Comment[spam]',
                 'value' => 1,
                 'checked' => 'checked',
-            ]
+            ],
         ];
         $this->assertHtml($expected, $result);
 
@@ -146,7 +149,7 @@ class CheckboxWidgetTest extends TestCase
                 'type' => 'checkbox',
                 'name' => 'Comment[spam]',
                 'value' => 1,
-            ]
+            ],
         ];
         $this->assertHtml($expected, $result);
     }
@@ -187,7 +190,7 @@ class CheckboxWidgetTest extends TestCase
                 'name' => 'Comment[spam]',
                 'value' => 1,
                 'checked' => 'checked',
-            ]
+            ],
         ];
         $this->assertHtml($expected, $result);
     }
@@ -229,7 +232,7 @@ class CheckboxWidgetTest extends TestCase
                 'type' => 'checkbox',
                 'name' => 'Comment[spam]',
                 'value' => 1,
-            ]
+            ],
         ];
         $this->assertHtml($expected, $result);
     }
@@ -258,7 +261,7 @@ class CheckboxWidgetTest extends TestCase
                 'custom' => 'value',
                 'name' => 'Comment[spam]',
                 'value' => 1,
-            ]
+            ],
         ];
         $this->assertHtml($expected, $result);
     }
@@ -278,7 +281,7 @@ class CheckboxWidgetTest extends TestCase
             'name' => 'Model[field]',
             'class' => 'my-class',
             'data-ref' => 'custom-attr',
-            'value' => 1
+            'value' => 1,
 
         ], $this->context);
 
@@ -288,8 +291,8 @@ class CheckboxWidgetTest extends TestCase
                 'name' => 'Model[field]',
                 'value' => '1',
                 'class' => 'my-class',
-                'data-ref' => 'custom-attr'
-            ]
+                'data-ref' => 'custom-attr',
+            ],
         ];
         $this->assertHtml($expected, $result);
     }

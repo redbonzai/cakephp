@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace TestApp\Model\Entity;
 
@@ -10,7 +11,6 @@ use Cake\Datasource\EntityTrait;
  */
 class NonExtending implements EntityInterface
 {
-
     use EntityTrait;
 
     public function __construct(array $properties = [], array $options = [])
@@ -20,13 +20,13 @@ class NonExtending implements EntityInterface
             'markClean' => false,
             'markNew' => null,
             'guard' => false,
-            'source' => null
+            'source' => null,
         ];
 
         if (!empty($properties)) {
             $this->set($properties, [
                 'setter' => $options['useSetters'],
-                'guard' => $options['guard']
+                'guard' => $options['guard'],
             ]);
         }
 

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,31 +16,28 @@
  */
 namespace Cake\Database\Type;
 
+use Cake\I18n\Date;
+use Cake\I18n\FrozenDate;
 use DateTime;
+use DateTimeImmutable;
+use DateTimeInterface;
 
 /**
  * Class DateType
  */
 class DateType extends DateTimeType
 {
-
     /**
-     * The class to use for representing date objects
-     *
-     * This property can only be used before an instance of this type
-     * class is constructed. After that use `useMutable()` or `useImmutable()` instead.
-     *
-     * @var string
-     * @deprecated 3.2.0 Use DateType::useMutable() or DateType::useImmutable() instead.
-     */
-    public static $dateTimeClass = 'Cake\I18n\Date';
-
-    /**
-     * Date format for DateTime object
-     *
-     * @var string|array
+     * @inheritDoc
      */
     protected $_format = 'Y-m-d';
+
+    /**
+     * @inheritDoc
+     */
+    protected $_marshalFormats = [
+        'Y-m-d',
+    ];
 
     /**
      * In this class we want Date objects to  have their time
@@ -55,7 +54,7 @@ class DateType extends DateTimeType
      */
     public function useImmutable()
     {
-        $this->_setClassName('Cake\I18n\FrozenDate', 'DateTimeImmutable');
+        $this->_setClassName(FrozenDate::class, DateTimeImmutable::class);
 
         return $this;
     }
@@ -67,7 +66,7 @@ class DateType extends DateTimeType
      */
     public function useMutable()
     {
-        $this->_setClassName('Cake\I18n\Date', 'DateTime');
+        $this->_setClassName(Date::class, DateTime::class);
 
         return $this;
     }
@@ -76,9 +75,9 @@ class DateType extends DateTimeType
      * Convert request data into a datetime object.
      *
      * @param mixed $value Request data
-     * @return \DateTimeInterface
+     * @return \DateTimeInterface|null
      */
-    public function marshal($value)
+    public function marshal($value): ?DateTimeInterface
     {
         $date = parent::marshal($value);
         if ($date instanceof DateTime) {
@@ -89,13 +88,13 @@ class DateType extends DateTimeType
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    protected function _parseValue($value)
+    protected function _parseLocaleValue(string $value)
     {
-        /* @var \Cake\I18n\Time $class */
+        /** @var \Cake\I18n\I18nDateTimeInterface $class */
         $class = $this->_className;
 
-        return $class::parseDate($value, $this->_localeFormat);
+        return $class::parseDate($value, $this->_localeMarshalFormat);
     }
 }

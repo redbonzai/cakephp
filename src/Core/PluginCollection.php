@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright 2005-2011, Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,6 +17,7 @@ namespace Cake\Core;
 
 use Cake\Core\Exception\MissingPluginException;
 use Countable;
+use Generator;
 use InvalidArgumentException;
 use Iterator;
 
@@ -37,14 +40,14 @@ class PluginCollection implements Iterator, Countable
     /**
      * Plugin list
      *
-     * @var array
+     * @var \Cake\Core\PluginInterface[]
      */
     protected $plugins = [];
 
     /**
      * Names of plugins
      *
-     * @var array
+     * @var string[]
      */
     protected $names = [];
 
@@ -65,7 +68,7 @@ class PluginCollection implements Iterator, Countable
     /**
      * Constructor
      *
-     * @param array $plugins The map of plugins to add to the collection.
+     * @param \Cake\Core\PluginInterface[] $plugins The map of plugins to add to the collection.
      */
     public function __construct(array $plugins = [])
     {
@@ -85,7 +88,7 @@ class PluginCollection implements Iterator, Countable
      * @internal
      * @return void
      */
-    protected function loadConfig()
+    protected function loadConfig(): void
     {
         if (Configure::check('plugins')) {
             return;
@@ -107,7 +110,7 @@ class PluginCollection implements Iterator, Countable
     /**
      * Locate a plugin path by looking at configuration data.
      *
-     * This will use the `plugins` Configure key, and fallback to enumerating `App::path('Plugin')`
+     * This will use the `plugins` Configure key, and fallback to enumerating `App::path('plugins')`
      *
      * This method is not part of the official public API as plugins with
      * no plugin class are being phased out.
@@ -117,7 +120,7 @@ class PluginCollection implements Iterator, Countable
      * @throws \Cake\Core\Exception\MissingPluginException when a plugin path cannot be resolved.
      * @internal
      */
-    public function findPath($name)
+    public function findPath(string $name): string
     {
         $this->loadConfig();
 
@@ -127,7 +130,7 @@ class PluginCollection implements Iterator, Countable
         }
 
         $pluginPath = str_replace('/', DIRECTORY_SEPARATOR, $name);
-        $paths = App::path('Plugin');
+        $paths = App::path('plugins');
         foreach ($paths as $path) {
             if (is_dir($path . $pluginPath)) {
                 return $path . $pluginPath . DIRECTORY_SEPARATOR;
@@ -160,7 +163,7 @@ class PluginCollection implements Iterator, Countable
      * @param string $name The named plugin.
      * @return $this
      */
-    public function remove($name)
+    public function remove(string $name)
     {
         unset($this->plugins[$name]);
         $this->names = array_keys($this->plugins);
@@ -189,25 +192,61 @@ class PluginCollection implements Iterator, Countable
      * @param string $name The named plugin.
      * @return bool
      */
-    public function has($name)
+    public function has(string $name): bool
     {
         return isset($this->plugins[$name]);
     }
 
     /**
-     * Get the a plugin by name
+     * Get the a plugin by name.
+     *
+     * If a plugin isn't already loaded it will be autoloaded on first access
+     * and that plugins loaded this way may miss some hook methods.
      *
      * @param string $name The plugin to get.
      * @return \Cake\Core\PluginInterface The plugin.
      * @throws \Cake\Core\Exception\MissingPluginException when unknown plugins are fetched.
      */
-    public function get($name)
+    public function get(string $name): PluginInterface
     {
-        if (!$this->has($name)) {
-            throw new MissingPluginException(['plugin' => $name]);
+        if ($this->has($name)) {
+            return $this->plugins[$name];
         }
 
-        return $this->plugins[$name];
+        $plugin = $this->create($name);
+        $this->add($plugin);
+
+        return $plugin;
+    }
+
+    /**
+     * Create a plugin instance from a name/classname and configuration.
+     *
+     * @param string $name The plugin name or classname
+     * @param array $config Configuration options for the plugin.
+     * @return \Cake\Core\PluginInterface
+     * @throws \Cake\Core\Exception\MissingPluginException When plugin instance could not be created.
+     * @psalm-var class-string<\Cake\Core\PluginInterface> $name
+     */
+    public function create(string $name, array $config = []): PluginInterface
+    {
+        if (strpos($name, '\\') !== false) {
+            // phpcs:ignore SlevomatCodingStandard.Commenting.InlineDocCommentDeclaration.InvalidFormat
+            /** @var \Cake\Core\PluginInterface */
+            return new $name($config);
+        }
+
+        $config += ['name' => $name];
+        /** @var class-string<\Cake\Core\PluginInterface> $className */
+        $className = str_replace('/', '\\', $name) . '\\' . 'Plugin';
+        if (!class_exists($className)) {
+            $className = BasePlugin::class;
+            if (empty($config['path'])) {
+                $config['path'] = $this->findPath($name);
+            }
+        }
+
+        return new $className($config);
     }
 
     /**
@@ -217,7 +256,7 @@ class PluginCollection implements Iterator, Countable
      *
      * @return int
      */
-    public function count()
+    public function count(): int
     {
         return count($this->plugins);
     }
@@ -227,7 +266,7 @@ class PluginCollection implements Iterator, Countable
      *
      * @return void
      */
-    public function next()
+    public function next(): void
     {
         $this->positions[$this->loopDepth]++;
     }
@@ -237,7 +276,7 @@ class PluginCollection implements Iterator, Countable
      *
      * @return string
      */
-    public function key()
+    public function key(): string
     {
         return $this->names[$this->positions[$this->loopDepth]];
     }
@@ -247,7 +286,7 @@ class PluginCollection implements Iterator, Countable
      *
      * @return \Cake\Core\PluginInterface
      */
-    public function current()
+    public function current(): PluginInterface
     {
         $position = $this->positions[$this->loopDepth];
         $name = $this->names[$position];
@@ -260,7 +299,7 @@ class PluginCollection implements Iterator, Countable
      *
      * @return void
      */
-    public function rewind()
+    public function rewind(): void
     {
         $this->positions[] = 0;
         $this->loopDepth += 1;
@@ -271,7 +310,7 @@ class PluginCollection implements Iterator, Countable
      *
      * @return bool
      */
-    public function valid()
+    public function valid(): bool
     {
         $valid = isset($this->names[$this->positions[$this->loopDepth]]);
         if (!$valid) {
@@ -289,9 +328,9 @@ class PluginCollection implements Iterator, Countable
      * @return \Generator A generator containing matching plugins.
      * @throws \InvalidArgumentException on invalid hooks
      */
-    public function with($hook)
+    public function with(string $hook): Generator
     {
-        if (!in_array($hook, PluginInterface::VALID_HOOKS)) {
+        if (!in_array($hook, PluginInterface::VALID_HOOKS, true)) {
             throw new InvalidArgumentException("The `{$hook}` hook is not a known plugin hook.");
         }
         foreach ($this as $plugin) {

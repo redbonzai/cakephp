@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -32,25 +34,11 @@ class OpenSslTest extends TestCase
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->skipIf(!function_exists('openssl_encrypt'), 'No openssl skipping tests');
         $this->crypt = new OpenSsl();
-    }
-
-    /**
-     * testRijndael method
-     *
-     * @return void
-     */
-    public function testRijndael()
-    {
-        $this->expectException(\LogicException::class);
-        $txt = 'The quick brown fox jumped over the lazy dog.';
-        $key = 'DYhG93b0qyJfIxfs2guVoUubWwvniR2G0FgaC9mi';
-
-        $this->crypt->rijndael($txt, $key, 'encrypt');
     }
 
     /**
@@ -65,7 +53,7 @@ class OpenSslTest extends TestCase
         $result = $this->crypt->encrypt($txt, $key);
         $this->assertNotEquals($txt, $result, 'Should be encrypted.');
         $this->assertNotEquals($result, $this->crypt->encrypt($txt, $key), 'Each result is unique.');
-        $this->assertEquals($txt, $this->crypt->decrypt($result, $key));
+        $this->assertSame($txt, $this->crypt->decrypt($result, $key));
     }
 
     /**
@@ -80,6 +68,6 @@ class OpenSslTest extends TestCase
         $result = $this->crypt->encrypt($txt, $key);
 
         $key = 'Not the same key.';
-        $this->assertFalse($this->crypt->decrypt($txt, $key), 'Modified key will fail.');
+        $this->assertNull($this->crypt->decrypt($txt, $key), 'Modified key will fail.');
     }
 }

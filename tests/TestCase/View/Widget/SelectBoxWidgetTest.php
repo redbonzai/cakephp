@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,7 +17,9 @@
 namespace Cake\Test\TestCase\View\Widget;
 
 use Cake\Collection\Collection;
+use Cake\Http\ServerRequest;
 use Cake\TestSuite\TestCase;
+use Cake\View\Form\NullContext;
 use Cake\View\StringTemplate;
 use Cake\View\Widget\SelectBoxWidget;
 
@@ -24,13 +28,12 @@ use Cake\View\Widget\SelectBoxWidget;
  */
 class SelectBoxWidgetTest extends TestCase
 {
-
     /**
      * setup method.
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $templates = [
@@ -39,7 +42,7 @@ class SelectBoxWidgetTest extends TestCase
             'option' => '<option value="{{value}}"{{attrs}}>{{text}}</option>',
             'optgroup' => '<optgroup label="{{label}}"{{attrs}}>{{content}}</optgroup>',
         ];
-        $this->context = $this->getMockBuilder('Cake\View\Form\ContextInterface')->getMock();
+        $this->context = new NullContext(new ServerRequest(), []);
         $this->templates = new StringTemplate($templates);
     }
 
@@ -54,12 +57,12 @@ class SelectBoxWidgetTest extends TestCase
         $data = [
             'id' => 'BirdName',
             'name' => 'Birds[name]',
-            'options' => []
+            'options' => [],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
             'select' => ['name' => 'Birds[name]', 'id' => 'BirdName'],
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -75,14 +78,14 @@ class SelectBoxWidgetTest extends TestCase
         $data = [
             'id' => 'BirdName',
             'name' => 'Birds[name]',
-            'options' => ['a' => 'Albatross', 'b' => 'Budgie']
+            'options' => ['a' => 'Albatross', 'b' => 'Budgie'],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
             'select' => ['name' => 'Birds[name]', 'id' => 'BirdName'],
             ['option' => ['value' => 'a']], 'Albatross', '/option',
             ['option' => ['value' => 'b']], 'Budgie', '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -99,14 +102,14 @@ class SelectBoxWidgetTest extends TestCase
             'id' => 'enabled',
             'name' => 'enabled',
             'options' => [0 => 'No', 1 => 'Yes'],
-            'val' => false
+            'val' => false,
         ];
         $result = $select->render($data, $this->context);
-        $this->assertContains('<option value="0" selected="selected">No</option>', $result);
+        $this->assertStringContainsString('<option value="0" selected="selected">No</option>', $result);
 
         $data['value'] = [false, 2];
         $result = $select->render($data, $this->context);
-        $this->assertContains('<option value="0" selected="selected">No</option>', $result);
+        $this->assertStringContainsString('<option value="0" selected="selected">No</option>', $result);
     }
 
     /**
@@ -121,7 +124,7 @@ class SelectBoxWidgetTest extends TestCase
         $data = [
             'name' => 'Birds[name]',
             'options' => $options,
-            'empty' => true
+            'empty' => true,
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -129,7 +132,7 @@ class SelectBoxWidgetTest extends TestCase
             ['option' => ['value' => '']], '/option',
             ['option' => ['value' => 'a']], 'Albatross', '/option',
             ['option' => ['value' => 'b']], 'Budgie', '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -146,7 +149,7 @@ class SelectBoxWidgetTest extends TestCase
         $data = [
             'name' => 'Birds[name]',
             'options' => $options,
-            'empty' => 'Pick one'
+            'empty' => 'Pick one',
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -154,7 +157,7 @@ class SelectBoxWidgetTest extends TestCase
             ['option' => ['value' => '']], 'Pick one', '/option',
             ['option' => ['value' => 'a']], 'Albatross', '/option',
             ['option' => ['value' => 'b']], 'Budgie', '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -173,7 +176,7 @@ class SelectBoxWidgetTest extends TestCase
             'options' => [
                 ['value' => 'a', 'text' => 'Albatross'],
                 ['value' => 'b', 'text' => 'Budgie', 'data-foo' => 'bar'],
-            ]
+            ],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -184,7 +187,7 @@ class SelectBoxWidgetTest extends TestCase
             ['option' => ['value' => 'b', 'data-foo' => 'bar']],
             'Budgie',
             '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -206,7 +209,7 @@ class SelectBoxWidgetTest extends TestCase
                 '1x' => 'one x',
                 '2' => 'two',
                 '2x' => 'two x',
-            ]
+            ],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -215,7 +218,7 @@ class SelectBoxWidgetTest extends TestCase
             ['option' => ['value' => '1x']], 'one x', '/option',
             ['option' => ['value' => '2']], 'two', '/option',
             ['option' => ['value' => '2x']], 'two x', '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
 
@@ -227,7 +230,7 @@ class SelectBoxWidgetTest extends TestCase
             ['option' => ['value' => '1x']], 'one x', '/option',
             ['option' => ['value' => '2', 'selected' => 'selected']], 'two', '/option',
             ['option' => ['value' => '2x']], 'two x', '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -247,7 +250,7 @@ class SelectBoxWidgetTest extends TestCase
             'options' => [
                 ['value' => 'a', 'text' => 'Albatross'],
                 ['value' => 'b', 'text' => 'Budgie', 'data-foo' => 'bar'],
-            ]
+            ],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -258,7 +261,7 @@ class SelectBoxWidgetTest extends TestCase
             ['option' => ['value' => 'b', 'data-foo' => 'bar']],
             'Budgie',
             '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -275,7 +278,7 @@ class SelectBoxWidgetTest extends TestCase
             'id' => 'BirdName',
             'name' => 'Birds[name]',
             'multiple' => true,
-            'options' => ['a' => 'Albatross', 'b' => 'Budgie']
+            'options' => ['a' => 'Albatross', 'b' => 'Budgie'],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -286,7 +289,7 @@ class SelectBoxWidgetTest extends TestCase
             ],
             ['option' => ['value' => 'a']], 'Albatross', '/option',
             ['option' => ['value' => 'b']], 'Budgie', '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -309,20 +312,20 @@ class SelectBoxWidgetTest extends TestCase
                 '1x' => 'one x',
                 '2' => 'two',
                 '2x' => 'two x',
-            ]
+            ],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
             'select' => [
                 'name' => 'Birds[name][]',
                 'multiple' => 'multiple',
-                'id' => 'BirdName'
+                'id' => 'BirdName',
             ],
             ['option' => ['value' => '1', 'selected' => 'selected']], 'one', '/option',
             ['option' => ['value' => '1x']], 'one x', '/option',
             ['option' => ['value' => '2', 'selected' => 'selected']], 'two', '/option',
             ['option' => ['value' => '2x']], 'two x', '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -345,8 +348,8 @@ class SelectBoxWidgetTest extends TestCase
                 'Bird' => [
                     'budgie' => 'Budgie',
                     'eagle' => 'Eagle',
-                ]
-            ]
+                ],
+            ],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -369,7 +372,7 @@ class SelectBoxWidgetTest extends TestCase
             'Eagle',
             '/option',
             '/optgroup',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -386,15 +389,15 @@ class SelectBoxWidgetTest extends TestCase
             'name' => 'Year[key]',
             'options' => [
                 2014 => [
-                    'key' => 'value'
+                    'key' => 'value',
                 ],
                 2013 => [
                     'text' => '2013-text',
                     'options' => [
-                        'key2' => 'value2'
-                    ]
-                ]
-            ]
+                        'key2' => 'value2',
+                    ],
+                ],
+            ],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -411,7 +414,7 @@ class SelectBoxWidgetTest extends TestCase
             'value2',
             '/option',
             '/optgroup',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -430,7 +433,7 @@ class SelectBoxWidgetTest extends TestCase
                 '>XSS<' => [
                     '1' => 'One>',
                 ],
-            ]
+            ],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -442,7 +445,7 @@ class SelectBoxWidgetTest extends TestCase
             'One&gt;',
             '/option',
             '/optgroup',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
 
@@ -457,7 +460,7 @@ class SelectBoxWidgetTest extends TestCase
             'One>',
             '/option',
             '/optgroup',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -479,9 +482,9 @@ class SelectBoxWidgetTest extends TestCase
                     'options' => [
                         'beaver' => 'Beaver',
                         'elk' => 'Elk',
-                    ]
-                ]
-            ]
+                    ],
+                ],
+            ],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -496,7 +499,7 @@ class SelectBoxWidgetTest extends TestCase
             'Elk',
             '/option',
             '/optgroup',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -517,8 +520,8 @@ class SelectBoxWidgetTest extends TestCase
                 'Bird' => [
                     'budgie' => 'Budgie',
                     'eagle' => 'Eagle',
-                ]
-            ]
+                ],
+            ],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -541,7 +544,7 @@ class SelectBoxWidgetTest extends TestCase
             'Eagle',
             '/option',
             '/optgroup',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -566,8 +569,8 @@ class SelectBoxWidgetTest extends TestCase
                 'twos' => [
                     '2' => 'two',
                     '2x' => 'two x',
-                ]
-            ]
+                ],
+            ],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -583,7 +586,7 @@ class SelectBoxWidgetTest extends TestCase
             ['option' => ['value' => '2', 'selected' => 'selected']], 'two', '/option',
             ['option' => ['value' => '2x', 'disabled' => 'disabled']], 'two x', '/option',
             '/optgroup',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -610,7 +613,7 @@ class SelectBoxWidgetTest extends TestCase
             ],
             ['option' => ['value' => 'a', 'selected' => 'selected']], 'Albatross', '/option',
             ['option' => ['value' => 'b']], 'Budgie', '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
 
@@ -627,7 +630,7 @@ class SelectBoxWidgetTest extends TestCase
             ],
             ['option' => ['value' => '1', 'disabled' => 'disabled']], 'One', '/option',
             ['option' => ['value' => '2']], 'Two', '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -648,7 +651,7 @@ class SelectBoxWidgetTest extends TestCase
                 'a' => 'Albatross',
                 'b' => 'Budgie',
                 'c' => 'Canary',
-            ]
+            ],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -664,7 +667,7 @@ class SelectBoxWidgetTest extends TestCase
             ['option' => ['value' => 'c', 'disabled' => 'disabled']],
             'Canary',
             '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -684,7 +687,7 @@ class SelectBoxWidgetTest extends TestCase
             'options' => [
                 ['value' => 'a', 'text' => 'Albatross'],
                 ['value' => 'b', 'text' => 'Budgie', 'data-foo' => 'bar'],
-            ]
+            ],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -695,7 +698,7 @@ class SelectBoxWidgetTest extends TestCase
             ['option' => ['value' => 'b', 'data-foo' => 'bar', 'disabled' => 'disabled']],
             'Budgie',
             '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -712,7 +715,7 @@ class SelectBoxWidgetTest extends TestCase
             'id' => 'BirdName',
             'name' => 'Birds[name]',
             'empty' => true,
-            'options' => ['a' => 'Albatross', 'b' => 'Budgie']
+            'options' => ['a' => 'Albatross', 'b' => 'Budgie'],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -720,7 +723,7 @@ class SelectBoxWidgetTest extends TestCase
             ['option' => ['value' => '']], '/option',
             ['option' => ['value' => 'a']], 'Albatross', '/option',
             ['option' => ['value' => 'b']], 'Budgie', '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
 
@@ -731,7 +734,7 @@ class SelectBoxWidgetTest extends TestCase
             ['option' => ['value' => '']], 'empty', '/option',
             ['option' => ['value' => 'a']], 'Albatross', '/option',
             ['option' => ['value' => 'b']], 'Budgie', '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
 
@@ -742,7 +745,7 @@ class SelectBoxWidgetTest extends TestCase
             ['option' => ['value' => '99']], '(choose one)', '/option',
             ['option' => ['value' => 'a']], 'Albatross', '/option',
             ['option' => ['value' => 'b']], 'Budgie', '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
 
@@ -754,7 +757,7 @@ class SelectBoxWidgetTest extends TestCase
             ['option' => ['value' => '', 'selected' => 'selected']], 'empty', '/option',
             ['option' => ['value' => 'a']], 'Albatross', '/option',
             ['option' => ['value' => 'b']], 'Budgie', '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -773,7 +776,7 @@ class SelectBoxWidgetTest extends TestCase
                 'a' => '>Albatross',
                 'b' => '>Budgie',
                 'c' => '>Canary',
-            ]
+            ],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -789,7 +792,7 @@ class SelectBoxWidgetTest extends TestCase
             ['option' => ['value' => 'c']],
             '&gt;Canary',
             '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
 
@@ -798,7 +801,7 @@ class SelectBoxWidgetTest extends TestCase
             'name' => 'Birds[name]',
             'options' => [
                 '>a' => '>Albatross',
-            ]
+            ],
         ];
         $result = $select->render($data, $this->context);
         $expected = [
@@ -808,7 +811,7 @@ class SelectBoxWidgetTest extends TestCase
             ['option' => ['value' => '>a']],
             '>Albatross',
             '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -824,12 +827,12 @@ class SelectBoxWidgetTest extends TestCase
         $data = [
             'id' => 'BirdName',
             'name' => 'Birds[name]',
-            'options' => null
+            'options' => null,
         ];
         $result = $select->render($data, $this->context);
         $expected = [
             'select' => ['name' => 'Birds[name]', 'id' => 'BirdName'],
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
 
@@ -838,7 +841,7 @@ class SelectBoxWidgetTest extends TestCase
         $expected = [
             'select' => ['name' => 'Birds[name]', 'id' => 'BirdName'],
             ['option' => ['value' => '']], '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
 
@@ -847,7 +850,7 @@ class SelectBoxWidgetTest extends TestCase
         $expected = [
             'select' => ['name' => 'Birds[name]', 'id' => 'BirdName'],
             ['option' => ['value' => '']], 'empty', '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -872,7 +875,7 @@ class SelectBoxWidgetTest extends TestCase
                 ['value' => 'a', 'text' => 'Albatross', 'templateVars' => ['opt' => 'opt-1']],
                 'b' => 'Budgie',
                 'c' => 'Canary',
-            ]
+            ],
         ];
         $result = $input->render($data, $this->context);
         $expected = [
@@ -889,7 +892,7 @@ class SelectBoxWidgetTest extends TestCase
             ['option' => ['value' => 'c', 'opt' => 'option']],
             'Canary',
             '/option',
-            '/select'
+            '/select',
         ];
         $this->assertHtml($expected, $result);
     }

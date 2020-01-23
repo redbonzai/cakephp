@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -16,6 +18,7 @@ namespace Cake\View\Helper;
 
 use Cake\Core\App;
 use Cake\Core\Exception\Exception;
+use Cake\I18n\Number;
 use Cake\View\Helper;
 use Cake\View\View;
 
@@ -24,19 +27,18 @@ use Cake\View\View;
  *
  * Methods to make numbers more readable.
  *
- * @link https://book.cakephp.org/3.0/en/views/helpers/number.html
+ * @link https://book.cakephp.org/4/en/views/helpers/number.html
  * @see \Cake\I18n\Number
  */
 class NumberHelper extends Helper
 {
-
     /**
      * Default config for this class
      *
      * @var array
      */
     protected $_defaultConfig = [
-        'engine' => 'Cake\I18n\Number'
+        'engine' => Number::class,
     ];
 
     /**
@@ -54,22 +56,22 @@ class NumberHelper extends Helper
      * - `engine` Class name to use to replace Cake\I18n\Number functionality
      *            The class needs to be placed in the `Utility` directory.
      *
-     * @param \Cake\View\View $View The View this helper is being attached to.
+     * @param \Cake\View\View $view The View this helper is being attached to.
      * @param array $config Configuration settings for the helper
      * @throws \Cake\Core\Exception\Exception When the engine class could not be found.
      */
-    public function __construct(View $View, array $config = [])
+    public function __construct(View $view, array $config = [])
     {
-        parent::__construct($View, $config);
+        parent::__construct($view, $config);
 
         $config = $this->_config;
 
         $engineClass = App::className($config['engine'], 'Utility');
-        if ($engineClass) {
-            $this->_engine = new $engineClass($config);
-        } else {
+        if ($engineClass === null) {
             throw new Exception(sprintf('Class for %s could not be found', $config['engine']));
         }
+
+        $this->_engine = new $engineClass($config);
     }
 
     /**
@@ -79,7 +81,7 @@ class NumberHelper extends Helper
      * @param array $params Array of params for the method.
      * @return mixed Whatever is returned by called method, or false on failure
      */
-    public function __call($method, $params)
+    public function __call(string $method, array $params)
     {
         return call_user_func_array([$this->_engine, $method], $params);
     }
@@ -87,13 +89,13 @@ class NumberHelper extends Helper
     /**
      * Formats a number with a level of precision.
      *
-     * @param float $number A floating point number.
+     * @param float|string $number A floating point number.
      * @param int $precision The precision of the returned number.
      * @return string Formatted float.
      * @see \Cake\I18n\Number::precision()
-     * @link https://book.cakephp.org/3.0/en/views/helpers/number.html#formatting-floating-point-numbers
+     * @link https://book.cakephp.org/4/en/views/helpers/number.html#formatting-floating-point-numbers
      */
-    public function precision($number, $precision = 3)
+    public function precision($number, int $precision = 3): string
     {
         return $this->_engine->precision($number, $precision);
     }
@@ -101,12 +103,12 @@ class NumberHelper extends Helper
     /**
      * Returns a formatted-for-humans file size.
      *
-     * @param int $size Size in bytes
+     * @param int|string $size Size in bytes
      * @return string Human readable size
      * @see \Cake\I18n\Number::toReadableSize()
-     * @link https://book.cakephp.org/3.0/en/views/helpers/number.html#interacting-with-human-readable-values
+     * @link https://book.cakephp.org/4/en/views/helpers/number.html#interacting-with-human-readable-values
      */
-    public function toReadableSize($size)
+    public function toReadableSize($size): string
     {
         return $this->_engine->toReadableSize($size);
     }
@@ -118,14 +120,14 @@ class NumberHelper extends Helper
      *
      * - `multiply`: Multiply the input value by 100 for decimal percentages.
      *
-     * @param float $number A floating point number
+     * @param float|string $number A floating point number
      * @param int $precision The precision of the returned number
      * @param array $options Options
      * @return string Percentage string
      * @see \Cake\I18n\Number::toPercentage()
-     * @link https://book.cakephp.org/3.0/en/views/helpers/number.html#formatting-percentages
+     * @link https://book.cakephp.org/4/en/views/helpers/number.html#formatting-percentages
      */
-    public function toPercentage($number, $precision = 2, array $options = [])
+    public function toPercentage($number, int $precision = 2, array $options = []): string
     {
         return $this->_engine->toPercentage($number, $precision, $options);
     }
@@ -142,12 +144,12 @@ class NumberHelper extends Helper
      * - `after` - The string to place after decimal numbers, e.g. ']'
      * - `escape` - Whether or not to escape html in resulting string
      *
-     * @param float $number A floating point number.
+     * @param float|string $number A floating point number.
      * @param array $options An array with options.
      * @return string Formatted number
-     * @link https://book.cakephp.org/3.0/en/views/helpers/number.html#formatting-numbers
+     * @link https://book.cakephp.org/4/en/views/helpers/number.html#formatting-numbers
      */
-    public function format($number, array $options = [])
+    public function format($number, array $options = []): string
     {
         $formatted = $this->_engine->format($number, $options);
         $options += ['escape' => true];
@@ -174,12 +176,12 @@ class NumberHelper extends Helper
      *   currency code.
      * - `escape` - Whether or not to escape html in resulting string
      *
-     * @param float $number Value to format.
+     * @param float|string $number Value to format.
      * @param string|null $currency International currency name such as 'USD', 'EUR', 'JPY', 'CAD'
      * @param array $options Options list.
      * @return string Number formatted as a currency.
      */
-    public function currency($number, $currency = null, array $options = [])
+    public function currency($number, ?string $currency = null, array $options = []): string
     {
         $formatted = $this->_engine->currency($number, $currency, $options);
         $options += ['escape' => true];
@@ -199,11 +201,11 @@ class NumberHelper extends Helper
      * - `after` - The string to place after decimal numbers, e.g. ']'
      * - `escape` - Set to false to prevent escaping
      *
-     * @param float $value A floating point number
+     * @param float|string $value A floating point number
      * @param array $options Options list.
      * @return string formatted delta
      */
-    public function formatDelta($value, array $options = [])
+    public function formatDelta($value, array $options = []): string
     {
         $formatted = $this->_engine->formatDelta($value, $options);
         $options += ['escape' => true];
@@ -214,12 +216,12 @@ class NumberHelper extends Helper
     /**
      * Getter/setter for default currency
      *
-     * @param string|bool $currency Default currency string to be used by currency()
+     * @param string|false|null $currency Default currency string to be used by currency()
      * if $currency argument is not provided. If boolean false is passed, it will clear the
-     * currently stored value
-     * @return string Currency
+     * currently stored value. Null reads the current default.
+     * @return string|null Currency
      */
-    public function defaultCurrency($currency)
+    public function defaultCurrency($currency): ?string
     {
         return $this->_engine->defaultCurrency($currency);
     }
@@ -229,7 +231,7 @@ class NumberHelper extends Helper
      *
      * @return array
      */
-    public function implementedEvents()
+    public function implementedEvents(): array
     {
         return [];
     }
@@ -241,7 +243,7 @@ class NumberHelper extends Helper
      * @param array $options An array with options.
      * @return string formatted number
      */
-    public function ordinal($value, array $options = [])
+    public function ordinal($value, array $options = []): string
     {
         return $this->_engine->ordinal($value, $options);
     }

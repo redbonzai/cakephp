@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -26,7 +28,6 @@ use UnexpectedValueException;
  */
 trait ModelAwareTrait
 {
-
     /**
      * This object's primary model class name. Should be a plural form.
      * CakePHP will not inflect the name.
@@ -35,12 +36,12 @@ trait ModelAwareTrait
      * Plugin classes should use `Plugin.Comments` style names to correctly load
      * models from the correct plugin.
      *
-     * Use false to not use auto-loading on this object. Null auto-detects based on
+     * Use empty string to not use auto-loading on this object. Null auto-detects based on
      * controller name.
      *
-     * @var string|false|null
+     * @var string|null
      */
-    public $modelClass;
+    protected $modelClass;
 
     /**
      * A list of overridden model factory functions.
@@ -64,9 +65,9 @@ trait ModelAwareTrait
      * @param string $name Class name.
      * @return void
      */
-    protected function _setModelClass($name)
+    protected function _setModelClass(string $name): void
     {
-        if (empty($this->modelClass)) {
+        if ($this->modelClass === null) {
             $this->modelClass = $name;
         }
     }
@@ -80,27 +81,39 @@ trait ModelAwareTrait
      * If a repository provider does not return an object a MissingModelException will
      * be thrown.
      *
-     * @param string|null $modelClass Name of model class to load. Defaults to $this->modelClass
+     * @param string|null $modelClass Name of model class to load. Defaults to $this->modelClass.
+     *  The name can be an alias like `'Post'` or FQCN like `App\Model\Table\PostsTable::class`.
      * @param string|null $modelType The type of repository to load. Defaults to the modelType() value.
      * @return \Cake\Datasource\RepositoryInterface The model instance created.
      * @throws \Cake\Datasource\Exception\MissingModelException If the model class cannot be found.
-     * @throws \InvalidArgumentException When using a type that has not been registered.
-     * @throws \UnexpectedValueException If no model type has been defined
+     * @throws \UnexpectedValueException If $modelClass argument is not provided
+     *   and ModelAwareTrait::$modelClass property value is empty.
      */
-    public function loadModel($modelClass = null, $modelType = null)
+    public function loadModel(?string $modelClass = null, ?string $modelType = null): RepositoryInterface
     {
         if ($modelClass === null) {
             $modelClass = $this->modelClass;
         }
+        if (empty($modelClass)) {
+            throw new UnexpectedValueException('Default modelClass is empty');
+        }
         if ($modelType === null) {
             $modelType = $this->getModelType();
-
-            if ($modelType === null) {
-                throw new UnexpectedValueException('No model type has been defined');
-            }
         }
 
-        list(, $alias) = pluginSplit($modelClass, true);
+        $options = [];
+        if (strpos($modelClass, '\\') === false) {
+            [, $alias] = pluginSplit($modelClass, true);
+        } else {
+            $options['className'] = $modelClass;
+            /** @psalm-suppress PossiblyFalseOperand */
+            $alias = substr(
+                $modelClass,
+                strrpos($modelClass, '\\') + 1,
+                -strlen($modelType)
+            );
+            $modelClass = $alias;
+        }
 
         if (isset($this->{$alias})) {
             return $this->{$alias};
@@ -112,7 +125,7 @@ trait ModelAwareTrait
         if (!isset($factory)) {
             $factory = FactoryLocator::get($modelType);
         }
-        $this->{$alias} = $factory($modelClass);
+        $this->{$alias} = $factory($modelClass, $options);
         if (!$this->{$alias}) {
             throw new MissingModelException([$modelClass, $modelType]);
         }
@@ -127,7 +140,7 @@ trait ModelAwareTrait
      * @param callable $factory The factory function used to create instances.
      * @return void
      */
-    public function modelFactory($type, callable $factory)
+    public function modelFactory(string $type, callable $factory): void
     {
         $this->_modelFactories[$type] = $factory;
     }
@@ -137,7 +150,7 @@ trait ModelAwareTrait
      *
      * @return string
      */
-    public function getModelType()
+    public function getModelType(): string
     {
         return $this->_modelType;
     }
@@ -149,31 +162,8 @@ trait ModelAwareTrait
      *
      * @return $this
      */
-    public function setModelType($modelType)
+    public function setModelType(string $modelType)
     {
-        $this->_modelType = $modelType;
-
-        return $this;
-    }
-
-    /**
-     * Set or get the model type to be used by this class
-     *
-     * @deprecated 3.5.0 Use getModelType()/setModelType() instead.
-     * @param string|null $modelType The model type or null to retrieve the current
-     *
-     * @return string|$this
-     */
-    public function modelType($modelType = null)
-    {
-        deprecationWarning(
-            get_called_class() . '::modelType() is deprecated. ' .
-            'Use setModelType()/getModelType() instead.'
-        );
-        if ($modelType === null) {
-            return $this->_modelType;
-        }
-
         $this->_modelType = $modelType;
 
         return $this;

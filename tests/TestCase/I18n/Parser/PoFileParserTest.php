@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -16,6 +18,7 @@ namespace Cake\Test\TestCase\I18n\Parser;
 
 use Aura\Intl\Package;
 use Cake\Cache\Cache;
+use Cake\Core\Configure;
 use Cake\I18n\I18n;
 use Cake\I18n\Parser\PoFileParser;
 use Cake\TestSuite\TestCase;
@@ -28,14 +31,22 @@ class PoFileParserTest extends TestCase
     protected $locale;
 
     /**
+     * Locale folder path
+     *
+     * @var string
+     */
+    protected $path;
+
+    /**
      * Set Up
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->locale = I18n::getLocale();
+        $this->path = Configure::read('App.paths.locales.0');
     }
 
     /**
@@ -43,12 +54,12 @@ class PoFileParserTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         I18n::clear();
         I18n::setLocale($this->locale);
-        Cache::clear(false, '_cake_core_');
+        Cache::clear('_cake_core_');
     }
 
     /**
@@ -58,34 +69,34 @@ class PoFileParserTest extends TestCase
      */
     public function testParse()
     {
-        $parser = new PoFileParser;
-        $file = APP . 'Locale' . DS . 'rule_1_po' . DS . 'default.po';
+        $parser = new PoFileParser();
+        $file = $this->path . 'rule_1_po' . DS . 'default.po';
         $messages = $parser->parse($file);
         $this->assertCount(8, $messages);
         $expected = [
             'Plural Rule 1' => [
                 '_context' => [
-                    '' => 'Plural Rule 1 (translated)'
-                ]
+                    '' => 'Plural Rule 1 (translated)',
+                ],
             ],
             '%d = 1' => [
                 '_context' => [
                     'This is the context' => 'First Context translation',
-                    'Another Context' => '%d = 1 (translated)'
-                ]
+                    'Another Context' => '%d = 1 (translated)',
+                ],
             ],
             'p:%d = 0 or > 1' => [
                 '_context' => [
                     'Another Context' => [
                         0 => '%d = 1 (translated)',
-                        1 => '%d = 0 or > 1 (translated)'
-                    ]
-                ]
+                        1 => '%d = 0 or > 1 (translated)',
+                    ],
+                ],
             ],
             '%-5d = 1' => [
                 '_context' => [
-                    '' => '%-5d = 1 (translated)'
-                ]
+                    '' => '%-5d = 1 (translated)',
+                ],
             ],
             'p:%-5d = 0 or > 1' => [
                 '_context' => [
@@ -94,19 +105,19 @@ class PoFileParserTest extends TestCase
                         1 => '',
                         2 => '',
                         3 => '',
-                        4 => '%-5d = 0 or > 1 (translated)'
-                    ]
-                ]
+                        4 => '%-5d = 0 or > 1 (translated)',
+                    ],
+                ],
             ],
             '%d = 2' => [
                 '_context' => [
                     'This is another translated context' => 'First Context translation',
-                ]
+                ],
             ],
             '%-6d = 3' => [
                 '_context' => [
                     '' => '%-6d = 1 (translated)',
-                ]
+                ],
             ],
             'p:%-6d = 0 or > 1' => [
                 '_context' => [
@@ -116,8 +127,8 @@ class PoFileParserTest extends TestCase
                         2 => '',
                         3 => '',
                         4 => '%-6d = 0 or > 1 (translated)',
-                    ]
-                ]
+                    ],
+                ],
             ],
         ];
         $this->assertEquals($expected, $messages);
@@ -130,8 +141,8 @@ class PoFileParserTest extends TestCase
      */
     public function testParseMultiLine()
     {
-        $parser = new PoFileParser;
-        $file = APP . 'Locale' . DS . 'en' . DS . 'default.po';
+        $parser = new PoFileParser();
+        $file = $this->path . 'en' . DS . 'default.po';
         $messages = $parser->parse($file);
         $this->assertCount(12, $messages);
         $this->assertTextEquals("v\nsecond line", $messages["valid\nsecond line"]['_context']['']);
@@ -144,8 +155,8 @@ class PoFileParserTest extends TestCase
      */
     public function testQuotedString()
     {
-        $parser = new PoFileParser;
-        $file = APP . 'Locale' . DS . 'en' . DS . 'default.po';
+        $parser = new PoFileParser();
+        $file = $this->path . 'en' . DS . 'default.po';
         $messages = $parser->parse($file);
 
         $this->assertTextEquals('this is a "quoted string" (translated)', $messages['this is a "quoted string"']['_context']['']);
@@ -163,7 +174,7 @@ class PoFileParserTest extends TestCase
     public function testParseContextOnSomeMessages()
     {
         $parser = new PoFileParser();
-        $file = APP . 'Locale' . DS . 'en' . DS . 'context.po';
+        $file = $this->path . 'en' . DS . 'context.po';
         $messages = $parser->parse($file);
 
         I18n::setTranslator('default', function () use ($messages) {
@@ -179,7 +190,7 @@ class PoFileParserTest extends TestCase
         $this->assertSame('En resolved - context', $messages['Resolved']['_context']['Pay status']);
 
         $key = '{0,plural,=0{Je suis}=1{Je suis}=2{Nous sommes} other{Nous sommes}}';
-        $this->assertContains("I've", $messages[$key]['_context']['origin']);
+        $this->assertStringContainsString("I've", $messages[$key]['_context']['origin']);
 
         // Confirm actual behavior
         I18n::setLocale('en_CA');
@@ -199,7 +210,7 @@ class PoFileParserTest extends TestCase
     public function testParseContextMessages()
     {
         $parser = new PoFileParser();
-        $file = APP . 'Locale' . DS . 'en' . DS . 'context.po';
+        $file = $this->path . 'en' . DS . 'context.po';
         $messages = $parser->parse($file);
 
         I18n::setTranslator('default', function () use ($messages) {
@@ -224,7 +235,7 @@ class PoFileParserTest extends TestCase
     public function testPlurals()
     {
         $parser = new PoFileParser();
-        $file = APP . 'Locale' . DS . 'de' . DS . 'wa.po';
+        $file = $this->path . 'de' . DS . 'wa.po';
         $messages = $parser->parse($file);
 
         I18n::getTranslator('default', 'de_DE', function () use ($messages) {
@@ -236,8 +247,8 @@ class PoFileParserTest extends TestCase
 
         // Check translated messages
         I18n::setLocale('de_DE');
-        $this->assertEquals('Standorte', __d('wa', 'Locations'));
+        $this->assertSame('Standorte', __d('wa', 'Locations'));
         I18n::setLocale('en_EN');
-        $this->assertEquals('Locations', __d('wa', 'Locations'));
+        $this->assertSame('Locations', __d('wa', 'Locations'));
     }
 }

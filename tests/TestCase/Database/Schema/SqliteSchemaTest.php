@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -27,7 +29,6 @@ use PDO;
  */
 class SqliteSchemaTest extends TestCase
 {
-
     /**
      * Helper method for skipping tests that need a real connection.
      *
@@ -49,103 +50,103 @@ class SqliteSchemaTest extends TestCase
         return [
             [
                 'DATETIME',
-                ['type' => 'datetime', 'length' => null]
+                ['type' => 'datetime', 'length' => null],
             ],
             [
                 'DATE',
-                ['type' => 'date', 'length' => null]
+                ['type' => 'date', 'length' => null],
             ],
             [
                 'TIME',
-                ['type' => 'time', 'length' => null]
+                ['type' => 'time', 'length' => null],
             ],
             [
                 'BOOLEAN',
-                ['type' => 'boolean', 'length' => null]
+                ['type' => 'boolean', 'length' => null],
             ],
             [
                 'BIGINT',
-                ['type' => 'biginteger', 'length' => null, 'unsigned' => false]
+                ['type' => 'biginteger', 'length' => null, 'unsigned' => false],
             ],
             [
                 'UNSIGNED BIGINT',
-                ['type' => 'biginteger', 'length' => null, 'unsigned' => true]
+                ['type' => 'biginteger', 'length' => null, 'unsigned' => true],
             ],
             [
                 'VARCHAR(255)',
-                ['type' => 'string', 'length' => 255]
+                ['type' => 'string', 'length' => 255],
             ],
             [
                 'CHAR(25)',
-                ['type' => 'string', 'fixed' => true, 'length' => 25]
+                ['type' => 'char', 'length' => 25],
             ],
             [
                 'CHAR(36)',
-                ['type' => 'uuid', 'length' => null]
+                ['type' => 'uuid', 'length' => null],
             ],
             [
                 'BINARY(16)',
-                ['type' => 'binaryuuid', 'length' => null]
+                ['type' => 'binaryuuid', 'length' => null],
             ],
             [
                 'BINARY(1)',
-                ['type' => 'binary', 'length' => 1]
+                ['type' => 'binary', 'length' => 1],
             ],
             [
                 'BLOB',
-                ['type' => 'binary', 'length' => null]
+                ['type' => 'binary', 'length' => null],
             ],
             [
                 'INTEGER(11)',
-                ['type' => 'integer', 'length' => 11, 'unsigned' => false]
+                ['type' => 'integer', 'length' => 11, 'unsigned' => false],
             ],
             [
                 'UNSIGNED INTEGER(11)',
-                ['type' => 'integer', 'length' => 11, 'unsigned' => true]
+                ['type' => 'integer', 'length' => 11, 'unsigned' => true],
             ],
             [
                 'TINYINT(3)',
-                ['type' => 'tinyinteger', 'length' => 3, 'unsigned' => false]
+                ['type' => 'tinyinteger', 'length' => 3, 'unsigned' => false],
             ],
             [
                 'UNSIGNED TINYINT(3)',
-                ['type' => 'tinyinteger', 'length' => 3, 'unsigned' => true]
+                ['type' => 'tinyinteger', 'length' => 3, 'unsigned' => true],
             ],
             [
                 'SMALLINT(5)',
-                ['type' => 'smallinteger', 'length' => 5, 'unsigned' => false]
+                ['type' => 'smallinteger', 'length' => 5, 'unsigned' => false],
             ],
             [
                 'UNSIGNED SMALLINT(5)',
-                ['type' => 'smallinteger', 'length' => 5, 'unsigned' => true]
+                ['type' => 'smallinteger', 'length' => 5, 'unsigned' => true],
             ],
             [
                 'MEDIUMINT(10)',
-                ['type' => 'integer', 'length' => 10, 'unsigned' => false]
+                ['type' => 'integer', 'length' => 10, 'unsigned' => false],
             ],
             [
                 'FLOAT',
-                ['type' => 'float', 'length' => null, 'unsigned' => false]
+                ['type' => 'float', 'length' => null, 'precision' => null, 'unsigned' => false],
             ],
             [
                 'DOUBLE',
-                ['type' => 'float', 'length' => null, 'unsigned' => false]
+                ['type' => 'float', 'length' => null, 'precision' => null, 'unsigned' => false],
             ],
             [
                 'UNSIGNED DOUBLE',
-                ['type' => 'float', 'length' => null, 'unsigned' => true]
+                ['type' => 'float', 'length' => null, 'precision' => null, 'unsigned' => true],
             ],
             [
                 'REAL',
-                ['type' => 'float', 'length' => null, 'unsigned' => false]
+                ['type' => 'float', 'length' => null, 'precision' => null, 'unsigned' => false],
             ],
             [
                 'DECIMAL(11,2)',
-                ['type' => 'decimal', 'length' => null, 'unsigned' => false]
+                ['type' => 'decimal', 'length' => 11, 'precision' => 2, 'unsigned' => false],
             ],
             [
                 'UNSIGNED DECIMAL(11,2)',
-                ['type' => 'decimal', 'length' => null, 'unsigned' => true]
+                ['type' => 'decimal', 'length' => 11, 'precision' => 2, 'unsigned' => true],
             ],
         ];
     }
@@ -168,17 +169,19 @@ class SqliteSchemaTest extends TestCase
         $expected += [
             'null' => true,
             'default' => 'Default value',
+            'comment' => null,
         ];
 
         $driver = $this->getMockBuilder('Cake\Database\Driver\Sqlite')->getMock();
         $dialect = new SqliteSchema($driver);
 
-        $table = $this->getMockBuilder(TableSchema::class)
-            ->setConstructorArgs(['table'])
-            ->getMock();
-        $table->expects($this->at(1))->method('addColumn')->with('field', $expected);
-
+        $table = new TableSchema('table');
         $dialect->convertColumnDescription($table, $field);
+
+        $actual = array_intersect_key($table->getColumn('field'), $expected);
+        ksort($expected);
+        ksort($actual);
+        $this->assertSame($expected, $actual);
     }
 
     /**
@@ -210,7 +213,7 @@ class SqliteSchemaTest extends TestCase
         $table = new TableSchema('table');
         $dialect->convertColumnDescription($table, $field1);
         $dialect->convertColumnDescription($table, $field2);
-        $this->assertEquals(['field1', 'field2'], $table->primaryKey());
+        $this->assertEquals(['field1', 'field2'], $table->getPrimaryKey());
     }
 
     /**
@@ -225,7 +228,8 @@ class SqliteSchemaTest extends TestCase
 
         $schema = new SchemaCollection($connection);
         $result = $schema->listTables();
-        if (in_array('schema_articles', $result) &&
+        if (
+            in_array('schema_articles', $result) &&
             in_array('schema_authors', $result)
         ) {
             return;
@@ -282,7 +286,7 @@ SQL;
         $schema = new SchemaCollection($connection);
         $result = $schema->listTables();
 
-        $this->assertInternalType('array', $result);
+        $this->assertIsArray($result);
         $this->assertContains('schema_articles', $result);
         $this->assertContains('schema_authors', $result);
     }
@@ -316,7 +320,6 @@ SQL;
                 'default' => 'Let \'em eat cake',
                 'length' => 20,
                 'precision' => null,
-                'fixed' => null,
                 'comment' => null,
                 'collate' => null,
             ],
@@ -361,7 +364,6 @@ SQL;
                 'default' => null,
                 'length' => 10,
                 'precision' => null,
-                'fixed' => null,
                 'comment' => null,
                 'collate' => null,
             ],
@@ -371,13 +373,12 @@ SQL;
                 'default' => 'NULL',
                 'length' => 10,
                 'precision' => null,
-                'fixed' => null,
                 'comment' => null,
                 'collate' => null,
             ],
         ];
         $this->assertInstanceOf('Cake\Database\Schema\TableSchema', $result);
-        $this->assertEquals(['id'], $result->primaryKey());
+        $this->assertEquals(['id'], $result->getPrimaryKey());
         foreach ($expected as $field => $definition) {
             $this->assertEquals($definition, $result->getColumn($field));
         }
@@ -398,7 +399,7 @@ SQL;
         $schema = new SchemaCollection($connection);
         $result = $schema->describe('schema_composite');
 
-        $this->assertEquals(['id', 'site_id'], $result->primaryKey());
+        $this->assertEquals(['id', 'site_id'], $result->getPrimaryKey());
         $this->assertNull($result->getColumn('site_id')['autoIncrement'], 'site_id should not be autoincrement');
         $this->assertNull($result->getColumn('id')['autoIncrement'], 'id should not be autoincrement');
     }
@@ -420,12 +421,12 @@ SQL;
             'primary' => [
                 'type' => 'primary',
                 'columns' => ['id'],
-                'length' => []
+                'length' => [],
             ],
             'sqlite_autoindex_schema_articles_1' => [
                 'type' => 'unique',
                 'columns' => ['title', 'body'],
-                'length' => []
+                'length' => [],
             ],
             'author_id_fk' => [
                 'type' => 'foreign',
@@ -434,7 +435,7 @@ SQL;
                 'length' => [],
                 'update' => 'cascade',
                 'delete' => 'restrict',
-            ]
+            ],
         ];
         $this->assertCount(3, $result->constraints());
         $this->assertEquals($expected['primary'], $result->getConstraint('primary'));
@@ -451,7 +452,7 @@ SQL;
         $expected = [
             'type' => 'index',
             'columns' => ['created'],
-            'length' => []
+            'length' => [],
         ];
         $this->assertEquals($expected, $result->getIndex('created_idx'));
     }
@@ -468,7 +469,7 @@ SQL;
             [
                 'title',
                 ['type' => 'string', 'length' => 25, 'null' => false],
-                '"title" VARCHAR(25) NOT NULL'
+                '"title" VARCHAR(25) NOT NULL',
             ],
             [
                 'title',
@@ -477,161 +478,161 @@ SQL;
             ],
             [
                 'id',
-                ['type' => 'string', 'length' => 32, 'fixed' => true, 'null' => false],
-                '"id" VARCHAR(32) NOT NULL'
+                ['type' => 'string', 'length' => 32, 'null' => false],
+                '"id" VARCHAR(32) NOT NULL',
             ],
             [
                 'role',
                 ['type' => 'string', 'length' => 10, 'null' => false, 'default' => 'admin'],
-                '"role" VARCHAR(10) NOT NULL DEFAULT "admin"'
+                '"role" VARCHAR(10) NOT NULL DEFAULT "admin"',
             ],
             [
                 'title',
                 ['type' => 'string'],
-                '"title" VARCHAR'
+                '"title" VARCHAR',
             ],
             [
                 'id',
                 ['type' => 'uuid'],
-                '"id" CHAR(36)'
+                '"id" CHAR(36)',
             ],
             [
                 'id',
                 ['type' => 'binaryuuid'],
-                '"id" BINARY(16)'
+                '"id" BINARY(16)',
             ],
             // Text
             [
                 'body',
                 ['type' => 'text', 'null' => false],
-                '"body" TEXT NOT NULL'
+                '"body" TEXT NOT NULL',
             ],
             [
                 'body',
                 ['type' => 'text', 'length' => TableSchema::LENGTH_TINY, 'null' => false],
-                '"body" VARCHAR(' . TableSchema::LENGTH_TINY . ') NOT NULL'
+                '"body" VARCHAR(' . TableSchema::LENGTH_TINY . ') NOT NULL',
             ],
             [
                 'body',
                 ['type' => 'text', 'length' => TableSchema::LENGTH_MEDIUM, 'null' => false],
-                '"body" TEXT NOT NULL'
+                '"body" TEXT NOT NULL',
             ],
             [
                 'body',
                 ['type' => 'text', 'length' => TableSchema::LENGTH_LONG, 'null' => false],
-                '"body" TEXT NOT NULL'
+                '"body" TEXT NOT NULL',
             ],
             // Integers
             [
                 'post_id',
                 ['type' => 'smallinteger', 'length' => 5, 'unsigned' => false],
-                '"post_id" SMALLINT(5)'
+                '"post_id" SMALLINT(5)',
             ],
             [
                 'post_id',
                 ['type' => 'smallinteger', 'length' => 5, 'unsigned' => true],
-                '"post_id" UNSIGNED SMALLINT(5)'
+                '"post_id" UNSIGNED SMALLINT(5)',
             ],
             [
                 'post_id',
                 ['type' => 'tinyinteger', 'length' => 3, 'unsigned' => false],
-                '"post_id" TINYINT(3)'
+                '"post_id" TINYINT(3)',
             ],
             [
                 'post_id',
                 ['type' => 'tinyinteger', 'length' => 3, 'unsigned' => true],
-                '"post_id" UNSIGNED TINYINT(3)'
+                '"post_id" UNSIGNED TINYINT(3)',
             ],
             [
                 'post_id',
                 ['type' => 'integer', 'length' => 11, 'unsigned' => false],
-                '"post_id" INTEGER(11)'
+                '"post_id" INTEGER(11)',
             ],
             [
                 'post_id',
                 ['type' => 'biginteger', 'length' => 20, 'unsigned' => false],
-                '"post_id" BIGINT'
+                '"post_id" BIGINT',
             ],
             [
                 'post_id',
                 ['type' => 'biginteger', 'length' => 20, 'unsigned' => true],
-                '"post_id" UNSIGNED BIGINT'
+                '"post_id" UNSIGNED BIGINT',
             ],
             // Decimal
             [
                 'value',
                 ['type' => 'decimal', 'unsigned' => false],
-                '"value" DECIMAL'
+                '"value" DECIMAL',
             ],
             [
                 'value',
                 ['type' => 'decimal', 'length' => 11, 'unsigned' => false],
-                '"value" DECIMAL(11,0)'
+                '"value" DECIMAL(11,0)',
             ],
             [
                 'value',
                 ['type' => 'decimal', 'length' => 11, 'unsigned' => true],
-                '"value" UNSIGNED DECIMAL(11,0)'
+                '"value" UNSIGNED DECIMAL(11,0)',
             ],
             [
                 'value',
                 ['type' => 'decimal', 'length' => 12, 'precision' => 5, 'unsigned' => false],
-                '"value" DECIMAL(12,5)'
+                '"value" DECIMAL(12,5)',
             ],
             // Float
             [
                 'value',
                 ['type' => 'float'],
-                '"value" FLOAT'
+                '"value" FLOAT',
             ],
             [
                 'value',
                 ['type' => 'float', 'length' => 11, 'precision' => 3, 'unsigned' => false],
-                '"value" FLOAT(11,3)'
+                '"value" FLOAT(11,3)',
             ],
             [
                 'value',
                 ['type' => 'float', 'length' => 11, 'precision' => 3, 'unsigned' => true],
-                '"value" UNSIGNED FLOAT(11,3)'
+                '"value" UNSIGNED FLOAT(11,3)',
             ],
             // Boolean
             [
                 'checked',
                 ['type' => 'boolean', 'null' => true, 'default' => false],
-                '"checked" BOOLEAN DEFAULT FALSE'
+                '"checked" BOOLEAN DEFAULT FALSE',
             ],
             [
                 'checked',
                 ['type' => 'boolean', 'default' => true, 'null' => false],
-                '"checked" BOOLEAN NOT NULL DEFAULT TRUE'
+                '"checked" BOOLEAN NOT NULL DEFAULT TRUE',
             ],
             // datetimes
             [
                 'created',
                 ['type' => 'datetime'],
-                '"created" DATETIME'
+                '"created" DATETIME',
             ],
             [
                 'open_date',
                 ['type' => 'datetime', 'null' => false, 'default' => '2016-12-07 23:04:00'],
-                '"open_date" DATETIME NOT NULL DEFAULT "2016-12-07 23:04:00"'
+                '"open_date" DATETIME NOT NULL DEFAULT "2016-12-07 23:04:00"',
             ],
             // Date & Time
             [
                 'start_date',
                 ['type' => 'date'],
-                '"start_date" DATE'
+                '"start_date" DATE',
             ],
             [
                 'start_time',
                 ['type' => 'time'],
-                '"start_time" TIME'
+                '"start_time" TIME',
             ],
             // timestamps
             [
                 'created',
                 ['type' => 'timestamp', 'null' => true],
-                '"created" TIMESTAMP DEFAULT NULL'
+                '"created" TIMESTAMP DEFAULT NULL',
             ],
         ];
     }
@@ -705,17 +706,17 @@ SQL;
                 'type' => 'integer',
                 'null' => false,
                 'length' => 11,
-                'unsigned' => true
+                'unsigned' => true,
             ])
             ->addConstraint('primary', [
                 'type' => 'primary',
-                'columns' => ['id']
+                'columns' => ['id'],
             ]);
         $result = $schema->columnSql($table, 'id');
         $this->assertEquals($result, '"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT');
 
         $result = $schema->constraintSql($table, 'primary');
-        $this->assertEquals('', $result, 'Integer primary keys are special in sqlite.');
+        $this->assertSame('', $result, 'Integer primary keys are special in sqlite.');
     }
 
     /**
@@ -731,17 +732,17 @@ SQL;
         $table = new TableSchema('articles');
         $table->addColumn('id', [
                 'type' => 'biginteger',
-                'null' => false
+                'null' => false,
             ])
             ->addConstraint('primary', [
                 'type' => 'primary',
-                'columns' => ['id']
+                'columns' => ['id'],
             ]);
         $result = $schema->columnSql($table, 'id');
         $this->assertEquals($result, '"id" BIGINT NOT NULL');
 
         $result = $schema->constraintSql($table, 'primary');
-        $this->assertEquals('CONSTRAINT "primary" PRIMARY KEY ("id")', $result, 'Bigint primary keys are not special.');
+        $this->assertSame('CONSTRAINT "primary" PRIMARY KEY ("id")', $result, 'Bigint primary keys are not special.');
     }
 
     /**
@@ -755,42 +756,42 @@ SQL;
             [
                 'primary',
                 ['type' => 'primary', 'columns' => ['title']],
-                'CONSTRAINT "primary" PRIMARY KEY ("title")'
+                'CONSTRAINT "primary" PRIMARY KEY ("title")',
             ],
             [
                 'unique_idx',
                 ['type' => 'unique', 'columns' => ['title', 'author_id']],
-                'CONSTRAINT "unique_idx" UNIQUE ("title", "author_id")'
+                'CONSTRAINT "unique_idx" UNIQUE ("title", "author_id")',
             ],
             [
                 'author_id_idx',
                 ['type' => 'foreign', 'columns' => ['author_id'], 'references' => ['authors', 'id']],
                 'CONSTRAINT "author_id_idx" FOREIGN KEY ("author_id") ' .
-                'REFERENCES "authors" ("id") ON UPDATE RESTRICT ON DELETE RESTRICT'
+                'REFERENCES "authors" ("id") ON UPDATE RESTRICT ON DELETE RESTRICT',
             ],
             [
                 'author_id_idx',
                 ['type' => 'foreign', 'columns' => ['author_id'], 'references' => ['authors', 'id'], 'update' => 'cascade'],
                 'CONSTRAINT "author_id_idx" FOREIGN KEY ("author_id") ' .
-                'REFERENCES "authors" ("id") ON UPDATE CASCADE ON DELETE RESTRICT'
+                'REFERENCES "authors" ("id") ON UPDATE CASCADE ON DELETE RESTRICT',
             ],
             [
                 'author_id_idx',
                 ['type' => 'foreign', 'columns' => ['author_id'], 'references' => ['authors', 'id'], 'update' => 'restrict'],
                 'CONSTRAINT "author_id_idx" FOREIGN KEY ("author_id") ' .
-                'REFERENCES "authors" ("id") ON UPDATE RESTRICT ON DELETE RESTRICT'
+                'REFERENCES "authors" ("id") ON UPDATE RESTRICT ON DELETE RESTRICT',
             ],
             [
                 'author_id_idx',
                 ['type' => 'foreign', 'columns' => ['author_id'], 'references' => ['authors', 'id'], 'update' => 'setNull'],
                 'CONSTRAINT "author_id_idx" FOREIGN KEY ("author_id") ' .
-                'REFERENCES "authors" ("id") ON UPDATE SET NULL ON DELETE RESTRICT'
+                'REFERENCES "authors" ("id") ON UPDATE SET NULL ON DELETE RESTRICT',
             ],
             [
                 'author_id_idx',
                 ['type' => 'foreign', 'columns' => ['author_id'], 'references' => ['authors', 'id'], 'update' => 'noAction'],
                 'CONSTRAINT "author_id_idx" FOREIGN KEY ("author_id") ' .
-                'REFERENCES "authors" ("id") ON UPDATE NO ACTION ON DELETE RESTRICT'
+                'REFERENCES "authors" ("id") ON UPDATE NO ACTION ON DELETE RESTRICT',
             ],
         ];
     }
@@ -807,7 +808,7 @@ SQL;
 
         $table = (new TableSchema('articles'))->addColumn('title', [
             'type' => 'string',
-            'length' => 255
+            'length' => 255,
         ])->addColumn('author_id', [
             'type' => 'integer',
         ])->addConstraint($name, $data);
@@ -826,7 +827,7 @@ SQL;
             [
                 'author_idx',
                 ['type' => 'index', 'columns' => ['title', 'author_id']],
-                'CREATE INDEX "author_idx" ON "articles" ("title", "author_id")'
+                'CREATE INDEX "author_idx" ON "articles" ("title", "author_id")',
             ],
         ];
     }
@@ -843,7 +844,7 @@ SQL;
 
         $table = (new TableSchema('articles'))->addColumn('title', [
             'type' => 'string',
-            'length' => 255
+            'length' => 255,
         ])->addColumn('author_id', [
             'type' => 'integer',
         ])->addIndex($name, $data);
@@ -867,7 +868,7 @@ SQL;
 
         $table = (new TableSchema('articles'))->addColumn('id', [
                 'type' => 'integer',
-                'null' => false
+                'null' => false,
             ])
             ->addColumn('title', [
                 'type' => 'string',
@@ -878,11 +879,11 @@ SQL;
             ->addColumn('created', 'datetime')
             ->addConstraint('primary', [
                 'type' => 'primary',
-                'columns' => ['id']
+                'columns' => ['id'],
             ])
             ->addIndex('title_idx', [
                 'type' => 'index',
-                'columns' => ['title']
+                'columns' => ['title'],
             ]);
 
         $expected = <<<SQL
@@ -918,11 +919,11 @@ SQL;
             ->will($this->returnValue($driver));
         $table = (new TableSchema('schema_articles'))->addColumn('id', [
             'type' => 'integer',
-            'null' => false
+            'null' => false,
         ]);
         $table->setTemporary(true);
         $sql = $table->createSql($connection);
-        $this->assertContains('CREATE TEMPORARY TABLE', $sql[0]);
+        $this->assertStringContainsString('CREATE TEMPORARY TABLE', $sql[0]);
     }
 
     /**
@@ -942,7 +943,7 @@ SQL;
         $table = (new TableSchema('articles_tags'))
             ->addColumn('article_id', [
                 'type' => 'integer',
-                'null' => false
+                'null' => false,
             ])
             ->addColumn('tag_id', [
                 'type' => 'integer',
@@ -950,7 +951,7 @@ SQL;
             ])
             ->addConstraint('primary', [
                 'type' => 'primary',
-                'columns' => ['article_id', 'tag_id']
+                'columns' => ['article_id', 'tag_id'],
             ]);
 
         $expected = <<<SQL
@@ -970,7 +971,7 @@ SQL;
             ->addColumn('id', [
                 'type' => 'integer',
                 'null' => false,
-                'autoIncrement' => true
+                'autoIncrement' => true,
             ])
             ->addColumn('account_id', [
                 'type' => 'integer',
@@ -978,7 +979,7 @@ SQL;
             ])
             ->addConstraint('primary', [
                 'type' => 'primary',
-                'columns' => ['id', 'account_id']
+                'columns' => ['id', 'account_id'],
             ]);
 
         $expected = <<<SQL
@@ -1010,7 +1011,7 @@ SQL;
         $table = new TableSchema('articles');
         $result = $table->dropSql($connection);
         $this->assertCount(1, $result);
-        $this->assertEquals('DROP TABLE "articles"', $result[0]);
+        $this->assertSame('DROP TABLE "articles"', $result[0]);
     }
 
     /**
@@ -1037,12 +1038,13 @@ SQL;
         $statement->expects($this->once())
             ->method('fetchAll')
             ->will($this->returnValue(['1']));
+        $statement->method('execute')->will($this->returnValue(true));
 
         $table = new TableSchema('articles');
         $result = $table->truncateSql($connection);
         $this->assertCount(2, $result);
-        $this->assertEquals('DELETE FROM sqlite_sequence WHERE name="articles"', $result[0]);
-        $this->assertEquals('DELETE FROM "articles"', $result[1]);
+        $this->assertSame('DELETE FROM sqlite_sequence WHERE name="articles"', $result[0]);
+        $this->assertSame('DELETE FROM "articles"', $result[1]);
     }
 
     /**
@@ -1070,11 +1072,12 @@ SQL;
         $statement->expects($this->once())
             ->method('fetchAll')
             ->will($this->returnValue(false));
+        $statement->method('execute')->will($this->returnValue(true));
 
         $table = new TableSchema('articles');
         $result = $table->truncateSql($connection);
         $this->assertCount(1, $result);
-        $this->assertEquals('DELETE FROM "articles"', $result[0]);
+        $this->assertSame('DELETE FROM "articles"', $result[0]);
     }
 
     /**

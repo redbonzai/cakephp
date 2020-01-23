@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -24,7 +26,6 @@ use Cake\Collection\Collection;
  */
 class InsertIterator extends Collection
 {
-
     /**
      * The collection from which to extract the values to be inserted
      *
@@ -58,14 +59,14 @@ class InsertIterator extends Collection
      * Constructs a new collection that will dynamically add properties to it out of
      * the values found in $values.
      *
-     * @param array|\Traversable $into The target collection to which the values will
+     * @param iterable $into The target collection to which the values will
      * be inserted at the specified path.
      * @param string $path A dot separated list of properties that need to be traversed
      * to insert the value into the target collection.
-     * @param array|\Traversable $values The source collection from which the values will
+     * @param iterable $values The source collection from which the values will
      * be inserted at the specified path.
      */
-    public function __construct($into, $path, $values)
+    public function __construct(iterable $into, string $path, iterable $values)
     {
         parent::__construct($into);
 
@@ -85,7 +86,7 @@ class InsertIterator extends Collection
      *
      * @return void
      */
-    public function next()
+    public function next(): void
     {
         parent::next();
         if ($this->_validValues) {
@@ -126,7 +127,7 @@ class InsertIterator extends Collection
      *
      * @return void
      */
-    public function rewind()
+    public function rewind(): void
     {
         parent::rewind();
         $this->_values->rewind();

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * HelpFormatterTest file
  *
@@ -25,7 +27,6 @@ use Cake\TestSuite\TestCase;
  */
 class HelpFormatterTest extends TestCase
 {
-
     /**
      * test that the console max width is respected when generating help.
      *
@@ -83,7 +84,7 @@ txt;
             ->addArgument('type', [
                 'help' => 'Resource type.',
                 'choices' => ['aco', 'aro'],
-                'required' => true
+                'required' => true,
             ])
             ->addArgument('other_longer', ['help' => 'Another argument.']);
 
@@ -190,21 +191,28 @@ txt;
     {
         $parser = new ConsoleOptionParser('mycommand', false);
         $parser->addOption('test', ['help' => 'A test option.'])
-            ->addOption('connection', [
-                'short' => 'c', 'help' => 'The connection to use.', 'default' => 'default'
-            ]);
+               ->addOption('number', [
+                   'help' => 'The number',
+                   'default' => 2,
+               ])
+                ->addOption('connection', [
+                    'short' => 'c',
+                    'help' => 'The connection to use.',
+                    'default' => 'default',
+                ]);
 
         $formatter = new HelpFormatter($parser);
         $result = $formatter->text();
         $expected = <<<txt
 <info>Usage:</info>
-cake mycommand [-c default] [-h] [--test]
+cake mycommand [-c default] [-h] [--number 2] [--test]
 
 <info>Options:</info>
 
 --connection, -c  The connection to use. <comment>(default:
                   default)</comment>
 --help, -h        Display this help.
+--number          The number <comment>(default: 2)</comment>
 --test            A test option.
 
 txt;
@@ -265,7 +273,7 @@ xml;
         $formatter = new HelpFormatter($parser);
         $result = $formatter->text();
         $expected = 'cake mycommand [options] <model> [<other_longer>]';
-        $this->assertContains($expected, $result);
+        $this->assertStringContainsString($expected, $result);
     }
 
     /**
@@ -290,7 +298,7 @@ xml;
         $formatter = new HelpFormatter($parser);
         $result = $formatter->text();
         $expected = 'cake mycommand [-h] [arguments]';
-        $this->assertContains($expected, $result);
+        $this->assertStringContainsString($expected, $result);
     }
 
     /**
@@ -305,21 +313,7 @@ xml;
         $formatter->setAlias('foo');
         $result = $formatter->text();
         $expected = 'foo mycommand [-h]';
-        $this->assertContains($expected, $result);
-    }
-
-    /**
-     * Tests that setting a none string help alias triggers an exception
-     *
-     * @return void
-     */
-    public function testWithNoneStringHelpAlias()
-    {
-        $this->expectException(\Cake\Console\Exception\ConsoleException::class);
-        $this->expectExceptionMessage('Alias must be of type string.');
-        $parser = new ConsoleOptionParser('mycommand', false);
-        $formatter = new HelpFormatter($parser);
-        $formatter->setAlias(['foo']);
+        $this->assertStringContainsString($expected, $result);
     }
 
     /**
@@ -334,7 +328,7 @@ xml;
             ->addArgument('type', [
                 'help' => 'Resource type.',
                 'choices' => ['aco', 'aro'],
-                'required' => true
+                'required' => true,
             ])
             ->addArgument('other_longer', ['help' => 'Another argument.']);
 
@@ -348,7 +342,7 @@ xml;
 <subcommands />
 <options>
 	<option name="--help" short="-h" help="Display this help." boolean="1">
-		<default></default>
+		<default>false</default>
 		<choices></choices>
 	</option>
 	<option name="--test" short="" help="A test option." boolean="0">
@@ -399,7 +393,7 @@ xml;
 <subcommands />
 <options>
 	<option name="--help" short="-h" help="Display this help." boolean="1">
-		<default></default>
+		<default>false</default>
 		<choices></choices>
 	</option>
 	<option name="--test" short="" help="A test option." boolean="0">
@@ -441,7 +435,7 @@ xml;
 </subcommands>
 <options>
 	<option name="--help" short="-h" help="Display this help." boolean="1">
-		<default></default>
+		<default>false</default>
 		<choices></choices>
 	</option>
 	<option name="--test" short="" help="A test option." boolean="0">
@@ -466,7 +460,7 @@ xml;
         $parser = new ConsoleOptionParser('mycommand', false);
         $parser->addOption('test', ['help' => 'A test option.'])
             ->addOption('connection', [
-                'short' => 'c', 'help' => 'The connection to use.', 'default' => 'default'
+                'short' => 'c', 'help' => 'The connection to use.', 'default' => 'default',
             ]);
 
         $formatter = new HelpFormatter($parser);
@@ -483,7 +477,7 @@ xml;
 		<choices></choices>
 	</option>
 	<option name="--help" short="-h" help="Display this help." boolean="1">
-		<default></default>
+		<default>false</default>
 		<choices></choices>
 	</option>
 	<option name="--test" short="" help="A test option." boolean="0">
@@ -520,7 +514,7 @@ xml;
 	<subcommands/>
 	<options>
 		<option name="--help" short="-h" help="Display this help." boolean="1">
-			<default></default>
+			<default>false</default>
 			<choices></choices>
 		</option>
 		<option name="--test" short="" help="A test option." boolean="0">

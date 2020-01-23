@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -69,18 +71,18 @@ class PoFileParser
      *
      * @return array
      */
-    public function parse($resource)
+    public function parse(string $resource): array
     {
         $stream = fopen($resource, 'rb');
 
         $defaults = [
             'ids' => [],
-            'translated' => null
+            'translated' => null,
         ];
 
         $messages = [];
         $item = $defaults;
-        $stage = null;
+        $stage = [];
 
         while ($line = fgets($stream)) {
             $line = trim($line);
@@ -89,10 +91,11 @@ class PoFileParser
                 // Whitespace indicated current item is done
                 $this->_addMessage($messages, $item);
                 $item = $defaults;
-                $stage = null;
+                $stage = [];
             } elseif (substr($line, 0, 7) === 'msgid "') {
                 // We start a new msg so save previous
                 $this->_addMessage($messages, $item);
+                /** @psalm-suppress InvalidArrayOffset */
                 $item['ids']['singular'] = substr($line, 7, -1);
                 $stage = ['ids', 'singular'];
             } elseif (substr($line, 0, 8) === 'msgstr "') {
@@ -104,17 +107,30 @@ class PoFileParser
             } elseif ($line[0] === '"') {
                 switch (count($stage)) {
                     case 2:
+                        /**
+                         * @psalm-suppress PossiblyUndefinedArrayOffset
+                         * @psalm-suppress InvalidArrayOffset
+                         * @psalm-suppress PossiblyNullArrayAccess
+                         */
                         $item[$stage[0]][$stage[1]] .= substr($line, 1, -1);
                         break;
 
                     case 1:
+                        /**
+                         * @psalm-suppress PossiblyUndefinedArrayOffset
+                         * @psalm-suppress InvalidArrayOffset
+                         * @psalm-suppress PossiblyInvalidOperand
+                         * @psalm-suppress PossiblyNullOperand
+                         */
                         $item[$stage[0]] .= substr($line, 1, -1);
                         break;
                 }
             } elseif (substr($line, 0, 14) === 'msgid_plural "') {
+                /** @psalm-suppress InvalidArrayOffset */
                 $item['ids']['plural'] = substr($line, 14, -1);
                 $stage = ['ids', 'plural'];
             } elseif (substr($line, 0, 7) === 'msgstr[') {
+                /** @var int $size */
                 $size = strpos($line, ']');
                 $row = (int)substr($line, 7, 1);
                 $item['translated'][$row] = substr($line, $size + 3, -1);
@@ -135,21 +151,21 @@ class PoFileParser
      * @param array $item The current item being inspected
      * @return void
      */
-    protected function _addMessage(array &$messages, array $item)
+    protected function _addMessage(array &$messages, array $item): void
     {
         if (empty($item['ids']['singular']) && empty($item['ids']['plural'])) {
             return;
         }
 
         $singular = stripcslashes($item['ids']['singular']);
-        $context = isset($item['context']) ? $item['context'] : null;
+        $context = $item['context'] ?? null;
         $translation = $item['translated'];
 
         if (is_array($translation)) {
             $translation = $translation[0];
         }
 
-        $translation = stripcslashes($translation);
+        $translation = stripcslashes((string)$translation);
 
         if ($context !== null && !isset($messages[$singular]['_context'][$context])) {
             $messages[$singular]['_context'][$context] = $translation;
@@ -164,7 +180,7 @@ class PoFileParser
 
             // Make sure every index is filled.
             end($plurals);
-            $count = key($plurals);
+            $count = (int)key($plurals);
 
             // Fill missing spots with an empty string.
             $empties = array_fill(0, $count + 1, '');

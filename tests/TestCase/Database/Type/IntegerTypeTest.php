@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,7 +16,7 @@
  */
 namespace Cake\Test\TestCase\Database\Type;
 
-use Cake\Database\Type;
+use Cake\Database\TypeFactory;
 use Cake\TestSuite\TestCase;
 use PDO;
 
@@ -26,22 +28,22 @@ class IntegerTypeTest extends TestCase
     /**
      * @var \Cake\Database\Type\IntegerType
      */
-    public $type;
+    protected $type;
 
     /**
      * @var \Cake\Database\Driver
      */
-    public $driver;
+    protected $driver;
 
     /**
      * Setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
-        $this->type = Type::build('integer');
+        $this->type = TypeFactory::build('integer');
         $this->driver = $this->getMockBuilder('Cake\Database\Driver')->getMock();
     }
 
@@ -79,14 +81,14 @@ class IntegerTypeTest extends TestCase
             'b' => '2.3',
             'c' => '15',
             'd' => '0.0',
-            'e' => 10
+            'e' => 10,
         ];
         $expected = [
             'a' => null,
             'b' => 2,
             'c' => 15,
             'd' => 0,
-            'e' => 10
+            'e' => 10,
         ];
         $this->assertEquals(
             $expected,
@@ -108,7 +110,7 @@ class IntegerTypeTest extends TestCase
             'c' => '15',
             'd' => '0.0',
             'e' => 10,
-            'f' => '6a88accf-a34e-4dd9-ade0-8d255ccaecbe'
+            'f' => '6a88accf-a34e-4dd9-ade0-8d255ccaecbe',
         ];
         $expected = [
             'a' => null,
@@ -116,7 +118,7 @@ class IntegerTypeTest extends TestCase
             'c' => 15,
             'd' => 0,
             'e' => 10,
-            'f' => '6a88accf-a34e-4dd9-ade0-8d255ccaecbe'
+            'f' => '6a88accf-a34e-4dd9-ade0-8d255ccaecbe',
         ];
         $this->assertEquals(
             $expected,
@@ -205,11 +207,7 @@ class IntegerTypeTest extends TestCase
         $this->assertNull($result);
 
         $result = $this->type->marshal('+0123.45e2');
-        if (version_compare(PHP_VERSION, '7.1', '<')) {
-            $this->assertSame(123, $result);
-        } else {
-            $this->assertSame(12345, $result);
-        }
+        $this->assertSame(12345, $result);
     }
 
     /**

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -27,7 +29,6 @@ use RuntimeException;
  */
 class SaveOptionsBuilder extends ArrayObject
 {
-
     use AssociationsNormalizerTrait;
 
     /**
@@ -65,9 +66,9 @@ class SaveOptionsBuilder extends ArrayObject
      *
      * @throws \InvalidArgumentException If a given option key does not exist.
      * @param array $array Options array.
-     * @return \Cake\ORM\SaveOptionsBuilder
+     * @return $this
      */
-    public function parseArrayOptions($array)
+    public function parseArrayOptions(array $array)
     {
         foreach ($array as $key => $value) {
             $this->{$key}($value);
@@ -80,7 +81,7 @@ class SaveOptionsBuilder extends ArrayObject
      * Set associated options.
      *
      * @param string|array $associated String or array of associations.
-     * @return \Cake\ORM\SaveOptionsBuilder
+     * @return $this
      */
     public function associated($associated)
     {
@@ -98,7 +99,7 @@ class SaveOptionsBuilder extends ArrayObject
      * @param array $associations An associations array.
      * @return void
      */
-    protected function _associated(Table $table, array $associations)
+    protected function _associated(Table $table, array $associations): void
     {
         foreach ($associations as $key => $associated) {
             if (is_int($key)) {
@@ -121,10 +122,14 @@ class SaveOptionsBuilder extends ArrayObject
      * @param string $association Association name.
      * @return void
      */
-    protected function _checkAssociation(Table $table, $association)
+    protected function _checkAssociation(Table $table, string $association): void
     {
         if (!$table->associations()->has($association)) {
-            throw new RuntimeException(sprintf('Table `%s` is not associated with `%s`', get_class($table), $association));
+            throw new RuntimeException(sprintf(
+                'Table `%s` is not associated with `%s`',
+                get_class($table),
+                $association
+            ));
         }
     }
 
@@ -132,9 +137,9 @@ class SaveOptionsBuilder extends ArrayObject
      * Set the guard option.
      *
      * @param bool $guard Guard the properties or not.
-     * @return \Cake\ORM\SaveOptionsBuilder
+     * @return $this
      */
-    public function guard($guard)
+    public function guard(bool $guard)
     {
         $this->_options['guard'] = (bool)$guard;
 
@@ -145,9 +150,9 @@ class SaveOptionsBuilder extends ArrayObject
      * Set the validation rule set to use.
      *
      * @param string $validate Name of the validation rule set to use.
-     * @return \Cake\ORM\SaveOptionsBuilder
+     * @return $this
      */
-    public function validate($validate)
+    public function validate(string $validate)
     {
         $this->_table->getValidator($validate);
         $this->_options['validate'] = $validate;
@@ -159,9 +164,9 @@ class SaveOptionsBuilder extends ArrayObject
      * Set check existing option.
      *
      * @param bool $checkExisting Guard the properties or not.
-     * @return \Cake\ORM\SaveOptionsBuilder
+     * @return $this
      */
-    public function checkExisting($checkExisting)
+    public function checkExisting(bool $checkExisting)
     {
         $this->_options['checkExisting'] = (bool)$checkExisting;
 
@@ -172,9 +177,9 @@ class SaveOptionsBuilder extends ArrayObject
      * Option to check the rules.
      *
      * @param bool $checkRules Check the rules or not.
-     * @return \Cake\ORM\SaveOptionsBuilder
+     * @return $this
      */
-    public function checkRules($checkRules)
+    public function checkRules(bool $checkRules)
     {
         $this->_options['checkRules'] = (bool)$checkRules;
 
@@ -185,9 +190,9 @@ class SaveOptionsBuilder extends ArrayObject
      * Sets the atomic option.
      *
      * @param bool $atomic Atomic or not.
-     * @return \Cake\ORM\SaveOptionsBuilder
+     * @return $this
      */
-    public function atomic($atomic)
+    public function atomic(bool $atomic)
     {
         $this->_options['atomic'] = (bool)$atomic;
 
@@ -197,7 +202,7 @@ class SaveOptionsBuilder extends ArrayObject
     /**
      * @return array
      */
-    public function toArray()
+    public function toArray(): array
     {
         return $this->_options;
     }
@@ -207,9 +212,9 @@ class SaveOptionsBuilder extends ArrayObject
      *
      * @param string $option Option key.
      * @param mixed $value Option value.
-     * @return \Cake\ORM\SaveOptionsBuilder
+     * @return $this
      */
-    public function set($option, $value)
+    public function set(string $option, $value)
     {
         if (method_exists($this, $option)) {
             return $this->{$option}($value);

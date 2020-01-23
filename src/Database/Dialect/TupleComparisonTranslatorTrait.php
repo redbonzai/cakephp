@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -26,12 +28,11 @@ use Cake\Database\Query;
  */
 trait TupleComparisonTranslatorTrait
 {
-
     /**
      * Receives a TupleExpression and changes it so that it conforms to this
      * SQL dialect.
      *
-     * It transforms expressions looking like '(a, b) IN ((c, d), (e, f)' into an
+     * It transforms expressions looking like '(a, b) IN ((c, d), (e, f))' into an
      * equivalent expression of the form '((a = c) AND (b = d)) OR ((a = e) AND (b = f))'.
      *
      * It can also transform transform expressions where the right hand side is a query
@@ -46,7 +47,7 @@ trait TupleComparisonTranslatorTrait
      * @param \Cake\Database\Query $query The query to update.
      * @return void
      */
-    protected function _transformTupleComparison(TupleComparison $expression, $query)
+    protected function _transformTupleComparison(TupleComparison $expression, Query $query): void
     {
         $fields = $expression->getField();
 
@@ -81,8 +82,8 @@ trait TupleComparisonTranslatorTrait
         $conditions = ['OR' => []];
         foreach ($value as $tuple) {
             $item = [];
-            foreach (array_values($tuple) as $i => $value) {
-                $item[] = [$fields[$i] => $value];
+            foreach (array_values($tuple) as $i => $value2) {
+                $item[] = [$fields[$i] => $value2];
             }
             $conditions['OR'][] = $item;
         }

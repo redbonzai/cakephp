@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -14,20 +16,23 @@
  */
 namespace Cake\Http\Middleware;
 
+use ArrayAccess;
 use Cake\Http\Cookie\Cookie;
 use Cake\Http\Exception\InvalidCsrfTokenException;
 use Cake\Http\Response;
-use Cake\Http\ServerRequest;
-use Cake\I18n\Time;
 use Cake\Utility\Hash;
 use Cake\Utility\Security;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
 /**
  * Provides CSRF protection & validation.
  *
  * This middleware adds a CSRF token to a cookie. The cookie value is compared to
- * request data, or the X-CSRF-Token header on each PATCH, POST,
- * PUT, or DELETE request.
+ * token in request data, or the X-CSRF-Token header on each PATCH, POST,
+ * PUT, or DELETE request. This is known as "double submit cookie" technique.
  *
  * If the request data is missing or does not match the cookie data,
  * an InvalidCsrfTokenException will be raised.
@@ -35,11 +40,13 @@ use Cake\Utility\Security;
  * This middleware integrates with the FormHelper automatically and when
  * used together your forms will have CSRF tokens automatically added
  * when `$this->Form->create(...)` is used in a view.
+ *
+ * @see https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#double-submit-cookie
  */
-class CsrfProtectionMiddleware
+class CsrfProtectionMiddleware implements MiddlewareInterface
 {
     /**
-     * Default config for the CSRF handling.
+     * Config for the CSRF handling.
      *
      *  - `cookieName` The name of the cookie to send.
      *  - `expiry` A strotime compatible value of how long the CSRF token should last.
@@ -51,7 +58,7 @@ class CsrfProtectionMiddleware
      *
      * @var array
      */
-    protected $_defaultConfig = [
+    protected $_config = [
         'cookieName' => 'csrfToken',
         'expiry' => 0,
         'secure' => false,
@@ -60,69 +67,99 @@ class CsrfProtectionMiddleware
     ];
 
     /**
-     * Configuration
+     * Callback for deciding whether or not to skip the token check for particular request.
      *
-     * @var array
+     * CSRF protection token check will be skipped if the callback returns `true`.
+     *
+     * @var callable|null
      */
-    protected $_config = [];
+    protected $whitelistCallback;
 
     /**
      * Constructor
      *
-     * @param array $config Config options. See $_defaultConfig for valid keys.
+     * @param array $config Config options. See $_config for valid keys.
      */
     public function __construct(array $config = [])
     {
-        $this->_config = $config + $this->_defaultConfig;
+        $this->_config = $config + $this->_config;
     }
 
     /**
      * Checks and sets the CSRF token depending on the HTTP verb.
      *
-     * @param \Cake\Http\ServerRequest $request The request.
-     * @param \Cake\Http\Response $response The response.
-     * @param callable $next Callback to invoke the next middleware.
-     * @return \Cake\Http\Response A response
+     * @param \Psr\Http\Message\ServerRequestInterface $request The request.
+     * @param \Psr\Http\Server\RequestHandlerInterface $handler The request handler.
+     * @return \Psr\Http\Message\ResponseInterface A response.
      */
-    public function __invoke(ServerRequest $request, Response $response, $next)
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+        $method = $request->getMethod();
+        $hasData = in_array($method, ['PUT', 'POST', 'DELETE', 'PATCH'], true)
+            || $request->getParsedBody();
+
+        if (
+            $hasData
+            && $this->whitelistCallback !== null
+            && call_user_func($this->whitelistCallback, $request) === true
+        ) {
+            $request = $this->_unsetTokenField($request);
+
+            return $handler->handle($request);
+        }
+
         $cookies = $request->getCookieParams();
         $cookieData = Hash::get($cookies, $this->_config['cookieName']);
 
-        if (strlen($cookieData) > 0) {
-            $params = $request->getAttribute('params');
-            $params['_csrfToken'] = $cookieData;
-            $request = $request->withAttribute('params', $params);
+        if ($cookieData !== null && strlen($cookieData) > 0) {
+            $request = $request->withAttribute('csrfToken', $cookieData);
         }
 
-        $method = $request->getMethod();
         if ($method === 'GET' && $cookieData === null) {
             $token = $this->_createToken();
-            $request = $this->_addTokenToRequest($token, $request);
-            $response = $this->_addTokenCookie($token, $request, $response);
+            $request = $request->withAttribute('csrfToken', $token);
+            /** @var mixed $response */
+            $response = $handler->handle($request);
 
-            return $next($request, $response);
+            return $this->_addTokenCookie($token, $request, $response);
         }
-        $request = $this->_validateAndUnsetTokenField($request);
 
-        return $next($request, $response);
+        if ($hasData) {
+            $this->_validateToken($request);
+            $request = $this->_unsetTokenField($request);
+        }
+
+        return $handler->handle($request);
     }
 
     /**
-     * Checks if the request is POST, PUT, DELETE or PATCH and validates the CSRF token
+     * Set callback for allowing to skip token check for particular request.
      *
-     * @param \Cake\Http\ServerRequest $request The request object.
-     * @return \Cake\Http\ServerRequest
+     * The callback will receive request instance as argument and must return
+     * `true` if you want to skip token check for the current request.
+     *
+     * @param callable $callback A callable.
+     * @return $this
      */
-    protected function _validateAndUnsetTokenField(ServerRequest $request)
+    public function whitelistCallback(callable $callback)
     {
-        if (in_array($request->getMethod(), ['PUT', 'POST', 'DELETE', 'PATCH']) || $request->getData()) {
-            $this->_validateToken($request);
-            $body = $request->getParsedBody();
-            if (is_array($body)) {
-                unset($body[$this->_config['field']]);
-                $request = $request->withParsedBody($body);
-            }
+        $this->whitelistCallback = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Remove CSRF protection token from request data.
+     *
+     * @param \Psr\Http\Message\ServerRequestInterface $request The request object.
+     * @return \Psr\Http\Message\ServerRequestInterface
+     */
+    protected function _unsetTokenField(ServerRequestInterface $request): ServerRequestInterface
+    {
+        $body = $request->getParsedBody();
+        if (is_array($body)) {
+            unset($body[$this->_config['field']]);
+            $request = $request->withParsedBody($body);
         }
 
         return $request;
@@ -133,71 +170,69 @@ class CsrfProtectionMiddleware
      *
      * @return string
      */
-    protected function _createToken()
+    protected function _createToken(): string
     {
         return hash('sha512', Security::randomBytes(16), false);
-    }
-
-    /**
-     * Add a CSRF token to the request parameters.
-     *
-     * @param string $token The token to add.
-     * @param \Cake\Http\ServerRequest $request The request to augment
-     * @return \Cake\Http\ServerRequest Modified request
-     */
-    protected function _addTokenToRequest($token, ServerRequest $request)
-    {
-        $params = $request->getAttribute('params');
-        $params['_csrfToken'] = $token;
-
-        return $request->withAttribute('params', $params);
     }
 
     /**
      * Add a CSRF token to the response cookies.
      *
      * @param string $token The token to add.
-     * @param \Cake\Http\ServerRequest $request The request to validate against.
-     * @param \Cake\Http\Response $response The response.
-     * @return \Cake\Http\Response $response Modified response.
+     * @param \Psr\Http\Message\ServerRequestInterface $request The request to validate against.
+     * @param \Psr\Http\Message\ResponseInterface $response The response.
+     * @return \Psr\Http\Message\ResponseInterface $response Modified response.
      */
-    protected function _addTokenCookie($token, ServerRequest $request, Response $response)
-    {
-        $expiry = new Time($this->_config['expiry']);
-
-        $cookie = new Cookie(
+    protected function _addTokenCookie(
+        string $token,
+        ServerRequestInterface $request,
+        ResponseInterface $response
+    ): ResponseInterface {
+        $cookie = Cookie::create(
             $this->_config['cookieName'],
             $token,
-            $expiry,
-            $request->getAttribute('webroot'),
-            '',
-            (bool)$this->_config['secure'],
-            (bool)$this->_config['httpOnly']
+            [
+                'expires' => $this->_config['expiry'] ?: null,
+                'path' => $request->getAttribute('webroot'),
+                'secure' => $this->_config['secure'],
+                'httponly' => $this->_config['httpOnly'],
+            ]
         );
+        if ($response instanceof Response) {
+            return $response->withCookie($cookie);
+        }
 
-        return $response->withCookie($cookie);
+        return $response->withAddedHeader('Set-Cookie', $cookie->toHeaderValue());
     }
 
     /**
      * Validate the request data against the cookie token.
      *
-     * @param \Cake\Http\ServerRequest $request The request to validate against.
+     * @param \Psr\Http\Message\ServerRequestInterface $request The request to validate against.
      * @return void
      * @throws \Cake\Http\Exception\InvalidCsrfTokenException When the CSRF token is invalid or missing.
      */
-    protected function _validateToken(ServerRequest $request)
+    protected function _validateToken(ServerRequestInterface $request): void
     {
-        $cookies = $request->getCookieParams();
-        $cookie = Hash::get($cookies, $this->_config['cookieName']);
-        $post = Hash::get($request->getParsedBody(), $this->_config['field']);
-        $header = $request->getHeaderLine('X-CSRF-Token');
+        $cookie = Hash::get($request->getCookieParams(), $this->_config['cookieName']);
 
         if (!$cookie) {
             throw new InvalidCsrfTokenException(__d('cake', 'Missing CSRF token cookie'));
         }
 
-        if (!Security::constantEquals($post, $cookie) && !Security::constantEquals($header, $cookie)) {
-            throw new InvalidCsrfTokenException(__d('cake', 'CSRF token mismatch.'));
+        $body = $request->getParsedBody();
+        if (is_array($body) || $body instanceof ArrayAccess) {
+            $post = Hash::get($body, $this->_config['field']);
+            if (Security::constantEquals($post, $cookie)) {
+                return;
+            }
         }
+
+        $header = $request->getHeaderLine('X-CSRF-Token');
+        if (Security::constantEquals($header, $cookie)) {
+            return;
+        }
+
+        throw new InvalidCsrfTokenException(__d('cake', 'Missing CSRF token body'));
     }
 }

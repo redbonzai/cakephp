@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -23,7 +25,6 @@ use Exception;
  */
 class CommandRetryTest extends TestCase
 {
-
     /**
      * Simple retry test
      *
@@ -74,7 +75,7 @@ class CommandRetryTest extends TestCase
         $strategy
             ->expects($this->exactly(4))
             ->method('shouldRetry')
-            ->will($this->returnCallback(function ($e) use ($exception) {
+            ->will($this->returnCallback(function ($e) {
                 return true;
             }));
 
@@ -83,6 +84,7 @@ class CommandRetryTest extends TestCase
         $this->expectExceptionMessage('this is failing');
         $retry->run($action);
     }
+
     /**
      * Test that the strategy is respected
      *

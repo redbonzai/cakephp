@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP :  Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -44,7 +46,7 @@ class ProgressHelperTest extends TestCase
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -62,7 +64,7 @@ class ProgressHelperTest extends TestCase
     {
         $helper = $this->helper->init([
             'total' => 200,
-            'width' => 50
+            'width' => 50,
         ]);
         $this->assertSame($helper, $this->helper, 'Should be chainable');
     }
@@ -116,7 +118,7 @@ class ProgressHelperTest extends TestCase
             'width' => 20,
             'callback' => function (ProgressHelper $progress) {
                 $progress->increment(2);
-            }
+            },
         ]);
         $expected = [
             '',
@@ -147,7 +149,7 @@ class ProgressHelperTest extends TestCase
         $this->helper->increment(20);
         $this->helper->draw();
 
-        $this->helper->increment(40);
+        $this->helper->increment(40.0);
         $this->helper->draw();
 
         $this->helper->increment(40);
@@ -257,7 +259,7 @@ class ProgressHelperTest extends TestCase
     public function testIncrementFloatPad()
     {
         $this->helper->init([
-            'total' => 50
+            'total' => 50,
         ]);
         $expected = [
             '',

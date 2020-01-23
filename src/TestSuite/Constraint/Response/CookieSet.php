@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -20,6 +22,10 @@ namespace Cake\TestSuite\Constraint\Response;
  */
 class CookieSet extends ResponseBase
 {
+    /**
+     * @var \Cake\Http\Response
+     */
+    protected $response;
 
     /**
      * Checks assertion
@@ -27,7 +33,7 @@ class CookieSet extends ResponseBase
      * @param mixed $other Expected content
      * @return bool
      */
-    public function matches($other)
+    public function matches($other): bool
     {
         $cookie = $this->response->getCookie($other);
 
@@ -39,8 +45,8 @@ class CookieSet extends ResponseBase
      *
      * @return string
      */
-    public function toString()
+    public function toString(): string
     {
-        return 'cookie was set';
+        return 'cookie is set';
     }
 }

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * Exception Renderer
  *
@@ -20,20 +22,22 @@
 namespace TestPlugin\Error;
 
 use Cake\Error\ExceptionRenderer;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * TestPluginExceptionRenderer
  */
 class TestPluginExceptionRenderer extends ExceptionRenderer
 {
-
     /**
      * Renders the response for the exception.
      *
      * @return string
      */
-    public function render()
+    public function render(): ResponseInterface
     {
-        return 'Rendered by test plugin';
+        $response = $this->controller->getResponse();
+
+        return $response->withStringBody('Rendered by test plugin');
     }
 }

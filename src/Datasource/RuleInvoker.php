@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -28,7 +30,7 @@ class RuleInvoker
     /**
      * The rule name
      *
-     * @var string
+     * @var string|null
      */
     protected $name;
 
@@ -59,10 +61,10 @@ class RuleInvoker
      * rule $scope.
      *
      * @param callable $rule The rule to be invoked.
-     * @param string $name The name of the rule. Used in error messsages.
+     * @param ?string $name The name of the rule. Used in error messsages.
      * @param array $options The options for the rule. See above.
      */
-    public function __construct(callable $rule, $name, array $options = [])
+    public function __construct(callable $rule, ?string $name, array $options = [])
     {
         $this->rule = $rule;
         $this->name = $name;
@@ -89,10 +91,10 @@ class RuleInvoker
      *
      * Only truthy names will be set.
      *
-     * @param string $name The name to set.
+     * @param string|null $name The name to set.
      * @return $this
      */
-    public function setName($name)
+    public function setName(?string $name)
     {
         if ($name) {
             $this->name = $name;
@@ -109,7 +111,7 @@ class RuleInvoker
      * @param array $scope The rule's scope/options.
      * @return bool Whether or not the rule passed.
      */
-    public function __invoke($entity, $scope)
+    public function __invoke(EntityInterface $entity, array $scope): bool
     {
         $rule = $this->rule;
         $pass = $rule($entity, $this->options + $scope);

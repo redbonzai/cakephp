@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP :  Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -31,7 +33,6 @@ use Cake\Console\ConsoleOutput as ConsoleOutputBase;
  */
 class ConsoleOutput extends ConsoleOutputBase
 {
-
     /**
      * Buffered messages.
      *
@@ -42,11 +43,11 @@ class ConsoleOutput extends ConsoleOutputBase
     /**
      * Write output to the buffer.
      *
-     * @param string|array $message A string or an array of strings to output
+     * @param string|string[] $message A string or an array of strings to output
      * @param int $newlines Number of newlines to append
-     * @return void
+     * @return int
      */
-    public function write($message, $newlines = 1)
+    public function write($message, int $newlines = 1): int
     {
         foreach ((array)$message as $line) {
             $this->_out[] = $line;
@@ -57,6 +58,8 @@ class ConsoleOutput extends ConsoleOutputBase
             $this->_out[] = '';
             $newlines--;
         }
+
+        return 0;
     }
 
     /**
@@ -64,8 +67,18 @@ class ConsoleOutput extends ConsoleOutputBase
      *
      * @return array
      */
-    public function messages()
+    public function messages(): array
     {
         return $this->_out;
+    }
+
+    /**
+     * Get the output as a string
+     *
+     * @return string
+     */
+    public function output(): string
+    {
+        return implode("\n", $this->_out);
     }
 }

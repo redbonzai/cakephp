@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -34,50 +36,32 @@ use Cake\Log\LogTrait;
  * Components can provide several callbacks that are fired at various stages of the request
  * cycle. The available callbacks are:
  *
- * - `beforeFilter(Event $event)`
+ * - `beforeFilter(EventInterface $event)`
  *   Called before the controller's beforeFilter method by default.
- * - `startup(Event $event)`
+ * - `startup(EventInterface $event)`
  *   Called after the controller's beforeFilter method, and before the
  *   controller action is called.
- * - `beforeRender(Event $event)`
+ * - `beforeRender(EventInterface $event)`
  *   Called before the Controller beforeRender, and before the view class is loaded.
- * - `shutdown(Event $event)`
+ * - `shutdown(EventInterface $event)`
  *   Called after the action is complete and the view has been rendered but
  *   before Controller::afterFilter().
- * - `beforeRedirect(Event $event $url, Response $response)`
+ * - `beforeRedirect(EventInterface $event $url, Response $response)`
  *   Called before a redirect is done. Allows you to change the URL that will
  *   be redirected to by returning a Response instance with new URL set using
  *   Response::location(). Redirection can be prevented by stopping the event
  *   propagation.
  *
  * While the controller is not an explicit argument for the callback methods it
- * is the subject of each event and can be fetched using Event::getSubject().
+ * is the subject of each event and can be fetched using EventInterface::getSubject().
  *
- * @link https://book.cakephp.org/3.0/en/controllers/components.html
+ * @link https://book.cakephp.org/4/en/controllers/components.html
  * @see \Cake\Controller\Controller::$components
  */
 class Component implements EventListenerInterface
 {
     use InstanceConfigTrait;
     use LogTrait;
-
-    /**
-     * Request object
-     *
-     * @var \Cake\Http\ServerRequest
-     * @deprecated 3.4.0 Storing references to the request is deprecated. Use Component::getController()
-     *   or callback $event->getSubject() to access the controller & request instead.
-     */
-    public $request;
-
-    /**
-     * Response object
-     *
-     * @var \Cake\Http\Response
-     * @deprecated 3.4.0 Storing references to the response is deprecated. Use Component::getController()
-     *   or callback $event->getSubject() to access the controller & response instead.
-     */
-    public $response;
 
     /**
      * Component registry class used to lazy load components.
@@ -112,17 +96,13 @@ class Component implements EventListenerInterface
     /**
      * Constructor
      *
-     * @param \Cake\Controller\ComponentRegistry $registry A ComponentRegistry this component can use to lazy load its components
+     * @param \Cake\Controller\ComponentRegistry $registry A component registry
+     *  this component can use to lazy load its components.
      * @param array $config Array of configuration settings.
      */
     public function __construct(ComponentRegistry $registry, array $config = [])
     {
         $this->_registry = $registry;
-        $controller = $registry->getController();
-        if ($controller) {
-            $this->request =& $controller->request;
-            $this->response =& $controller->response;
-        }
 
         $this->setConfig($config);
 
@@ -137,7 +117,7 @@ class Component implements EventListenerInterface
      *
      * @return \Cake\Controller\Controller The bound controller.
      */
-    public function getController()
+    public function getController(): Controller
     {
         return $this->_registry->getController();
     }
@@ -151,7 +131,7 @@ class Component implements EventListenerInterface
      * @param array $config The configuration settings provided to this component.
      * @return void
      */
-    public function initialize(array $config)
+    public function initialize(array $config): void
     {
     }
 
@@ -159,9 +139,9 @@ class Component implements EventListenerInterface
      * Magic method for lazy loading $components.
      *
      * @param string $name Name of component to get.
-     * @return mixed A Component object or null.
+     * @return \Cake\Controller\Component|null A Component object or null.
      */
-    public function __get($name)
+    public function __get(string $name)
     {
         if (isset($this->_componentMap[$name]) && !isset($this->{$name})) {
             $config = (array)$this->_componentMap[$name]['config'] + ['enabled' => false];
@@ -186,7 +166,7 @@ class Component implements EventListenerInterface
      *
      * @return array
      */
-    public function implementedEvents()
+    public function implementedEvents(): array
     {
         $eventMap = [
             'Controller.initialize' => 'beforeFilter',
@@ -211,7 +191,7 @@ class Component implements EventListenerInterface
      *
      * @return array
      */
-    public function __debugInfo()
+    public function __debugInfo(): array
     {
         return [
             'components' => $this->components,

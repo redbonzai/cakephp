@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) :  Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,8 +17,6 @@
 namespace Cake\Log\Engine;
 
 use Cake\Core\InstanceConfigTrait;
-use Cake\Datasource\EntityInterface;
-use JsonSerializable;
 use Psr\Log\AbstractLogger;
 
 /**
@@ -33,7 +33,7 @@ abstract class BaseLog extends AbstractLogger
      */
     protected $_defaultConfig = [
         'levels' => [],
-        'scopes' => []
+        'scopes' => [],
     ];
 
     /**
@@ -63,7 +63,7 @@ abstract class BaseLog extends AbstractLogger
      *
      * @return array
      */
-    public function levels()
+    public function levels(): array
     {
         return $this->_config['levels'];
     }
@@ -71,7 +71,7 @@ abstract class BaseLog extends AbstractLogger
     /**
      * Get the scopes this logger is interested in.
      *
-     * @return array
+     * @return array|false
      */
     public function scopes()
     {
@@ -79,34 +79,17 @@ abstract class BaseLog extends AbstractLogger
     }
 
     /**
-     * Converts to string the provided data so it can be logged. The context
-     * can optionally be used by log engines to interpolate variables
+     * Formats the message to be logged.
+     *
+     * The context can optionally be used by log engines to interpolate variables
      * or add additional info to the logged message.
      *
-     * @param mixed $data The data to be converted to string and logged.
+     * @param string $message The message to be formatted.
      * @param array $context Additional logging information for the message.
      * @return string
      */
-    protected function _format($data, array $context = [])
+    protected function _format(string $message, array $context = []): string
     {
-        if (is_string($data)) {
-            return $data;
-        }
-
-        $isObject = is_object($data);
-
-        if ($isObject && $data instanceof EntityInterface) {
-            return json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        }
-
-        if ($isObject && method_exists($data, '__toString')) {
-            return (string)$data;
-        }
-
-        if ($isObject && $data instanceof JsonSerializable) {
-            return json_encode($data, JSON_UNESCAPED_UNICODE);
-        }
-
-        return print_r($data, true);
+        return $message;
     }
 }

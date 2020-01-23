@@ -1,6 +1,8 @@
 <?php
+declare(strict_types=1);
+
 /**
- * CakePHP(tm) Tests <https://book.cakephp.org/2.0/en/development/testing.html>
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
  * Licensed under The MIT License
@@ -8,7 +10,7 @@
  * Redistributions of files must retain the above copyright notice
  *
  * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
- * @link          https://book.cakephp.org/2.0/en/development/testing.html CakePHP(tm) Tests
+ * @link          https://cakephp.org CakePHP(tm) Project
  * @since         3.3.3
  * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
@@ -19,7 +21,6 @@ namespace TestApp\Mailer;
  */
 class TestUserMailer extends TestMailer
 {
-
     public function invite($email)
     {
         $this->_email
@@ -32,7 +33,7 @@ class TestUserMailer extends TestMailer
             ->addBcc('antograssiot@cakephp.org')
             ->setAttachments([
                 dirname(__FILE__) . DS . 'TestMailer.php',
-                dirname(__FILE__) . DS . 'TestUserMailer.php'
+                dirname(__FILE__) . DS . 'TestUserMailer.php',
             ])
             ->send('Hello ' . $email);
     }

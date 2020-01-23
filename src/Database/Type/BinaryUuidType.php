@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,9 +17,7 @@
 namespace Cake\Database\Type;
 
 use Cake\Core\Exception\Exception;
-use Cake\Database\Driver;
-use Cake\Database\Type;
-use Cake\Database\TypeInterface;
+use Cake\Database\DriverInterface;
 use Cake\Utility\Text;
 use PDO;
 
@@ -26,42 +26,19 @@ use PDO;
  *
  * Use to convert binary uuid data between PHP and the database types.
  */
-class BinaryUuidType extends Type implements TypeInterface
+class BinaryUuidType extends BaseType
 {
-    /**
-     * Identifier name for this type.
-     *
-     * (This property is declared here again so that the inheritance from
-     * Cake\Database\Type can be removed in the future.)
-     *
-     * @var string|null
-     */
-    protected $_name;
-
-    /**
-     * Constructor.
-     *
-     * (This method is declared here again so that the inheritance from
-     * Cake\Database\Type can be removed in the future.)
-     *
-     * @param string|null $name The name identifying this type
-     */
-    public function __construct($name = null)
-    {
-        $this->_name = $name;
-    }
-
     /**
      * Convert binary uuid data into the database format.
      *
      * Binary data is not altered before being inserted into the database.
      * As PDO will handle reading file handles.
      *
-     * @param string|resource $value The value to convert.
-     * @param \Cake\Database\Driver $driver The driver instance to convert with.
+     * @param mixed $value The value to convert.
+     * @param \Cake\Database\DriverInterface $driver The driver instance to convert with.
      * @return string|resource
      */
-    public function toDatabase($value, Driver $driver)
+    public function toDatabase($value, DriverInterface $driver)
     {
         if (is_string($value)) {
             return $this->convertStringToBinaryUuid($value);
@@ -75,7 +52,7 @@ class BinaryUuidType extends Type implements TypeInterface
      *
      * @return string A new primary key value.
      */
-    public function newId()
+    public function newId(): string
     {
         return Text::uuid();
     }
@@ -83,12 +60,12 @@ class BinaryUuidType extends Type implements TypeInterface
     /**
      * Convert binary uuid into resource handles
      *
-     * @param null|string|resource $value The value to convert.
-     * @param \Cake\Database\Driver $driver The driver instance to convert with.
+     * @param mixed $value The value to convert.
+     * @param \Cake\Database\DriverInterface $driver The driver instance to convert with.
      * @return resource|string|null
      * @throws \Cake\Core\Exception\Exception
      */
-    public function toPHP($value, Driver $driver)
+    public function toPHP($value, DriverInterface $driver)
     {
         if ($value === null) {
             return null;
@@ -107,16 +84,16 @@ class BinaryUuidType extends Type implements TypeInterface
      * Get the correct PDO binding type for Binary data.
      *
      * @param mixed $value The value being bound.
-     * @param \Cake\Database\Driver $driver The driver.
+     * @param \Cake\Database\DriverInterface $driver The driver.
      * @return int
      */
-    public function toStatement($value, Driver $driver)
+    public function toStatement($value, DriverInterface $driver): int
     {
         return PDO::PARAM_LOB;
     }
 
     /**
-     * Marshalls flat data into PHP objects.
+     * Marshals flat data into PHP objects.
      *
      * Most useful for converting request data into PHP objects
      * that make sense for the rest of the ORM/Database layers.
@@ -138,7 +115,7 @@ class BinaryUuidType extends Type implements TypeInterface
      *
      * @return string Converted value.
      */
-    protected function convertBinaryUuidToString($binary)
+    protected function convertBinaryUuidToString($binary): string
     {
         $string = unpack("H*", $binary);
 
@@ -155,11 +132,11 @@ class BinaryUuidType extends Type implements TypeInterface
      * Converts a string uuid to a binary representation
      *
      *
-     * @param mixed $string The value to convert.
+     * @param string $string The value to convert.
      *
-     * @return mixed Converted value.
+     * @return string Converted value.
      */
-    protected function convertStringToBinaryUuid($string)
+    protected function convertStringToBinaryUuid($string): string
     {
         $string = str_replace('-', '', $string);
 

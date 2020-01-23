@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -12,7 +14,7 @@
  * @since         3.0.0
  * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
-namespace Cake\Test\TestCase\I18n;
+namespace Cake\Test\TestCase\I18n\Formatter;
 
 use Cake\I18n\Formatter\IcuFormatter;
 use Cake\TestSuite\TestCase;
@@ -30,7 +32,7 @@ class IcuFormatterTest extends TestCase
     public function testFormatEmptyValues()
     {
         $formatter = new IcuFormatter();
-        $this->assertEquals('', $formatter->format('en_US', '', []));
+        $this->assertSame('', $formatter->format('en_US', '', []));
     }
 
     /**
@@ -41,13 +43,13 @@ class IcuFormatterTest extends TestCase
     public function testFormatSimple()
     {
         $formatter = new IcuFormatter();
-        $this->assertEquals('Hello José', $formatter->format('en_US', 'Hello {0}', ['José']));
+        $this->assertSame('Hello José', $formatter->format('en_US', 'Hello {0}', ['José']));
         $result = $formatter->format(
             '1 Orange',
             '{0, number} {1}',
             [1.0, 'Orange']
         );
-        $this->assertEquals('1 Orange', $result);
+        $this->assertSame('1 Orange', $result);
     }
 
     /**
@@ -86,26 +88,10 @@ class IcuFormatterTest extends TestCase
      *
      * @return void
      */
-    public function testBadMessageFormat()
-    {
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('msgfmt_create: message formatter');
-        $this->skipIf(version_compare(PHP_VERSION, '7', '>='));
-
-        $formatter = new IcuFormatter();
-        $formatter->format('en_US', '{crazy format', ['some', 'vars']);
-    }
-
-    /**
-     * Tests that passing a message in the wrong format will throw an exception
-     *
-     * @return void
-     */
     public function testBadMessageFormatPHP7()
     {
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Constructor failed');
-        $this->skipIf(version_compare(PHP_VERSION, '7', '<'));
 
         $formatter = new IcuFormatter();
         $formatter->format('en_US', '{crazy format', ['some', 'vars']);

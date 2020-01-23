@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -21,11 +23,10 @@ namespace Cake\TestSuite\Constraint\Email;
  */
 class MailContains extends MailConstraintBase
 {
-
     /**
      * Mail type to check contents of
      *
-     * @var string
+     * @var string|null
      */
     protected $type;
 
@@ -35,12 +36,14 @@ class MailContains extends MailConstraintBase
      * @param mixed $other Constraint check
      * @return bool
      */
-    public function matches($other)
+    public function matches($other): bool
     {
-        $emails = $this->getEmails();
-        foreach ($emails as $email) {
-            $message = implode("\r\n", (array)$email->message($this->type));
+        $messages = $this->getMessages();
+        foreach ($messages as $message) {
+            $method = 'getBody' . ($this->type ? ucfirst($this->type) : 'String');
+            $message = $message->$method();
 
+            $other = preg_quote($other, '/');
             if (preg_match("/$other/", $message) > 0) {
                 return true;
             }
@@ -54,7 +57,7 @@ class MailContains extends MailConstraintBase
      *
      * @return string
      */
-    public function toString()
+    public function toString(): string
     {
         if ($this->at) {
             return sprintf('is in email #%d', $this->at);

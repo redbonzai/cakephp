@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -21,34 +23,12 @@ use Cake\ORM\TableRegistry;
  */
 trait LocatorAwareTrait
 {
-
     /**
      * Table locator instance
      *
-     * @var \Cake\ORM\Locator\LocatorInterface
+     * @var \Cake\ORM\Locator\LocatorInterface|null
      */
     protected $_tableLocator;
-
-    /**
-     * Sets the table locator.
-     * If no parameters are passed, it will return the currently used locator.
-     *
-     * @param \Cake\ORM\Locator\LocatorInterface|null $tableLocator LocatorInterface instance.
-     * @return \Cake\ORM\Locator\LocatorInterface
-     * @deprecated 3.5.0 Use getTableLocator()/setTableLocator() instead.
-     */
-    public function tableLocator(LocatorInterface $tableLocator = null)
-    {
-        deprecationWarning(
-            get_called_class() . '::tableLocator() is deprecated. ' .
-            'Use getTableLocator()/setTableLocator() instead.'
-        );
-        if ($tableLocator !== null) {
-            $this->setTableLocator($tableLocator);
-        }
-
-        return $this->getTableLocator();
-    }
 
     /**
      * Sets the table locator.
@@ -68,9 +48,9 @@ trait LocatorAwareTrait
      *
      * @return \Cake\ORM\Locator\LocatorInterface
      */
-    public function getTableLocator()
+    public function getTableLocator(): LocatorInterface
     {
-        if (!$this->_tableLocator) {
+        if ($this->_tableLocator === null) {
             $this->_tableLocator = TableRegistry::getTableLocator();
         }
 

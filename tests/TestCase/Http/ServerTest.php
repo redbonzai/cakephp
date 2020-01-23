@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -12,23 +14,21 @@
  * @since         3.3.0
  * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
-namespace Cake\Test\TestCase;
+namespace Cake\Test\TestCase\Http;
 
 use Cake\Core\HttpApplicationInterface;
-use Cake\Event\Event;
+use Cake\Event\EventInterface;
 use Cake\Event\EventManager;
 use Cake\Http\BaseApplication;
 use Cake\Http\CallbackStream;
 use Cake\Http\MiddlewareQueue;
 use Cake\Http\Server;
+use Cake\Http\ServerRequest;
+use Cake\Http\Session;
 use Cake\TestSuite\TestCase;
 use InvalidArgumentException;
-use RuntimeException;
-use TestApp\Http\BadResponseApplication;
-use TestApp\Http\InvalidMiddlewareApplication;
+use Laminas\Diactoros\Response;
 use TestApp\Http\MiddlewareApplication;
-use Zend\Diactoros\Response;
-use Zend\Diactoros\ServerRequestFactory;
 
 require_once __DIR__ . '/server_mocks.php';
 
@@ -38,15 +38,25 @@ require_once __DIR__ . '/server_mocks.php';
 class ServerTest extends TestCase
 {
     /**
+     * @var string
+     */
+    protected $config;
+
+    /**
+     * @var array
+     */
+    private $server;
+
+    /**
      * Setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->server = $_SERVER;
-        $this->config = dirname(dirname(__DIR__));
+        $this->config = dirname(dirname(__DIR__)) . '/test_app/config';
         $GLOBALS['mockedHeaders'] = [];
         $GLOBALS['mockedHeadersSent'] = true;
     }
@@ -56,7 +66,7 @@ class ServerTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         $_SERVER = $this->server;
@@ -70,7 +80,8 @@ class ServerTest extends TestCase
      */
     public function testAppGetSet()
     {
-        $app = $this->getMockBuilder('Cake\Http\BaseApplication')
+        /** @var \Cake\Http\BaseApplication|\PHPUnit\Framework\MockObject\MockObject $app */
+        $app = $this->getMockBuilder(BaseApplication::class)
             ->setConstructorArgs([$this->config])
             ->getMock();
 
@@ -79,7 +90,7 @@ class ServerTest extends TestCase
             ->willReturn($manager);
 
         $server = new Server($app);
-        $this->assertSame($app, $server->getApp($app));
+        $this->assertSame($app, $server->getApp());
         $this->assertSame($app->getEventManager(), $server->getEventManager());
     }
 
@@ -88,15 +99,14 @@ class ServerTest extends TestCase
      *
      * @return void
      */
-    public function testRunWithRequestAndResponse()
+    public function testRunWithRequest()
     {
-        $response = new Response('php://memory', 200, ['X-testing' => 'source header']);
-        $request = ServerRequestFactory::fromGlobals();
+        $request = new ServerRequest();
         $request = $request->withHeader('X-pass', 'request header');
 
         $app = new MiddlewareApplication($this->config);
         $server = new Server($app);
-        $res = $server->run($request, $response);
+        $res = $server->run($request);
         $this->assertEquals(
             'source header',
             $res->getHeaderLine('X-testing'),
@@ -116,10 +126,10 @@ class ServerTest extends TestCase
      */
     public function testRunCallingPluginHooks()
     {
-        $response = new Response('php://memory', 200, ['X-testing' => 'source header']);
-        $request = ServerRequestFactory::fromGlobals();
+        $request = new ServerRequest();
         $request = $request->withHeader('X-pass', 'request header');
 
+        /** @var \TestApp\Http\MiddlewareApplication|\PHPUnit\Framework\MockObject\MockObject $app */
         $app = $this->getMockBuilder(MiddlewareApplication::class)
             ->setMethods(['pluginBootstrap', 'pluginEvents', 'pluginMiddleware'])
             ->setConstructorArgs([$this->config])
@@ -134,7 +144,7 @@ class ServerTest extends TestCase
             }));
 
         $server = new Server($app);
-        $res = $server->run($request, $response);
+        $res = $server->run($request);
         $this->assertEquals(
             'source header',
             $res->getHeaderLine('X-testing'),
@@ -168,20 +178,6 @@ class ServerTest extends TestCase
     }
 
     /**
-     * Test an application failing to build middleware properly
-     *
-     * @return void
-     */
-    public function testRunWithApplicationNotMakingMiddleware()
-    {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('The application `middleware` method');
-        $app = new InvalidMiddlewareApplication($this->config);
-        $server = new Server($app);
-        $server->run();
-    }
-
-    /**
      * Test middleware being invoked.
      *
      * @return void
@@ -196,17 +192,55 @@ class ServerTest extends TestCase
     }
 
     /**
-     * Test middleware not creating a response.
-     *
-     * @return void
+     * Test that run closes session after invoking the application (if CakePHP ServerRequest is used).
      */
-    public function testRunMiddlewareNoResponse()
+    public function testRunClosesSessionIfServerRequestUsed()
     {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Application did not create a response. Got "Not a response" instead.');
-        $app = new BadResponseApplication($this->config);
+        $sessionMock = $this->createMock(Session::class);
+
+        $sessionMock->expects($this->once())
+            ->method('close');
+
+        $app = new MiddlewareApplication($this->config);
         $server = new Server($app);
-        $server->run();
+        $request = new ServerRequest(['session' => $sessionMock]);
+        $res = $server->run($request);
+
+        // assert that app was executed correctly
+        $this->assertSame(
+            200,
+            $res->getStatusCode(),
+            "Application was expected to be executed"
+        );
+        $this->assertSame(
+            'source header',
+            $res->getHeaderLine('X-testing'),
+            "Application was expected to be executed"
+        );
+    }
+
+    /**
+     * Test that run does not close the session if CakePHP ServerRequest is not used.
+     */
+    public function testRunDoesNotCloseSessionIfServerRequestNotUsed()
+    {
+        $request = new \Laminas\Diactoros\ServerRequest();
+
+        $app = new MiddlewareApplication($this->config);
+        $server = new Server($app);
+        $res = $server->run($request);
+
+        // assert that app was executed correctly
+        $this->assertSame(
+            200,
+            $res->getStatusCode(),
+            "Application was expected to be executed"
+        );
+        $this->assertSame(
+            'source header',
+            $res->getHeaderLine('X-testing'),
+            "Application was expected to be executed"
+        );
     }
 
     /**
@@ -216,19 +250,19 @@ class ServerTest extends TestCase
      */
     public function testEmit()
     {
-        $response = new Response('php://memory', 200, ['x-testing' => 'source header']);
+        $app = new MiddlewareApplication($this->config);
+        $server = new Server($app);
+        $response = $server->run();
         $final = $response
             ->withHeader('X-First', 'first')
             ->withHeader('X-Second', 'second');
 
-        $emitter = $this->getMockBuilder('Zend\Diactoros\Response\EmitterInterface')->getMock();
+        $emitter = $this->getMockBuilder('Laminas\HttpHandlerRunner\Emitter\EmitterInterface')->getMock();
         $emitter->expects($this->once())
             ->method('emit')
             ->with($final);
 
-        $app = new MiddlewareApplication($this->config);
-        $server = new Server($app);
-        $server->emit($server->run(null, $response), $emitter);
+        $server->emit($final, $emitter);
     }
 
     /**
@@ -249,7 +283,7 @@ class ServerTest extends TestCase
         ob_start();
         $server->emit($response);
         $result = ob_get_clean();
-        $this->assertEquals('body content', $result);
+        $this->assertSame('body content', $result);
     }
 
     /**
@@ -263,8 +297,7 @@ class ServerTest extends TestCase
         $server = new Server($app);
         $this->called = false;
 
-        $server->getEventManager()->on('Server.buildMiddleware', function (Event $event, $middleware) {
-            $this->assertInstanceOf('Cake\Http\MiddlewareQueue', $middleware);
+        $server->getEventManager()->on('Server.buildMiddleware', function (EventInterface $event, MiddlewareQueue $middleware) {
             $middleware->add(function ($req, $res, $next) {
                 $this->called = true;
 
@@ -274,8 +307,8 @@ class ServerTest extends TestCase
         });
         $server->run();
         $this->assertTrue($this->called, 'Middleware added in the event was not triggered.');
-        $this->assertInstanceOf('Closure', $this->middleware->get(3), '2nd last middleware is a closure');
-        $this->assertSame($app, $this->middleware->get(4), 'Last middleware is an app instance');
+        $this->middleware->seek(3);
+        $this->assertInstanceOf('Closure', $this->middleware->current()->getCallable(), '2nd last middleware is a closure');
     }
 
     /**
@@ -285,6 +318,7 @@ class ServerTest extends TestCase
      */
     public function testEventManagerProxies()
     {
+        /** @var \Cake\Http\BaseApplication|\PHPUnit\Framework\MockObject\MockObject $app */
         $app = $this->getMockForAbstractClass(
             BaseApplication::class,
             [$this->config]
@@ -301,6 +335,7 @@ class ServerTest extends TestCase
      */
     public function testGetEventManagerNonEventedApplication()
     {
+        /** @var \Cake\Core\HttpApplicationInterface|\PHPUnit\Framework\MockObject\MockObject $app */
         $app = $this->createMock(HttpApplicationInterface::class);
 
         $server = new Server($app);
@@ -314,26 +349,14 @@ class ServerTest extends TestCase
      */
     public function testSetEventManagerNonEventedApplication()
     {
-        $this->expectException(InvalidArgumentException::class);
+        /** @var \Cake\Core\HttpApplicationInterface|\PHPUnit\Framework\MockObject\MockObject $app */
         $app = $this->createMock(HttpApplicationInterface::class);
 
         $events = new EventManager();
         $server = new Server($app);
+
+        $this->expectException(InvalidArgumentException::class);
+
         $server->setEventManager($events);
-    }
-
-    /**
-     * test deprecated method defined in interface
-     *
-     * @return void
-     */
-    public function testEventManagerCompat()
-    {
-        $this->deprecated(function () {
-            $app = $this->createMock(HttpApplicationInterface::class);
-
-            $server = new Server($app);
-            $this->assertSame(EventManager::instance(), $server->eventManager());
-        });
     }
 }

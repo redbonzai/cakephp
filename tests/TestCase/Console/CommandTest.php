@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP :  Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,13 +16,17 @@
  */
 namespace Cake\Test\TestCase\Console;
 
-use Cake\Console\Command;
+use Cake\Command\Command;
 use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
+use Cake\Console\Exception\StopException;
 use Cake\ORM\Locator\TableLocator;
 use Cake\ORM\Table;
 use Cake\TestSuite\Stub\ConsoleOutput;
 use Cake\TestSuite\TestCase;
+use InvalidArgumentException;
+use TestApp\Command\AbortCommand;
+use TestApp\Command\AutoLoadModelCommand;
 use TestApp\Command\DemoCommand;
 
 /**
@@ -53,6 +59,17 @@ class CommandTest extends TestCase
     }
 
     /**
+     * test loadModel is configured properly
+     *
+     * @return void
+     */
+    public function testConstructorAutoLoadModel()
+    {
+        $command = new AutoLoadModelCommand();
+        $this->assertInstanceOf(Table::class, $command->Posts);
+    }
+
+    /**
      * Test name
      *
      * @return void
@@ -62,17 +79,19 @@ class CommandTest extends TestCase
         $command = new Command();
         $this->assertSame($command, $command->setName('routes show'));
         $this->assertSame('routes show', $command->getName());
+        $this->assertSame('routes', $command->getRootName());
     }
 
     /**
      * Test invalid name
      *
-     * @expectedException InvalidArgumentException
-     * @expectedExceptionMessage The name 'routes_show' is missing a space. Names should look like `cake routes`
      * @return void
      */
     public function testSetNameInvalid()
     {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('The name \'routes_show\' is missing a space. Names should look like `cake routes`');
+
         $command = new Command();
         $command->setName('routes_show');
     }
@@ -80,11 +99,12 @@ class CommandTest extends TestCase
     /**
      * Test invalid name
      *
-     * @expectedException InvalidArgumentException
      * @return void
      */
     public function testSetNameInvalidLeadingSpace()
     {
+        $this->expectException(InvalidArgumentException::class);
+
         $command = new Command();
         $command->setName(' routes_show');
     }
@@ -101,23 +121,6 @@ class CommandTest extends TestCase
         $parser = $command->getOptionParser();
         $this->assertInstanceOf(ConsoleOptionParser::class, $parser);
         $this->assertSame('routes show', $parser->getCommand());
-    }
-
-    /**
-     * Test option parser fetching
-     *
-     * @expectedException RuntimeException
-     * @return void
-     */
-    public function testGetOptionParserInvalid()
-    {
-        $command = $this->getMockBuilder(Command::class)
-            ->setMethods(['buildOptionParser'])
-            ->getMock();
-        $command->expects($this->once())
-            ->method('buildOptionParser')
-            ->will($this->returnValue(null));
-        $command->getOptionParser();
     }
 
     /**
@@ -151,8 +154,8 @@ class CommandTest extends TestCase
             $command->run(['-h'], $this->getMockIo($output))
         );
         $messages = implode("\n", $output->messages());
-        $this->assertNotContains('Demo', $messages);
-        $this->assertContains('cake demo [-h]', $messages);
+        $this->assertStringNotContainsString('Demo', $messages);
+        $this->assertStringContainsString('cake demo [-h]', $messages);
     }
 
     /**
@@ -171,8 +174,8 @@ class CommandTest extends TestCase
             $command->run(['--help'], $this->getMockIo($output))
         );
         $messages = implode("\n", $output->messages());
-        $this->assertNotContains('Demo', $messages);
-        $this->assertContains('cake demo [-h]', $messages);
+        $this->assertStringNotContainsString('Demo', $messages);
+        $this->assertStringContainsString('cake demo [-h]', $messages);
     }
 
     /**
@@ -188,10 +191,10 @@ class CommandTest extends TestCase
 
         $this->assertNull($command->run(['--verbose'], $this->getMockIo($output)));
         $messages = implode("\n", $output->messages());
-        $this->assertContains('Verbose!', $messages);
-        $this->assertContains('Demo Command!', $messages);
-        $this->assertContains('Quiet!', $messages);
-        $this->assertNotContains('cake demo [-h]', $messages);
+        $this->assertStringContainsString('Verbose!', $messages);
+        $this->assertStringContainsString('Demo Command!', $messages);
+        $this->assertStringContainsString('Quiet!', $messages);
+        $this->assertStringNotContainsString('cake demo [-h]', $messages);
     }
 
     /**
@@ -207,9 +210,9 @@ class CommandTest extends TestCase
 
         $this->assertNull($command->run(['--quiet'], $this->getMockIo($output)));
         $messages = implode("\n", $output->messages());
-        $this->assertContains('Quiet!', $messages);
-        $this->assertNotContains('Verbose!', $messages);
-        $this->assertNotContains('Demo Command!', $messages);
+        $this->assertStringContainsString('Quiet!', $messages);
+        $this->assertStringNotContainsString('Verbose!', $messages);
+        $this->assertStringNotContainsString('Demo Command!', $messages);
     }
 
     /**
@@ -232,18 +235,22 @@ class CommandTest extends TestCase
         $this->assertSame(Command::CODE_ERROR, $result);
 
         $messages = implode("\n", $output->messages());
-        $this->assertContains('Error: Missing required arguments. name is required', $messages);
+        $this->assertStringContainsString(
+            'Error: Missing required arguments. The `name` argument is required',
+            $messages
+        );
     }
 
     /**
      * Test abort()
      *
-     * @expectedException \Cake\Console\Exception\StopException
-     * @expectedExceptionCode 1
      * @return void
      */
     public function testAbort()
     {
+        $this->expectException(StopException::class);
+        $this->expectExceptionCode(1);
+
         $command = new Command();
         $command->abort();
     }
@@ -251,14 +258,111 @@ class CommandTest extends TestCase
     /**
      * Test abort()
      *
-     * @expectedException \Cake\Console\Exception\StopException
-     * @expectedExceptionCode 99
      * @return void
      */
     public function testAbortCustomCode()
     {
+        $this->expectException(StopException::class);
+        $this->expectExceptionCode(99);
+
         $command = new Command();
         $command->abort(99);
+    }
+
+    /**
+     * test executeCommand with a string class
+     *
+     * @return void
+     */
+    public function testExecuteCommandString()
+    {
+        $output = new ConsoleOutput();
+        $command = new Command();
+        $result = $command->executeCommand(DemoCommand::class, [], $this->getMockIo($output));
+        $this->assertNull($result);
+        $this->assertEquals(['Quiet!', 'Demo Command!'], $output->messages());
+    }
+
+    /**
+     * test executeCommand with an invalid string class
+     *
+     * @return void
+     */
+    public function testExecuteCommandStringInvalid()
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Command class 'Nope' does not exist");
+
+        $command = new Command();
+        $command->executeCommand('Nope', [], $this->getMockIo(new ConsoleOutput()));
+    }
+
+    /**
+     * test executeCommand with arguments
+     *
+     * @return void
+     */
+    public function testExecuteCommandArguments()
+    {
+        $output = new ConsoleOutput();
+        $command = new Command();
+        $command->executeCommand(DemoCommand::class, ['Jane'], $this->getMockIo($output));
+        $this->assertEquals(['Quiet!', 'Demo Command!', 'Jane'], $output->messages());
+    }
+
+    /**
+     * test executeCommand with arguments
+     *
+     * @return void
+     */
+    public function testExecuteCommandArgumentsOptions()
+    {
+        $output = new ConsoleOutput();
+        $command = new Command();
+        $command->executeCommand(DemoCommand::class, ['--quiet', 'Jane'], $this->getMockIo($output));
+        $this->assertEquals(['Quiet!'], $output->messages());
+    }
+
+    /**
+     * test executeCommand with an instance
+     *
+     * @return void
+     */
+    public function testExecuteCommandInstance()
+    {
+        $output = new ConsoleOutput();
+        $command = new Command();
+        $result = $command->executeCommand(new DemoCommand(), [], $this->getMockIo($output));
+        $this->assertNull($result);
+        $this->assertEquals(['Quiet!', 'Demo Command!'], $output->messages());
+    }
+
+    /**
+     * test executeCommand with an abort
+     *
+     * @return void
+     */
+    public function testExecuteCommandAbort()
+    {
+        $output = new ConsoleOutput();
+        $command = new Command();
+        $result = $command->executeCommand(AbortCommand::class, [], $this->getMockIo($output));
+        $this->assertSame(127, $result);
+        $this->assertEquals(['<error>Command aborted</error>'], $output->messages());
+    }
+
+    /**
+     * test executeCommand with an invalid instance
+     *
+     * @return void
+     */
+    public function testExecuteCommandInstanceInvalid()
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Command 'stdClass' is not a subclass");
+
+        $command = new Command();
+        $command->executeCommand(new \stdClass(), [], $this->getMockIo(new ConsoleOutput()));
     }
 
     protected function getMockIo($output)

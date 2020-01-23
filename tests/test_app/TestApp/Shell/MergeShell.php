@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * MergeShell file
  *
@@ -32,5 +34,5 @@ class MergeShell extends Shell
     /**
      * @var string
      */
-    public $modelClass = 'Articles';
+    protected $modelClass = 'Articles';
 }

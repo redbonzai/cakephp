@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright 2005-2011, Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,7 +16,7 @@
 namespace TestApp\Auth;
 
 use Cake\Auth\BaseAuthenticate;
-use Cake\Event\Event;
+use Cake\Event\EventInterface;
 use Cake\Http\Response;
 use Cake\Http\ServerRequest;
 
@@ -23,7 +25,6 @@ use Cake\Http\ServerRequest;
  */
 class TestAuthenticate extends BaseAuthenticate
 {
-
     public $callStack = [];
 
     public $authenticationProvider;
@@ -31,11 +32,11 @@ class TestAuthenticate extends BaseAuthenticate
     /**
      * @return array
      */
-    public function implementedEvents()
+    public function implementedEvents(): array
     {
         return [
             'Auth.afterIdentify' => 'afterIdentify',
-            'Auth.logout' => 'logout'
+            'Auth.logout' => 'logout',
         ];
     }
 
@@ -50,14 +51,14 @@ class TestAuthenticate extends BaseAuthenticate
     }
 
     /**
-     * @param \Cake\Event\Event $event
+     * @param \Cake\Event\EventInterface $event
      * @param array $user
      * @return array
      */
-    public function afterIdentify(Event $event, array $user)
+    public function afterIdentify(EventInterface $event, array $user)
     {
         $this->callStack[] = __FUNCTION__;
-        $this->authenticationProvider = $event->getData(1);
+        $this->authenticationProvider = $event->getData('1');
 
         if (!empty($this->modifiedUser)) {
             return $user + ['extra' => 'foo'];
@@ -65,10 +66,10 @@ class TestAuthenticate extends BaseAuthenticate
     }
 
     /**
-     * @param \Cake\Event\Event $event
+     * @param \Cake\Event\EventInterface $event
      * @param array $user
      */
-    public function logout(Event $event, array $user)
+    public function logout(EventInterface $event, array $user)
     {
         $this->callStack[] = __FUNCTION__;
     }

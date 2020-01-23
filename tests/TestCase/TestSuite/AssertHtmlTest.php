@@ -1,5 +1,20 @@
 <?php
-namespace Cake\Test\Fixture;
+declare(strict_types=1);
+
+/**
+ * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
+ * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ *
+ * Licensed under The MIT License
+ * For full copyright and license information, please see the LICENSE.txt
+ * Redistributions of files must retain the above copyright notice.
+ *
+ * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
+ * @link          https://cakephp.org CakePHP(tm) Project
+ * @since         3.0.0
+ * @license       https://opensource.org/licenses/mit-license.php MIT License
+ */
+namespace Cake\Test\TestCase\TestSuite;
 
 use Cake\TestSuite\TestCase;
 use PHPUnit\Framework\ExpectationFailedException;
@@ -28,7 +43,7 @@ HTML;
             'h4' => ['class' => 'widget-title'], 'Popular tags',
             'i' => ['class' => 'i-icon'], '/i',
             '/h4',
-            '/div'
+            '/div',
         ];
         $this->assertHtml($pattern, $input);
     }
@@ -68,7 +83,7 @@ HTML;
         $pattern = [
             'a' => ['href' => '/test.html', 'class' => 'active'],
             'My link',
-            '/a'
+            '/a',
         ];
         $this->assertHtml($pattern, $input);
 
@@ -76,7 +91,7 @@ HTML;
         $pattern = [
             'a' => ['href' => '/test.html', 'class' => 'active'],
             'My link',
-            '/a'
+            '/a',
         ];
         $this->assertHtml($pattern, $input);
 
@@ -84,7 +99,7 @@ HTML;
         $pattern = [
             'a' => ['href' => 'preg:/.*\.html/', 'class' => 'active'],
             'My link',
-            '/a'
+            '/a',
         ];
         $this->assertHtml($pattern, $input);
 
@@ -94,7 +109,7 @@ HTML;
             '<strong',
             'Text',
             '/strong',
-            '/span'
+            '/span',
         ];
         $this->assertHtml($pattern, $input);
 
@@ -104,7 +119,7 @@ HTML;
             '<strong',
             'Text',
             '/strong',
-            '/span'
+            '/span',
         ];
         $this->assertHtml($pattern, $input);
     }
@@ -128,7 +143,7 @@ HTML;
                 'attr8' => 'val8',
             ],
             'My div',
-            '/div'
+            '/div',
         ];
         $input = '<div attr8="val8" attr6="val6" attr4="val4" attr2="val2"' .
             ' attr1="val1" attr3="val3" attr5="val5" attr7="val7" />' .
@@ -148,7 +163,7 @@ HTML;
         $pattern = [
             'a' => ['href' => '/test.html', 'class' => 'active'],
             'My link',
-            '/a'
+            '/a',
         ];
         $this->assertHtml($pattern, $input);
 
@@ -156,7 +171,7 @@ HTML;
         $pattern = [
             'a' => ['href' => '/test.html', 'class' => 'active'],
             'My link',
-            '/a'
+            '/a',
         ];
         $this->assertHtml($pattern, $input);
 
@@ -164,7 +179,7 @@ HTML;
         $pattern = [
             'a' => ['href' => 'preg:/.*\.html/', 'class' => 'active'],
             'My link',
-            '/a'
+            '/a',
         ];
         $this->assertHtml($pattern, $input);
     }
@@ -184,7 +199,7 @@ HTML;
                 '<strong',
                     $value,
                 '/strong',
-            '/p'
+            '/p',
         ];
         $this->assertHtml($pattern, $input);
 
@@ -230,13 +245,13 @@ HTML;
         $pattern = [
             'a' => ['hRef' => '/test.html', 'clAss' => 'active'],
             'My link2',
-            '/a'
+            '/a',
         ];
         try {
             $this->assertHtml($pattern, $input);
             $this->fail('Assertion should fail');
         } catch (ExpectationFailedException $e) {
-            $this->assertContains(
+            $this->assertStringContainsString(
                 'Attribute did not match. Was expecting Attribute "clAss" == "active"',
                 $e->getMessage()
             );
@@ -254,12 +269,12 @@ HTML;
         $pattern = [
             '<a' => ['href' => '/test.html', 'class' => 'active'],
             'My link',
-            '/a'
+            '/a',
         ];
         try {
             $this->assertHtml($pattern, $input);
         } catch (ExpectationFailedException $e) {
-            $this->assertContains(
+            $this->assertStringContainsString(
                 'Item #1 / regex #0 failed: Open <a tag',
                 $e->getMessage()
             );

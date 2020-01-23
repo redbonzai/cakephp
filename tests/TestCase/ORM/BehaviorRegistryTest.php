@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,8 +16,8 @@
  */
 namespace Cake\Test\TestCase\ORM;
 
-use Cake\Core\Plugin;
 use Cake\ORM\BehaviorRegistry;
+use Cake\ORM\Query;
 use Cake\ORM\Table;
 use Cake\TestSuite\TestCase;
 
@@ -24,13 +26,17 @@ use Cake\TestSuite\TestCase;
  */
 class BehaviorRegistryTest extends TestCase
 {
+    /**
+     * @var \Cake\ORM\BehaviorRegistry
+     */
+    protected $Behaviors;
 
     /**
      * setup method.
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->Table = new Table(['table' => 'articles']);
@@ -44,7 +50,7 @@ class BehaviorRegistryTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         $this->clearPlugins();
         unset($this->Table, $this->EventManager, $this->Behaviors);
@@ -102,7 +108,7 @@ class BehaviorRegistryTest extends TestCase
         $result = $this->EventManager->listeners('Model.beforeFind');
         $this->assertCount(1, $result);
         $this->assertInstanceOf('TestApp\Model\Behavior\SluggableBehavior', $result[0]['callable'][0]);
-        $this->assertEquals('beforeFind', $result[0]['callable'][1], 'Method name should match.');
+        $this->assertSame('beforeFind', $result[0]['callable'][1], 'Method name should match.');
     }
 
     /**
@@ -179,7 +185,7 @@ class BehaviorRegistryTest extends TestCase
             ],
             'implementedMethods' => [
                 'renamed' => 'slugify',
-            ]
+            ],
         ]);
         $this->assertTrue($this->Behaviors->hasMethod('renamed'));
     }
@@ -208,7 +214,7 @@ class BehaviorRegistryTest extends TestCase
         $this->Behaviors->load('Duplicate', [
             'implementedFinders' => [
                 'renamed' => 'findChildren',
-            ]
+            ],
         ]);
         $this->assertTrue($this->Behaviors->hasFinder('renamed'));
     }
@@ -312,16 +318,14 @@ class BehaviorRegistryTest extends TestCase
             ->getMock();
         $this->Behaviors->set('Sluggable', $mockedBehavior);
 
-        $query = $this->getMockBuilder('Cake\ORM\Query')
-            ->setConstructorArgs([null, null])
-            ->getMock();
+        $query = new Query($this->Table->getConnection(), $this->Table);
         $mockedBehavior
             ->expects($this->once())
             ->method('findNoSlug')
             ->with($query, [])
-            ->will($this->returnValue('example'));
+            ->will($this->returnValue($query));
         $return = $this->Behaviors->callFinder('noSlug', [$query, []]);
-        $this->assertSame('example', $return);
+        $this->assertSame($query, $return);
     }
 
     /**

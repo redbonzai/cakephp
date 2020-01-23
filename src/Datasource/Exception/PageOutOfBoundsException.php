@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -20,12 +22,12 @@ use Cake\Core\Exception\Exception;
 class PageOutOfBoundsException extends Exception
 {
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     protected $_messageTemplate = 'Page number %s could not be found.';
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     protected $_defaultCode = 404;
 }

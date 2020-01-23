@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -20,6 +22,10 @@ namespace Cake\TestSuite\Constraint\Response;
  */
 class ContentType extends ResponseBase
 {
+    /**
+     * @var \Cake\Http\Response
+     */
+    protected $response;
 
     /**
      * Checks assertion
@@ -27,7 +33,7 @@ class ContentType extends ResponseBase
      * @param mixed $other Expected type
      * @return bool
      */
-    public function matches($other)
+    public function matches($other): bool
     {
         $alias = $this->response->getMimeType($other);
         if ($alias !== false) {
@@ -42,8 +48,8 @@ class ContentType extends ResponseBase
      *
      * @return string
      */
-    public function toString()
+    public function toString(): string
     {
-        return 'was set as the Content-Type';
+        return 'is set as the Content-Type (`' . $this->response->getType() . '`)';
     }
 }

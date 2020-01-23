@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -25,9 +27,8 @@ use Cake\Http\ServerRequest;
  */
 class AjaxView extends View
 {
-
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     protected $layout = 'ajax';
 
@@ -40,12 +41,12 @@ class AjaxView extends View
      * @param array $viewOptions View options.
      */
     public function __construct(
-        ServerRequest $request = null,
-        Response $response = null,
-        EventManager $eventManager = null,
+        ?ServerRequest $request = null,
+        ?Response $response = null,
+        ?EventManager $eventManager = null,
         array $viewOptions = []
     ) {
-        if ($response && $response instanceof Response) {
+        if ($response) {
             $response = $response->withType('ajax');
         }
 

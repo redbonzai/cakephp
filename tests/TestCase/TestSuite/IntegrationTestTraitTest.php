@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -16,33 +18,41 @@ namespace Cake\Test\TestCase\TestSuite;
 
 use Cake\Controller\Controller;
 use Cake\Core\Configure;
-use Cake\Core\Plugin;
 use Cake\Event\EventManager;
 use Cake\Http\Cookie\Cookie;
+use Cake\Http\Middleware\EncryptedCookieMiddleware;
 use Cake\Http\Response;
 use Cake\Http\Session;
-use Cake\Routing\DispatcherFactory;
+use Cake\Routing\Route\InflectedRoute;
 use Cake\Routing\RouteBuilder;
 use Cake\Routing\Router;
-use Cake\Routing\Route\InflectedRoute;
-use Cake\TestSuite\IntegrationTestCase;
 use Cake\Test\Fixture\AssertIntegrationTestCase;
+use Cake\TestSuite\IntegrationTestTrait;
+use Cake\TestSuite\TestCase;
 use Cake\Utility\Security;
+use Laminas\Diactoros\UploadedFile;
 use PHPUnit\Framework\AssertionFailedError;
-use Zend\Diactoros\UploadedFile;
 
 /**
- * Self test of the IntegrationTestCase
+ * Self test of the IntegrationTestTrait
  */
-class IntegrationTestTraitTest extends IntegrationTestCase
+class IntegrationTestTraitTest extends TestCase
 {
+    use IntegrationTestTrait;
+
+    /**
+     * stub encryption key.
+     *
+     * @var string
+     */
+    protected $key = 'abcdabcdabcdabcdabcdabcdabcdabcdabcd';
 
     /**
      * Setup method
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         static::setAppNamespace();
@@ -50,30 +60,17 @@ class IntegrationTestTraitTest extends IntegrationTestCase
         Router::reload();
         Router::extensions(['json']);
         Router::scope('/', function (RouteBuilder $routes) {
+            $routes->registerMiddleware('cookie', new EncryptedCookieMiddleware(['secrets'], $this->key));
+            $routes->applyMiddleware('cookie');
+
             $routes->setRouteClass(InflectedRoute::class);
             $routes->get('/get/:controller/:action', []);
             $routes->head('/head/:controller/:action', []);
             $routes->options('/options/:controller/:action', []);
             $routes->connect('/:controller/:action/*', []);
         });
-        Router::$initialized = true;
 
-        $this->useHttpServer(true);
         $this->configApplication(Configure::read('App.namespace') . '\Application', null);
-        DispatcherFactory::clear();
-    }
-
-    /**
-     * Helper for enabling the legacy stack for backwards compatibility testing.
-     *
-     * @return void
-     */
-    protected function useLegacyDispatcher()
-    {
-        DispatcherFactory::add('Routing');
-        DispatcherFactory::add('ControllerFactory');
-
-        $this->useHttpServer(false);
     }
 
     /**
@@ -92,50 +89,50 @@ class IntegrationTestTraitTest extends IntegrationTestCase
                 [
                     'body' => 'Comment',
                     'status' => 1,
-                ]
+                ],
             ],
             'file' => [
                 'tmp_name' => __FILE__,
                 'size' => 42,
                 'error' => 0,
                 'type' => 'text/plain',
-                'name' => 'Uploaded file'
+                'name' => 'Uploaded file',
             ],
             'pictures' => [
                 'name' => [
                     ['file' => 'a-file.png'],
-                    ['file' => 'a-moose.png']
+                    ['file' => 'a-moose.png'],
                 ],
                 'type' => [
                     ['file' => 'image/png'],
-                    ['file' => 'image/jpg']
+                    ['file' => 'image/jpg'],
                 ],
                 'tmp_name' => [
                     ['file' => __FILE__],
-                    ['file' => __FILE__]
+                    ['file' => __FILE__],
                 ],
                 'error' => [
                     ['file' => 0],
-                    ['file' => 0]
+                    ['file' => 0],
                 ],
                 'size' => [
                     ['file' => 17188],
-                    ['file' => 2010]
+                    ['file' => 2010],
                 ],
             ],
-            'upload' => new UploadedFile(__FILE__, 42, 0)
+            'upload' => new UploadedFile(__FILE__, 42, 0),
         ];
         $request = $this->_buildRequest('/posts/add', 'POST', $data);
-        $this->assertInternalType('string', $request['post']['status']);
-        $this->assertInternalType('string', $request['post']['published']);
+        $this->assertIsString($request['post']['status']);
+        $this->assertIsString($request['post']['published']);
         $this->assertSame('0', $request['post']['not_published']);
-        $this->assertInternalType('string', $request['post']['comments'][0]['status']);
-        $this->assertInternalType('integer', $request['post']['file']['error']);
-        $this->assertInternalType('integer', $request['post']['file']['size']);
-        $this->assertInternalType('integer', $request['post']['pictures']['error'][0]['file']);
-        $this->assertInternalType('integer', $request['post']['pictures']['error'][1]['file']);
-        $this->assertInternalType('integer', $request['post']['pictures']['size'][0]['file']);
-        $this->assertInternalType('integer', $request['post']['pictures']['size'][1]['file']);
+        $this->assertIsString($request['post']['comments'][0]['status']);
+        $this->assertIsInt($request['post']['file']['error']);
+        $this->assertIsInt($request['post']['file']['size']);
+        $this->assertIsInt($request['post']['pictures']['error'][0]['file']);
+        $this->assertIsInt($request['post']['pictures']['error'][1]['file']);
+        $this->assertIsInt($request['post']['pictures']['size'][0]['file']);
+        $this->assertIsInt($request['post']['pictures']['size'][1]['file']);
         $this->assertInstanceOf(UploadedFile::class, $request['post']['upload']);
     }
 
@@ -150,27 +147,27 @@ class IntegrationTestTraitTest extends IntegrationTestCase
             'headers' => [
                 'X-CSRF-Token' => 'abc123',
                 'Content-Type' => 'application/json',
-                'Accept' => 'application/json'
+                'Accept' => 'application/json',
             ],
             'base' => '',
             'webroot' => '/',
             'environment' => [
                 'PHP_AUTH_USER' => 'foo',
-                'PHP_AUTH_PW' => 'bar'
-            ]
+                'PHP_AUTH_PW' => 'bar',
+            ],
         ]);
         $this->cookie('split_token', 'def345');
-        $this->session(['User' => ['id' => 1, 'username' => 'mark']]);
+        $this->session(['User' => ['id' => '1', 'username' => 'mark']]);
         $request = $this->_buildRequest('/tasks/add', 'POST', ['title' => 'First post']);
 
-        $this->assertEquals('abc123', $request['environment']['HTTP_X_CSRF_TOKEN']);
-        $this->assertEquals('application/json', $request['environment']['CONTENT_TYPE']);
-        $this->assertEquals('/tasks/add', $request['url']);
+        $this->assertSame('abc123', $request['environment']['HTTP_X_CSRF_TOKEN']);
+        $this->assertSame('application/json', $request['environment']['CONTENT_TYPE']);
+        $this->assertSame('/tasks/add', $request['url']);
         $this->assertArrayHasKey('split_token', $request['cookies']);
-        $this->assertEquals('def345', $request['cookies']['split_token']);
-        $this->assertEquals(['id' => '1', 'username' => 'mark'], $request['session']->read('User'));
-        $this->assertEquals('foo', $request['environment']['PHP_AUTH_USER']);
-        $this->assertEquals('bar', $request['environment']['PHP_AUTH_PW']);
+        $this->assertSame('def345', $request['cookies']['split_token']);
+        $this->assertSame(['id' => '1', 'username' => 'mark'], $request['session']->read('User'));
+        $this->assertSame('foo', $request['environment']['PHP_AUTH_USER']);
+        $this->assertSame('bar', $request['environment']['PHP_AUTH_PW']);
     }
 
     /**
@@ -190,7 +187,7 @@ class IntegrationTestTraitTest extends IntegrationTestCase
         $this->cookie('csrfToken', '');
         $request = $this->_buildRequest('/tasks/add', 'POST', [
             '_csrfToken' => 'fale',
-            'title' => 'First post'
+            'title' => 'First post',
         ]);
 
         $this->assertSame('', $request['cookies']['csrfToken']);
@@ -255,33 +252,10 @@ class IntegrationTestTraitTest extends IntegrationTestCase
      */
     public function testCookieEncrypted()
     {
-        Security::setSalt('abcdabcdabcdabcdabcdabcdabcdabcdabcd');
+        Security::setSalt($this->key);
         $this->cookieEncrypted('KeyOfCookie', 'Encrypted with aes by default');
         $request = $this->_buildRequest('/tasks/view', 'GET', []);
         $this->assertStringStartsWith('Q2FrZQ==.', $request['cookies']['KeyOfCookie']);
-    }
-
-    /**
-     * Test sending get requests.
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testGetLegacy()
-    {
-        $this->useLegacyDispatcher();
-        $this->deprecated(function () {
-            $this->assertNull($this->_response);
-
-            $this->get('/request_action/test_request_action');
-            $this->assertNotEmpty($this->_response);
-            $this->assertInstanceOf('Cake\Http\Response', $this->_response);
-            $this->assertEquals('This is a test', $this->_response->getBody());
-
-            $this->_response = null;
-            $this->get('/get/request_action/test_request_action');
-            $this->assertEquals('This is a test', $this->_response->getBody());
-        });
     }
 
     /**
@@ -315,7 +289,7 @@ class IntegrationTestTraitTest extends IntegrationTestCase
 
         $this->get('/some_alias');
         $this->assertResponseOk();
-        $this->assertEquals('5', $this->_getBodyAsString());
+        $this->assertSame('5', $this->_getBodyAsString());
     }
 
     public function testExceptionsInMiddlewareJsonView()
@@ -323,7 +297,7 @@ class IntegrationTestTraitTest extends IntegrationTestCase
         Router::reload();
         Router::connect('/json_response/api_get_data', [
             'controller' => 'JsonResponse',
-            'action' => 'apiGetData'
+            'action' => 'apiGetData',
         ]);
 
         $this->configApplication(Configure::read('App.namespace') . '\ApplicationWithExceptionsInMiddleware', null);
@@ -349,8 +323,15 @@ class IntegrationTestTraitTest extends IntegrationTestCase
         $this->assertNotEmpty($this->_response);
         $this->assertInstanceOf('Cake\Http\Response', $this->_response);
         $this->assertResponseSuccess();
+    }
 
-        $this->_response = null;
+    /**
+     * Test sending head requests.
+     *
+     * @return void
+     */
+    public function testHeadMethodRoute()
+    {
         $this->head('/head/request_action/test_request_action');
         $this->assertResponseSuccess();
     }
@@ -368,25 +349,17 @@ class IntegrationTestTraitTest extends IntegrationTestCase
         $this->assertNotEmpty($this->_response);
         $this->assertInstanceOf('Cake\Http\Response', $this->_response);
         $this->assertResponseSuccess();
-
-        $this->_response = null;
-        $this->options('/options/request_action/test_request_action');
-        $this->assertResponseSuccess();
     }
 
     /**
-     * Test sending get requests sets the request method
+     * Test sending options requests.
      *
      * @return void
      */
-    public function testGetSpecificRouteLegacy()
+    public function testOptionsMethodRoute()
     {
-        $this->useLegacyDispatcher();
-        $this->deprecated(function () {
-            $this->get('/get/request_action/test_request_action');
-            $this->assertResponseOk();
-            $this->assertEquals('This is a test', $this->_response->getBody());
-        });
+        $this->options('/options/request_action/test_request_action');
+        $this->assertResponseSuccess();
     }
 
     /**
@@ -398,7 +371,7 @@ class IntegrationTestTraitTest extends IntegrationTestCase
     {
         $this->get('/get/request_action/test_request_action');
         $this->assertResponseOk();
-        $this->assertEquals('This is a test', $this->_response->getBody());
+        $this->assertSame('This is a test', (string)$this->_response->getBody());
     }
 
     /**
@@ -409,7 +382,7 @@ class IntegrationTestTraitTest extends IntegrationTestCase
     public function testConfigApplication()
     {
         $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('Cannot load "TestApp\MissingApp" for use in integration');
+        $this->expectExceptionMessage('Cannot load `TestApp\MissingApp` for use in integration');
         $this->configApplication('TestApp\MissingApp', []);
         $this->get('/request_action/test_request_action');
     }
@@ -426,7 +399,7 @@ class IntegrationTestTraitTest extends IntegrationTestCase
         $this->get('/request_action/test_request_action');
         $this->assertNotEmpty($this->_response);
         $this->assertInstanceOf('Cake\Http\Response', $this->_response);
-        $this->assertEquals('This is a test', $this->_response->getBody());
+        $this->assertSame('This is a test', (string)$this->_response->getBody());
         $this->assertHeader('X-Middleware', 'true');
     }
 
@@ -444,30 +417,27 @@ class IntegrationTestTraitTest extends IntegrationTestCase
         $this->assertResponseContains('"contentType":"text\/plain"');
         $this->assertHeader('X-Middleware', 'true');
 
-        $request = $this->_controller->request;
-        $this->assertContains('/request_action/params_pass?q=query', $request->getRequestTarget());
+        $request = $this->_controller->getRequest();
+        $this->assertStringContainsString('/request_action/params_pass?q=query', $request->getRequestTarget());
     }
 
     /**
      * Test that the PSR7 requests get query string data
      *
-     * @group deprecated
      * @return void
      */
     public function testGetQueryStringSetsHere()
     {
-        $this->deprecated(function () {
-            $this->configRequest(['headers' => ['Content-Type' => 'text/plain']]);
-            $this->get('/request_action/params_pass?q=query');
-            $this->assertResponseOk();
-            $this->assertResponseContains('"q":"query"');
-            $this->assertResponseContains('"contentType":"text\/plain"');
-            $this->assertHeader('X-Middleware', 'true');
+        $this->configRequest(['headers' => ['Content-Type' => 'text/plain']]);
+        $this->get('/request_action/params_pass?q=query');
+        $this->assertResponseOk();
+        $this->assertResponseContains('"q":"query"');
+        $this->assertResponseContains('"contentType":"text\/plain"');
+        $this->assertHeader('X-Middleware', 'true');
 
-            $request = $this->_controller->request;
-            $this->assertContains('/request_action/params_pass?q=query', $request->here());
-            $this->assertContains('/request_action/params_pass?q=query', $request->getRequestTarget());
-        });
+        $request = $this->_controller->getRequest();
+        $this->assertStringContainsString('/request_action/params_pass?q=query', $request->getRequestTarget());
+        $this->assertStringContainsString('/request_action/params_pass', $request->getAttribute('here'));
     }
 
     /**
@@ -489,27 +459,11 @@ class IntegrationTestTraitTest extends IntegrationTestCase
      *
      * @return void
      */
-    public function testPostDataLegacyDispatcher()
-    {
-        $this->useLegacyDispatcher();
-
-        $this->deprecated(function () {
-            $this->post('/request_action/post_pass', ['title' => 'value']);
-            $data = json_decode($this->_response->getBody());
-            $this->assertEquals('value', $data->title);
-        });
-    }
-
-    /**
-     * Test that the PSR7 requests receive post data
-     *
-     * @return void
-     */
     public function testPostDataHttpServer()
     {
         $this->post('/request_action/post_pass', ['title' => 'value']);
-        $data = json_decode($this->_response->getBody());
-        $this->assertEquals('value', $data->title);
+        $data = json_decode('' . $this->_response->getBody());
+        $this->assertSame('value', $data->title);
         $this->assertHeader('X-Middleware', 'true');
     }
 
@@ -527,42 +481,42 @@ class IntegrationTestTraitTest extends IntegrationTestCase
                     'size' => 42,
                     'error' => 0,
                     'type' => 'text/plain',
-                    'name' => 'Uploaded file'
+                    'name' => 'Uploaded file',
                 ],
                 'pictures' => [
                     'name' => [
                         ['file' => 'a-file.png'],
-                        ['file' => 'a-moose.png']
+                        ['file' => 'a-moose.png'],
                     ],
                     'type' => [
                         ['file' => 'image/png'],
-                        ['file' => 'image/jpg']
+                        ['file' => 'image/jpg'],
                     ],
                     'tmp_name' => [
                         ['file' => __FILE__],
-                        ['file' => __FILE__]
+                        ['file' => __FILE__],
                     ],
                     'error' => [
                         ['file' => 0],
-                        ['file' => 0]
+                        ['file' => 0],
                     ],
                     'size' => [
                         ['file' => 17188],
-                        ['file' => 2010]
+                        ['file' => 2010],
                     ],
                 ],
-                'upload' => new UploadedFile(__FILE__, 42, 0)
-            ]
+                'upload' => new UploadedFile(__FILE__, 42, 0),
+            ],
         ]);
         $this->post('/request_action/uploaded_files');
         $this->assertHeader('X-Middleware', 'true');
-        $data = json_decode($this->_response->getBody(), true);
+        $data = json_decode((string)$this->_response->getBody(), true);
 
-        $this->assertEquals([
+        $this->assertSame([
             'file' => 'Uploaded file',
             'pictures.0.file' => 'a-file.png',
             'pictures.1.file' => 'a-moose.png',
-            'upload' => null
+            'upload' => null,
         ], $data);
     }
 
@@ -619,13 +573,13 @@ class IntegrationTestTraitTest extends IntegrationTestCase
         $this->post('/posts/index');
         $this->assertInstanceOf('Cake\Controller\Controller', $this->_controller);
         $this->assertNotEmpty($this->_viewName, 'View name not set');
-        $this->assertContains('Template' . DS . 'Posts' . DS . 'index.ctp', $this->_viewName);
+        $this->assertStringContainsString('templates' . DS . 'Posts' . DS . 'index.php', $this->_viewName);
         $this->assertNotEmpty($this->_layoutName, 'Layout name not set');
-        $this->assertContains('Template' . DS . 'Layout' . DS . 'default.ctp', $this->_layoutName);
+        $this->assertStringContainsString('templates' . DS . 'layout' . DS . 'default.php', $this->_layoutName);
 
         $this->assertTemplate('index');
         $this->assertLayout('default');
-        $this->assertEquals('value', $this->viewVariable('test'));
+        $this->assertSame('value', $this->viewVariable('test'));
     }
 
     /**
@@ -638,13 +592,13 @@ class IntegrationTestTraitTest extends IntegrationTestCase
         $this->post('/posts/index');
         $this->assertInstanceOf('Cake\Controller\Controller', $this->_controller);
         $this->assertNotEmpty($this->_viewName, 'View name not set');
-        $this->assertContains('Template' . DS . 'Posts' . DS . 'index.ctp', $this->_viewName);
+        $this->assertStringContainsString('templates' . DS . 'Posts' . DS . 'index.php', $this->_viewName);
         $this->assertNotEmpty($this->_layoutName, 'Layout name not set');
-        $this->assertContains('Template' . DS . 'Layout' . DS . 'default.ctp', $this->_layoutName);
+        $this->assertStringContainsString('templates' . DS . 'layout' . DS . 'default.php', $this->_layoutName);
 
         $this->assertTemplate('index');
         $this->assertLayout('default');
-        $this->assertEquals('value', $this->viewVariable('test'));
+        $this->assertSame('value', $this->viewVariable('test'));
     }
 
     /**
@@ -667,7 +621,7 @@ class IntegrationTestTraitTest extends IntegrationTestCase
     public function testAssertTemplateAfterCellRender()
     {
         $this->get('/posts/get');
-        $this->assertContains('Template' . DS . 'Posts' . DS . 'get.ctp', $this->_viewName);
+        $this->assertStringContainsString('templates' . DS . 'Posts' . DS . 'get.php', $this->_viewName);
         $this->assertTemplate('get');
         $this->assertResponseContains('cellcontent');
     }
@@ -681,7 +635,7 @@ class IntegrationTestTraitTest extends IntegrationTestCase
     {
         $this->post(['controller' => 'Posts', 'action' => 'index', '_method' => 'POST']);
         $this->assertResponseOk();
-        $this->assertEquals('value', $this->viewVariable('test'));
+        $this->assertSame('value', $this->viewVariable('test'));
     }
 
     /**
@@ -691,7 +645,6 @@ class IntegrationTestTraitTest extends IntegrationTestCase
      */
     public function testArrayUrlWithHost()
     {
-        $this->useHttpServer(true);
         $this->get([
             'controller' => 'Posts',
             'action' => 'hostData',
@@ -711,11 +664,11 @@ class IntegrationTestTraitTest extends IntegrationTestCase
     public function testArrayUrlsEmptyRouter()
     {
         Router::reload();
-        $this->assertFalse(Router::$initialized);
+        $this->assertEmpty(Router::getRouteCollection()->routes());
 
-        $this->post(['controller' => 'Posts', 'action' => 'index']);
+        $this->get(['controller' => 'Posts', 'action' => 'index']);
         $this->assertResponseOk();
-        $this->assertEquals('value', $this->viewVariable('test'));
+        $this->assertSame('value', $this->viewVariable('test'));
     }
 
     /**
@@ -795,7 +748,7 @@ class IntegrationTestTraitTest extends IntegrationTestCase
     public function testCookieNotSetFailure()
     {
         $this->expectException(AssertionFailedError::class);
-        $this->expectExceptionMessage('Failed asserting that \'remember_me\' cookie was not set');
+        $this->expectExceptionMessage('Failed asserting that \'remember_me\' cookie is not set');
         $this->post('/posts/index');
         $this->assertCookieNotSet('remember_me');
     }
@@ -836,7 +789,7 @@ class IntegrationTestTraitTest extends IntegrationTestCase
         $this->enableSecurityToken();
         $data = [
             'title' => 'Some title',
-            'body' => 'Some text'
+            'body' => 'Some text',
         ];
         $this->post('/posts/securePost', $data);
         $this->assertResponseOk();
@@ -854,10 +807,53 @@ class IntegrationTestTraitTest extends IntegrationTestCase
         $data = [
             'title' => 'New post',
             'comments' => [
-                ['comment' => 'A new comment']
+                ['comment' => 'A new comment'],
             ],
-            'tags' => ['_ids' => [1, 2, 3, 4]]
+            'tags' => ['_ids' => [1, 2, 3, 4]],
         ];
+        $this->post('/posts/securePost', $data);
+        $this->assertResponseOk();
+        $this->assertResponseContains('Request was accepted');
+    }
+
+    /**
+     * Test posting to a secured form action with unlocked fields
+     *
+     * @return void
+     */
+    public function testPostSecuredFormUnlockedFieldsFails()
+    {
+        $this->enableSecurityToken();
+        $data = [
+            'title' => 'New post',
+            'comments' => [
+                ['comment' => 'A new comment'],
+            ],
+            'tags' => ['_ids' => [1, 2, 3, 4]],
+            'some_unlocked_field' => 'Unlocked data',
+        ];
+        $this->post('/posts/securePost', $data);
+        $this->assertResponseCode(400);
+        $this->assertResponseContains('Invalid form protection debug token.');
+    }
+
+    /**
+     * Test posting to a secured form action with unlocked fields
+     *
+     * @return void
+     */
+    public function testPostSecuredFormUnlockedFieldsWithSet()
+    {
+        $this->enableSecurityToken();
+        $data = [
+            'title' => 'New post',
+            'comments' => [
+                ['comment' => 'A new comment'],
+            ],
+            'tags' => ['_ids' => [1, 2, 3, 4]],
+            'some_unlocked_field' => 'Unlocked data',
+        ];
+        $this->setUnlockedFields(['some_unlocked_field']);
         $this->post('/posts/securePost', $data);
         $this->assertResponseOk();
         $this->assertResponseContains('Request was accepted');
@@ -873,7 +869,7 @@ class IntegrationTestTraitTest extends IntegrationTestCase
         $this->enableSecurityToken();
         $data = [
             'title' => 'Some title',
-            'body' => 'Some text'
+            'body' => 'Some text',
         ];
         $this->post('/posts/securePost?foo=bar', $data);
         $this->assertResponseOk();
@@ -891,7 +887,7 @@ class IntegrationTestTraitTest extends IntegrationTestCase
         $this->enableSecurityToken();
         $data = [
             'title' => 'Some title',
-            'body' => 'Some text'
+            'body' => 'Some text',
         ];
         $this->post('/posts/securePost?foo=/', $data);
         $this->assertResponseOk();
@@ -907,7 +903,7 @@ class IntegrationTestTraitTest extends IntegrationTestCase
     {
         $data = [
             'title' => 'Some title',
-            'body' => 'Some text'
+            'body' => 'Some text',
         ];
         $this->post('/posts/securePost', $data);
         $this->assertResponseError();
@@ -931,8 +927,6 @@ class IntegrationTestTraitTest extends IntegrationTestCase
      */
     public function testWithExpectedExceptionHttpServer()
     {
-        DispatcherFactory::clear();
-
         $this->get('/tests_apps/throw_exception');
         $this->assertResponseCode(500);
     }
@@ -968,8 +962,6 @@ class IntegrationTestTraitTest extends IntegrationTestCase
      */
     public function testRedirectHttpServer()
     {
-        DispatcherFactory::clear();
-
         $this->post('/tests_apps/redirect_to');
         $this->assertResponseCode(302);
         $this->assertHeader('X-Middleware', 'true');
@@ -1045,6 +1037,23 @@ class IntegrationTestTraitTest extends IntegrationTestCase
     }
 
     /**
+     * Test the location header assertion.
+     *
+     * @return void
+     */
+    public function testAssertRedirectEquals()
+    {
+        $this->_response = new Response();
+        $this->_response = $this->_response->withHeader('Location', '/get/tasks/index');
+
+        $this->assertRedirect();
+        $this->assertRedirectEquals('/get/tasks/index');
+        $this->assertRedirectEquals(['controller' => 'Tasks', 'action' => 'index']);
+
+        $this->assertResponseEmpty();
+    }
+
+    /**
      * Test the location header assertion string not contains
      *
      * @return void
@@ -1079,7 +1088,7 @@ class IntegrationTestTraitTest extends IntegrationTestCase
         $result = $test->run();
 
         $this->assertFalse($result->wasSuccessful());
-        $this->assertEquals(1, $result->failureCount());
+        $this->assertSame(1, $result->failureCount());
     }
 
     /**
@@ -1388,24 +1397,24 @@ class IntegrationTestTraitTest extends IntegrationTestCase
     {
         $this->get('/posts/stacked_flash');
 
-        $this->assertFlashElement('Flash/error');
-        $this->assertFlashElement('Flash/success', 'custom');
+        $this->assertFlashElement('flash/error');
+        $this->assertFlashElement('flash/success', 'custom');
 
         $this->assertFlashMessage('Error 1');
         $this->assertFlashMessageAt(0, 'Error 1');
-        $this->assertFlashElementAt(0, 'Flash/error');
+        $this->assertFlashElementAt(0, 'flash/error');
 
         $this->assertFlashMessage('Error 2');
         $this->assertFlashMessageAt(1, 'Error 2');
-        $this->assertFlashElementAt(1, 'Flash/error');
+        $this->assertFlashElementAt(1, 'flash/error');
 
         $this->assertFlashMessage('Success 1', 'custom');
         $this->assertFlashMessageAt(0, 'Success 1', 'custom');
-        $this->assertFlashElementAt(0, 'Flash/success', 'custom');
+        $this->assertFlashElementAt(0, 'flash/success', 'custom');
 
         $this->assertFlashMessage('Success 2', 'custom');
         $this->assertFlashMessageAt(1, 'Success 2', 'custom');
-        $this->assertFlashElementAt(1, 'Flash/success', 'custom');
+        $this->assertFlashElementAt(1, 'flash/success', 'custom');
     }
 
     /**
@@ -1437,7 +1446,7 @@ class IntegrationTestTraitTest extends IntegrationTestCase
         $this->expectException(AssertionFailedError::class);
         $this->expectExceptionMessage($message);
 
-        Security::setSalt('abcdabcdabcdabcdabcdabcdabcdabcdabcd');
+        Security::setSalt($this->key);
 
         $this->get($url);
 
@@ -1451,30 +1460,31 @@ class IntegrationTestTraitTest extends IntegrationTestCase
      */
     public function assertionFailureMessagesProvider()
     {
-        $templateDir = TEST_APP . 'TestApp' . DS . 'Template' . DS;
+        $templateDir = TEST_APP . 'templates' . DS;
 
         return [
-            'assertContentType' => ['assertContentType', 'Failed asserting that \'test\' was set as the Content-Type.', '/posts/index', 'test'],
+            'assertContentType' => ['assertContentType', 'Failed asserting that \'test\' is set as the Content-Type (`text/html`).', '/posts/index', 'test'],
             'assertContentTypeVerbose' => ['assertContentType', 'Possibly related to Cake\Routing\Exception\MissingRouteException: "A route matching "/notfound" could not be found."', '/notfound', 'test'],
-            'assertCookie' => ['assertCookie', 'Failed asserting that \'test\' was in cookie \'remember_me\'.', '/posts/index', 'test', 'remember_me'],
+            'assertCookie' => ['assertCookie', 'Failed asserting that \'test\' is in cookie \'remember_me\'.', '/posts/index', 'test', 'remember_me'],
             'assertCookieVerbose' => ['assertCookie', 'Possibly related to Cake\Routing\Exception\MissingRouteException: "A route matching "/notfound" could not be found."', '/notfound', 'test', 'remember_me'],
-            'assertCookieEncrypted' => ['assertCookieEncrypted', 'Failed asserting that \'test\' was encrypted in cookie \'NameOfCookie\'.', '/cookie_component_test/set_cookie', 'test', 'NameOfCookie'],
+            'assertCookieEncrypted' => ['assertCookieEncrypted', 'Failed asserting that \'test\' is encrypted in cookie \'secrets\'.', '/posts/secretCookie', 'test', 'secrets'],
             'assertCookieEncryptedVerbose' => ['assertCookieEncrypted', 'Possibly related to Cake\Routing\Exception\MissingRouteException: "A route matching "/notfound" could not be found."', '/notfound', 'test', 'NameOfCookie'],
-            'assertCookieNotSet' => ['assertCookieNotSet', 'Failed asserting that \'remember_me\' cookie was not set.', '/posts/index', 'remember_me'],
+            'assertCookieNotSet' => ['assertCookieNotSet', 'Failed asserting that \'remember_me\' cookie is not set.', '/posts/index', 'remember_me'],
             'assertFileResponse' => ['assertFileResponse', 'Failed asserting that \'test\' file was sent.', '/posts/file', 'test'],
             'assertFileResponseVerbose' => ['assertFileResponse', 'Possibly related to Cake\Routing\Exception\MissingRouteException: "A route matching "/notfound" could not be found."', '/notfound', 'test'],
-            'assertHeader' => ['assertHeader', 'Failed asserting that \'test\' equals content in header \'X-Cake\'.', '/posts/header', 'X-Cake', 'test'],
-            'assertHeaderContains' => ['assertHeaderContains', 'Failed asserting that \'test\' is in header \'X-Cake\'', '/posts/header', 'X-Cake', 'test'],
+            'assertHeader' => ['assertHeader', 'Failed asserting that \'test\' equals content in header \'X-Cake\' (`custom header`).', '/posts/header', 'X-Cake', 'test'],
+            'assertHeaderContains' => ['assertHeaderContains', 'Failed asserting that \'test\' is in header \'X-Cake\' (`custom header`)', '/posts/header', 'X-Cake', 'test'],
+            'assertHeaderNotContains' => ['assertHeaderNotContains', 'Failed asserting that \'custom header\' is not in header \'X-Cake\' (`custom header`)', '/posts/header', 'X-Cake', 'custom header'],
             'assertHeaderContainsVerbose' => ['assertHeaderContains', 'Possibly related to Cake\Routing\Exception\MissingRouteException: "A route matching "/notfound" could not be found."', '/notfound', 'X-Cake', 'test'],
             'assertHeaderNotContainsVerbose' => ['assertHeaderNotContains', 'Possibly related to Cake\Routing\Exception\MissingRouteException: "A route matching "/notfound" could not be found."', '/notfound', 'X-Cake', 'test'],
-            'assertLayout' => ['assertLayout', 'Failed asserting that \'custom_layout\' equals layout file ' . $templateDir . 'Layout' . DS . 'default.ctp.', '/posts/index', 'custom_layout'],
+            'assertLayout' => ['assertLayout', 'Failed asserting that \'custom_layout\' equals layout file `' . $templateDir . 'layout' . DS . 'default.php`.', '/posts/index', 'custom_layout'],
             'assertLayoutVerbose' => ['assertLayout', 'Possibly related to Cake\Routing\Exception\MissingRouteException: "A route matching "/notfound" could not be found."', '/notfound', 'custom_layout'],
-            'assertRedirect' => ['assertRedirect', 'Failed asserting that \'http://localhost/\' equals content in header \'Location\'.', '/posts/flashNoRender', '/'],
+            'assertRedirect' => ['assertRedirect', 'Failed asserting that \'http://localhost/\' equals content in header \'Location\' (`http://localhost/posts`).', '/posts/flashNoRender', '/'],
             'assertRedirectVerbose' => ['assertRedirect', 'Possibly related to Cake\Routing\Exception\MissingRouteException: "A route matching "/notfound" could not be found."', '/notfound', '/'],
-            'assertRedirectContains' => ['assertRedirectContains', 'Failed asserting that \'/posts/somewhere-else\' is in header \'Location\'.', '/posts/flashNoRender', '/posts/somewhere-else'],
+            'assertRedirectContains' => ['assertRedirectContains', 'Failed asserting that \'/posts/somewhere-else\' is in header \'Location\' (`http://localhost/posts`).', '/posts/flashNoRender', '/posts/somewhere-else'],
             'assertRedirectContainsVerbose' => ['assertRedirectContains', 'Possibly related to Cake\Routing\Exception\MissingRouteException: "A route matching "/notfound" could not be found."', '/notfound', '/posts/somewhere-else'],
             'assertRedirectNotContainsVerbose' => ['assertRedirectNotContains', 'Possibly related to Cake\Routing\Exception\MissingRouteException: "A route matching "/notfound" could not be found."', '/notfound', '/posts/somewhere-else'],
-            'assertResponseCode' => ['assertResponseCode', 'Failed asserting that 302 matches response status code 200.', '/posts/index', 302],
+            'assertResponseCode' => ['assertResponseCode', 'Failed asserting that `302` matches response status code `200`.', '/posts/index', 302],
             'assertResponseContains' => ['assertResponseContains', 'Failed asserting that \'test\' is in response body.', '/posts/index', 'test'],
             'assertResponseEmpty' => ['assertResponseEmpty', 'Failed asserting that response body is empty.', '/posts/index'],
             'assertResponseEquals' => ['assertResponseEquals', 'Failed asserting that \'test\' matches response body.', '/posts/index', 'test'],
@@ -1484,23 +1494,23 @@ class IntegrationTestTraitTest extends IntegrationTestCase
             'assertResponseNotContains' => ['assertResponseNotContains', 'Failed asserting that \'index\' is not in response body.', '/posts/index', 'index'],
             'assertResponseNotEmpty' => ['assertResponseNotEmpty', 'Failed asserting that response body is not empty.', '/posts/empty_response'],
             'assertResponseNotEquals' => ['assertResponseNotEquals', 'Failed asserting that \'posts index\' does not match response body.', '/posts/index/error', 'posts index'],
-            'assertResponseNotRegExp' => ['assertResponseNotRegExp', 'Failed asserting that /index/ PCRE pattern not found in response body.', '/posts/index/error', '/index/'],
+            'assertResponseNotRegExp' => ['assertResponseNotRegExp', 'Failed asserting that `/index/` PCRE pattern not found in response body.', '/posts/index/error', '/index/'],
             'assertResponseNotRegExpVerbose' => ['assertResponseNotRegExp', 'Possibly related to Cake\Routing\Exception\MissingRouteException: "A route matching "/notfound" could not be found."', '/notfound', '/index/'],
             'assertResponseOk' => ['assertResponseOk', 'Failed asserting that 404 is between 200 and 204.', '/posts/missing', '/index/'],
-            'assertResponseRegExp' => ['assertResponseRegExp', 'Failed asserting that /test/ PCRE pattern found in response body.', '/posts/index/error', '/test/'],
+            'assertResponseRegExp' => ['assertResponseRegExp', 'Failed asserting that `/test/` PCRE pattern found in response body.', '/posts/index/error', '/test/'],
             'assertResponseSuccess' => ['assertResponseSuccess', 'Failed asserting that 404 is between 200 and 308.', '/posts/missing'],
             'assertResponseSuccessVerbose' => ['assertResponseSuccess', 'Possibly related to Cake\Controller\Exception\MissingActionException: "Action PostsController::missing() could not be found, or is not accessible."', '/posts/missing'],
             'assertSession' => ['assertSession', 'Failed asserting that \'test\' is in session path \'Missing.path\'.', '/posts/index', 'test', 'Missing.path'],
-            'assertTemplate' => ['assertTemplate', 'Failed asserting that \'custom_template\' equals template file ' . $templateDir . 'Posts' . DS . 'index.ctp.', '/posts/index', 'custom_template'],
+            'assertTemplate' => ['assertTemplate', 'Failed asserting that \'custom_template\' equals template file `' . $templateDir . 'Posts' . DS . 'index.php`.', '/posts/index', 'custom_template'],
             'assertTemplateVerbose' => ['assertTemplate', 'Possibly related to Cake\Routing\Exception\MissingRouteException: "A route matching "/notfound" could not be found."', '/notfound', 'custom_template'],
-            'assertFlashMessage' => ['assertFlashMessage', 'Failed asserting that \'missing\' was in \'flash\' message.', '/posts/index', 'missing'],
-            'assertFlashMessageWithKey' => ['assertFlashMessage', 'Failed asserting that \'missing\' was in \'auth\' message.', '/posts/index', 'missing', 'auth'],
-            'assertFlashMessageAt' => ['assertFlashMessageAt', 'Failed asserting that \'missing\' was in \'flash\' message #0.', '/posts/index', 0, 'missing'],
-            'assertFlashMessageAtWithKey' => ['assertFlashMessageAt', 'Failed asserting that \'missing\' was in \'auth\' message #0.', '/posts/index', 0, 'missing', 'auth'],
-            'assertFlashElement' => ['assertFlashElement', 'Failed asserting that \'missing\' was in \'flash\' element.', '/posts/index', 'missing'],
-            'assertFlashElementWithKey' => ['assertFlashElement', 'Failed asserting that \'missing\' was in \'auth\' element.', '/posts/index', 'missing', 'auth'],
-            'assertFlashElementAt' => ['assertFlashElementAt', 'Failed asserting that \'missing\' was in \'flash\' element #0.', '/posts/index', 0, 'missing'],
-            'assertFlashElementAtWithKey' => ['assertFlashElementAt', 'Failed asserting that \'missing\' was in \'auth\' element #0.', '/posts/index', 0, 'missing', 'auth'],
+            'assertFlashMessage' => ['assertFlashMessage', 'Failed asserting that \'missing\' is in \'flash\' message.', '/posts/index', 'missing'],
+            'assertFlashMessageWithKey' => ['assertFlashMessage', 'Failed asserting that \'missing\' is in \'auth\' message.', '/posts/index', 'missing', 'auth'],
+            'assertFlashMessageAt' => ['assertFlashMessageAt', 'Failed asserting that \'missing\' is in \'flash\' message #0.', '/posts/index', 0, 'missing'],
+            'assertFlashMessageAtWithKey' => ['assertFlashMessageAt', 'Failed asserting that \'missing\' is in \'auth\' message #0.', '/posts/index', 0, 'missing', 'auth'],
+            'assertFlashElement' => ['assertFlashElement', 'Failed asserting that \'missing\' is in \'flash\' element.', '/posts/index', 'missing'],
+            'assertFlashElementWithKey' => ['assertFlashElement', 'Failed asserting that \'missing\' is in \'auth\' element.', '/posts/index', 'missing', 'auth'],
+            'assertFlashElementAt' => ['assertFlashElementAt', 'Failed asserting that \'missing\' is in \'flash\' element #0.', '/posts/index', 0, 'missing'],
+            'assertFlashElementAtWithKey' => ['assertFlashElementAt', 'Failed asserting that \'missing\' is in \'auth\' element #0.', '/posts/index', 0, 'missing', 'auth'],
         ];
     }
 
@@ -1620,18 +1630,6 @@ class IntegrationTestTraitTest extends IntegrationTestCase
     }
 
     /**
-     * Test fail case for viewVariable
-     *
-     * @return void
-     */
-    public function testViewVariableShouldFailIfNoViewVars()
-    {
-        $this->expectException(AssertionFailedError::class);
-        $this->expectExceptionMessage('There are no view variables, perhaps you need to run a request?');
-        $this->viewVariable('shouldFail');
-    }
-
-    /**
      * Test viewVariable not found
      *
      * @return void
@@ -1639,7 +1637,6 @@ class IntegrationTestTraitTest extends IntegrationTestCase
     public function testViewVariableNotFoundShouldReturnNull()
     {
         $this->_controller = new Controller();
-        $this->_controller->viewVars = ['key' => 'value'];
         $this->assertNull($this->viewVariable('notFound'));
     }
 }

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -22,16 +24,15 @@ use Cake\TestSuite\TestCase;
  */
 class AuthSecurityExceptionTest extends TestCase
 {
-
     /**
      * setUp method
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
-        $this->authSecurityException = new AuthSecurityException;
+        $this->authSecurityException = new AuthSecurityException();
     }
 
     /**
@@ -39,7 +40,7 @@ class AuthSecurityExceptionTest extends TestCase
      *
      * @return void
      */
-    public function testGetType()
+    public function testGetType(): void
     {
         $this->assertEquals(
             'auth',

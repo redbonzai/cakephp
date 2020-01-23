@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,9 +17,8 @@
 namespace Cake\Test\TestCase\Database;
 
 use Cake\Cache\Cache;
-use Cake\Cache\CacheEngine;
-use Cake\Database\SchemaCache;
 use Cake\Database\Schema\CachedCollection;
+use Cake\Database\SchemaCache;
 use Cake\Datasource\ConnectionManager;
 use Cake\TestSuite\TestCase;
 
@@ -26,38 +27,39 @@ use Cake\TestSuite\TestCase;
  */
 class SchemaCacheTest extends TestCase
 {
-
     /**
      * Fixtures.
      *
      * @var array
      */
-    public $fixtures = ['core.Articles', 'core.Tags'];
+    protected $fixtures = ['core.Articles', 'core.Tags'];
 
     /**
      * Cache Engine Mock
      *
      * @var \Cake\Cache\CacheEngine
      */
-    public $cache;
+    protected $cache;
+
+    /**
+     * @var \Cake\Datasource\ConnectionInterface
+     */
+    protected $connection;
 
     /**
      * setup method
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
-        $this->cache = $this->getMockBuilder(CacheEngine::class)->getMock();
-        $this->cache->expects($this->any())
-            ->method('init')
-            ->will($this->returnValue(true));
-        Cache::setConfig('orm_cache', $this->cache);
+        Cache::setConfig('orm_cache', ['className' => 'Array']);
+        $this->cache = Cache::pool('orm_cache');
 
-        $ds = ConnectionManager::get('test');
-        $ds->cacheMetadata('orm_cache');
+        $this->connection = ConnectionManager::get('test');
+        $this->connection->cacheMetadata('orm_cache');
     }
 
     /**
@@ -65,13 +67,13 @@ class SchemaCacheTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
-        Cache::drop('orm_cache');
 
-        $ds = ConnectionManager::get('test');
-        $ds->cacheMetadata(false);
+        $this->connection->cacheMetadata(false);
+        unset($this->connection);
+        Cache::drop('orm_cache');
     }
 
     /**
@@ -81,13 +83,12 @@ class SchemaCacheTest extends TestCase
      */
     public function testClearEnablesMetadataCache()
     {
-        $ds = ConnectionManager::get('test');
-        $ds->cacheMetadata(false);
+        $this->connection->cacheMetadata(false);
 
-        $ormCache = new SchemaCache($ds);
+        $ormCache = new SchemaCache($this->connection);
         $ormCache->clear();
 
-        $this->assertInstanceOf(CachedCollection::class, $ds->getSchemaCollection());
+        $this->assertInstanceOf(CachedCollection::class, $this->connection->getSchemaCollection());
     }
 
     /**
@@ -97,13 +98,12 @@ class SchemaCacheTest extends TestCase
      */
     public function testBuildEnablesMetadataCache()
     {
-        $ds = ConnectionManager::get('test');
-        $ds->cacheMetadata(false);
+        $this->connection->cacheMetadata(false);
 
-        $ormCache = new SchemaCache($ds);
+        $ormCache = new SchemaCache($this->connection);
         $ormCache->build();
 
-        $this->assertInstanceOf(CachedCollection::class, $ds->getSchemaCollection());
+        $this->assertInstanceOf(CachedCollection::class, $this->connection->getSchemaCollection());
     }
 
     /**
@@ -113,15 +113,10 @@ class SchemaCacheTest extends TestCase
      */
     public function testBuildNoArgs()
     {
-        $ds = ConnectionManager::get('test');
-        $this->cache->method('write')
-            ->will($this->returnValue(true));
-        $this->cache->expects($this->at(3))
-            ->method('write')
-            ->with('test_articles');
-
-        $ormCache = new SchemaCache($ds);
+        $ormCache = new SchemaCache($this->connection);
         $ormCache->build();
+
+        $this->assertNotEmpty($this->cache->get('test_articles'));
     }
 
     /**
@@ -131,18 +126,10 @@ class SchemaCacheTest extends TestCase
      */
     public function testBuildNamedModel()
     {
-        $ds = ConnectionManager::get('test');
-
-        $this->cache->expects($this->once())
-            ->method('write')
-            ->with('test_articles')
-            ->will($this->returnValue(true));
-
-        $this->cache->expects($this->never())
-            ->method('delete');
-
-        $ormCache = new SchemaCache($ds);
+        $ormCache = new SchemaCache($this->connection);
         $ormCache->build('articles');
+
+        $this->assertNotEmpty($this->cache->get('test_articles'));
     }
 
     /**
@@ -152,19 +139,12 @@ class SchemaCacheTest extends TestCase
      */
     public function testBuildOverwritesExistingData()
     {
-        $ds = ConnectionManager::get('test');
+        $this->cache->set('test_articles', 'dummy data');
 
-        $this->cache->expects($this->once())
-            ->method('write')
-            ->with('test_articles')
-            ->will($this->returnValue(true));
-        $this->cache->expects($this->never())
-            ->method('read');
-        $this->cache->expects($this->never())
-            ->method('delete');
-
-        $ormCache = new SchemaCache($ds);
+        $ormCache = new SchemaCache($this->connection);
         $ormCache->build('articles');
+
+        $this->assertNotSame('dummy data', $this->cache->get('test_articles'));
     }
 
     /**
@@ -174,14 +154,11 @@ class SchemaCacheTest extends TestCase
      */
     public function testClearNoArgs()
     {
-        $ds = ConnectionManager::get('test');
+        $this->cache->set('test_articles', 'dummy data');
 
-        $this->cache->expects($this->at(3))
-            ->method('delete')
-            ->with('test_articles');
-
-        $ormCache = new SchemaCache($ds);
+        $ormCache = new SchemaCache($this->connection);
         $ormCache->clear();
+        $this->assertFalse($this->cache->has('test_articles'));
     }
 
     /**
@@ -191,16 +168,11 @@ class SchemaCacheTest extends TestCase
      */
     public function testClearNamedModel()
     {
-        $ds = ConnectionManager::get('test');
+        $this->cache->set('test_articles', 'dummy data');
 
-        $this->cache->expects($this->never())
-            ->method('write');
-        $this->cache->expects($this->once())
-            ->method('delete')
-            ->with('test_articles');
-
-        $ormCache = new SchemaCache($ds);
+        $ormCache = new SchemaCache($this->connection);
         $ormCache->clear('articles');
+        $this->assertFalse($this->cache->has('test_articles'));
     }
 
     /**
@@ -210,10 +182,8 @@ class SchemaCacheTest extends TestCase
      */
     public function testGetSchemaWithConnectionInstance()
     {
-        $ds = ConnectionManager::get('test');
-
-        $ormCache = new SchemaCache($ds);
-        $result = $ormCache->getSchema($ds);
+        $ormCache = new SchemaCache($this->connection);
+        $result = $ormCache->getSchema($this->connection);
 
         $this->assertInstanceOf(CachedCollection::class, $result);
     }

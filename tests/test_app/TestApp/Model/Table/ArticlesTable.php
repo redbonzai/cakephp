@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -19,8 +21,7 @@ use Cake\ORM\Table;
  */
 class ArticlesTable extends Table
 {
-
-    public function initialize(array $config)
+    public function initialize(array $config): void
     {
         $this->belongsTo('Authors');
         $this->belongsToMany('Tags');
@@ -31,14 +32,15 @@ class ArticlesTable extends Table
      * Find published
      *
      * @param \Cake\ORM\Query $query The query
+     * @param array $options The options
      * @return \Cake\ORM\Query
      */
     public function findPublished($query, array $options = [])
     {
-        $query = $query->where(['published' => 'Y']);
+        $query = $query->where([$this->aliasField('published') => 'Y']);
 
         if (isset($options['title'])) {
-            $query->andWhere(['title' => $options['title']]);
+            $query->andWhere([$this->aliasField('title') => $options['title']]);
         }
 
         return $query;

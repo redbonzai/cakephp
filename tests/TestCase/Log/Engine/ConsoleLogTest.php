@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -22,7 +24,6 @@ use Cake\TestSuite\TestCase;
  */
 class ConsoleLogTest extends TestCase
 {
-
     /**
      * Test writing to ConsoleOutput
      */
@@ -36,7 +37,7 @@ class ConsoleLogTest extends TestCase
             ->with($this->stringContains($message));
 
         $log = new ConsoleLog([
-            'stream' => $output
+            'stream' => $output,
         ]);
         $log->log('error', 'oh noes');
     }
@@ -50,12 +51,12 @@ class ConsoleLogTest extends TestCase
     {
         $filename = tempnam(sys_get_temp_dir(), 'cake_log_test');
         $log = new ConsoleLog([
-            'stream' => $filename
+            'stream' => $filename,
         ]);
         $log->log('error', 'oh noes');
         $fh = fopen($filename, 'r');
         $line = fgets($fh);
-        $this->assertContains('Error: oh noes', $line);
+        $this->assertStringContainsString('Error: oh noes', $line);
     }
 
     /**

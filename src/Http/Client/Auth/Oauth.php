@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -16,6 +18,7 @@ namespace Cake\Http\Client\Auth;
 use Cake\Core\Exception\Exception;
 use Cake\Http\Client\Request;
 use Cake\Utility\Security;
+use Psr\Http\Message\UriInterface;
 use RuntimeException;
 
 /**
@@ -30,7 +33,6 @@ use RuntimeException;
  */
 class Oauth
 {
-
     /**
      * Add headers for Oauth authorization.
      *
@@ -39,7 +41,7 @@ class Oauth
      * @return \Cake\Http\Client\Request The updated request.
      * @throws \Cake\Core\Exception\Exception On invalid signature types.
      */
-    public function authentication(Request $request, array $credentials)
+    public function authentication(Request $request, array $credentials): Request
     {
         if (!isset($credentials['consumerKey'])) {
             return $request;
@@ -47,9 +49,9 @@ class Oauth
         if (empty($credentials['method'])) {
             $credentials['method'] = 'hmac-sha1';
         }
+
         $credentials['method'] = strtoupper($credentials['method']);
 
-        $value = null;
         switch ($credentials['method']) {
             case 'HMAC-SHA1':
                 $hasKeys = isset(
@@ -100,7 +102,7 @@ class Oauth
      * @param array $credentials Authentication credentials.
      * @return string Authorization header.
      */
-    protected function _plaintext($request, $credentials)
+    protected function _plaintext(Request $request, array $credentials): string
     {
         $values = [
             'oauth_version' => '1.0',
@@ -129,10 +131,10 @@ class Oauth
      * @param array $credentials Authentication credentials.
      * @return string
      */
-    protected function _hmacSha1($request, $credentials)
+    protected function _hmacSha1(Request $request, array $credentials): string
     {
-        $nonce = isset($credentials['nonce']) ? $credentials['nonce'] : uniqid();
-        $timestamp = isset($credentials['timestamp']) ? $credentials['timestamp'] : time();
+        $nonce = $credentials['nonce'] ?? uniqid();
+        $timestamp = $credentials['timestamp'] ?? time();
         $values = [
             'oauth_version' => '1.0',
             'oauth_nonce' => $nonce,
@@ -168,14 +170,14 @@ class Oauth
      *
      * @throws \RuntimeException
      */
-    protected function _rsaSha1($request, $credentials)
+    protected function _rsaSha1(Request $request, array $credentials): string
     {
         if (!function_exists('openssl_pkey_get_private')) {
             throw new RuntimeException('RSA-SHA1 signature method requires the OpenSSL extension.');
         }
 
-        $nonce = isset($credentials['nonce']) ? $credentials['nonce'] : bin2hex(Security::randomBytes(16));
-        $timestamp = isset($credentials['timestamp']) ? $credentials['timestamp'] : time();
+        $nonce = $credentials['nonce'] ?? bin2hex(Security::randomBytes(16));
+        $timestamp = $credentials['timestamp'] ?? time();
         $values = [
             'oauth_version' => '1.0',
             'oauth_nonce' => $nonce,
@@ -206,7 +208,7 @@ class Oauth
         }
 
         $credentials += [
-            'privateKeyPassphrase' => null,
+            'privateKeyPassphrase' => '',
         ];
         if (is_resource($credentials['privateKeyPassphrase'])) {
             $resource = $credentials['privateKeyPassphrase'];
@@ -237,7 +239,7 @@ class Oauth
      * @param array $oauthValues Oauth values.
      * @return string
      */
-    public function baseString($request, $oauthValues)
+    public function baseString(Request $request, array $oauthValues): string
     {
         $parts = [
             $request->getMethod(),
@@ -257,7 +259,7 @@ class Oauth
      * @param \Psr\Http\Message\UriInterface $uri Uri object to build a normalized version of.
      * @return string Normalized URL
      */
-    protected function _normalizedUrl($uri)
+    protected function _normalizedUrl(UriInterface $uri): string
     {
         $out = $uri->getScheme() . '://';
         $out .= strtolower($uri->getHost());
@@ -278,19 +280,14 @@ class Oauth
      * @param array $oauthValues Oauth values.
      * @return string sorted and normalized values
      */
-    protected function _normalizedParams($request, $oauthValues)
+    protected function _normalizedParams(Request $request, array $oauthValues): string
     {
-        $query = parse_url($request->getUri(), PHP_URL_QUERY);
-        parse_str($query, $queryArgs);
+        $query = parse_url((string)$request->getUri(), PHP_URL_QUERY);
+        parse_str((string)$query, $queryArgs);
 
         $post = [];
-        $body = $request->body();
-        if (is_string($body) && $request->getHeaderLine('content-type') === 'application/x-www-form-urlencoded') {
-            parse_str($body, $post);
-        }
-        if (is_array($body)) {
-            $post = $body;
-        }
+        $body = (string)$request->getBody();
+        parse_str($body, $post);
 
         $args = array_merge($queryArgs, $oauthValues, $post);
         $pairs = $this->_normalizeData($args);
@@ -311,7 +308,7 @@ class Oauth
      * @see https://tools.ietf.org/html/rfc5849#section-3.4.1.3.2
      * @return array
      */
-    protected function _normalizeData($args, $path = '')
+    protected function _normalizeData(array $args, string $path = ''): array
     {
         $data = [];
         foreach ($args as $key => $value) {
@@ -342,12 +339,12 @@ class Oauth
      * @param array $data The oauth_* values to build
      * @return string
      */
-    protected function _buildAuth($data)
+    protected function _buildAuth(array $data): string
     {
         $out = 'OAuth ';
         $params = [];
         foreach ($data as $key => $value) {
-            $params[] = $key . '="' . $this->_encode($value) . '"';
+            $params[] = $key . '="' . $this->_encode((string)$value) . '"';
         }
         $out .= implode(',', $params);
 
@@ -360,11 +357,8 @@ class Oauth
      * @param string $value Value to encode.
      * @return string
      */
-    protected function _encode($value)
+    protected function _encode(string $value): string
     {
         return str_replace(['%7E', '+'], ['~', ' '], rawurlencode($value));
     }
 }
-
-// @deprecated 3.4.0 Add backwards compat alias.
-class_alias('Cake\Http\Client\Auth\Oauth', 'Cake\Network\Http\Auth\Oauth');

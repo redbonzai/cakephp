@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,7 +16,9 @@
  */
 namespace Cake\Test\TestCase\View\Widget;
 
+use Cake\Http\ServerRequest;
 use Cake\TestSuite\TestCase;
+use Cake\View\Form\NullContext;
 use Cake\View\StringTemplate;
 use Cake\View\Widget\TextareaWidget;
 
@@ -23,19 +27,18 @@ use Cake\View\Widget\TextareaWidget;
  */
 class TextareaWidgetTest extends TestCase
 {
-
     /**
      * setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $templates = [
             'textarea' => '<textarea name="{{name}}"{{attrs}}>{{value}}</textarea>',
         ];
-        $this->context = $this->getMockBuilder('Cake\View\Form\ContextInterface')->getMock();
+        $this->context = new NullContext(new ServerRequest(), []);
         $this->templates = new StringTemplate($templates);
     }
 
@@ -97,7 +100,7 @@ class TextareaWidgetTest extends TestCase
         $data = [
             'templateVars' => ['custom' => 'value'],
             'name' => 'comment',
-            'val' => 'body'
+            'val' => 'body',
         ];
         $result = $input->render($data, $this->context);
         $expected = [

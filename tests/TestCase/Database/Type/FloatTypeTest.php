@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,7 +16,6 @@
  */
 namespace Cake\Test\TestCase\Database\Type;
 
-use Cake\Database\Type;
 use Cake\Database\Type\FloatType;
 use Cake\I18n\I18n;
 use Cake\TestSuite\TestCase;
@@ -28,32 +29,32 @@ class FloatTypeTest extends TestCase
     /**
      * @var \Cake\Database\Type\FloatType
      */
-    public $type;
+    protected $type;
 
     /**
      * @var \Cake\Database\Driver
      */
-    public $driver;
+    protected $driver;
 
     /**
      * @var string
      */
-    public $numberClass;
+    protected $numberClass;
 
     /**
      * @var string
      */
-    public $localeString;
+    protected $localeString;
 
     /**
      * Setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
-        $this->type = Type::build('float');
+        $this->type = new FloatType();
         $this->driver = $this->getMockBuilder('Cake\Database\Driver')->getMock();
         $this->localeString = I18n::getLocale();
         $this->numberClass = FloatType::$numberClass;
@@ -66,7 +67,7 @@ class FloatTypeTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         I18n::setLocale($this->localeString);
@@ -174,23 +175,24 @@ class FloatTypeTest extends TestCase
      */
     public function testMarshalWithLocaleParsing()
     {
-        I18n::setLocale('de_DE');
         $this->type->useLocaleParser();
+
+        I18n::setLocale('de_DE');
         $expected = 1234.53;
         $result = $this->type->marshal('1.234,53');
         $this->assertEquals($expected, $result);
 
         I18n::setLocale('en_US');
-        $this->type->useLocaleParser();
         $expected = 1234;
         $result = $this->type->marshal('1,234');
         $this->assertEquals($expected, $result);
 
         I18n::setLocale('pt_BR');
-        $this->type->useLocaleParser();
         $expected = 5987123.231;
         $result = $this->type->marshal('5.987.123,231');
         $this->assertEquals($expected, $result);
+
+        $this->type->useLocaleParser(false);
     }
 
     /**

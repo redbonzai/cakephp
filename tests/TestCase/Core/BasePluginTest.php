@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -30,13 +32,12 @@ use TestPlugin\Plugin as TestPlugin;
  */
 class BasePluginTest extends TestCase
 {
-
     /**
      * tearDown method
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         $this->clearPlugins();
@@ -51,7 +52,7 @@ class BasePluginTest extends TestCase
     {
         $plugin = new BasePlugin([
             'bootstrap' => false,
-            'routes' => false
+            'routes' => false,
         ]);
 
         $this->assertFalse($plugin->isEnabled('routes'));
@@ -140,12 +141,15 @@ class BasePluginTest extends TestCase
             'routes' => false,
             'bootstrap' => false,
             'console' => false,
-            'middleware' => false
+            'middleware' => false,
+            'templatePath' => '/plates/',
         ]);
         $this->assertFalse($plugin->isEnabled('routes'));
         $this->assertFalse($plugin->isEnabled('bootstrap'));
         $this->assertFalse($plugin->isEnabled('console'));
         $this->assertFalse($plugin->isEnabled('middleware'));
+
+        $this->assertSame('/plates/', $plugin->getTemplatePath());
     }
 
     public function testGetPathBaseClass()
@@ -156,6 +160,7 @@ class BasePluginTest extends TestCase
         $this->assertSame($expected, $plugin->getPath());
         $this->assertSame($expected . 'config' . DS, $plugin->getConfigPath());
         $this->assertSame($expected . 'src' . DS, $plugin->getClassPath());
+        $this->assertSame($expected . 'templates' . DS, $plugin->getTemplatePath());
     }
 
     public function testGetPathOptionValue()
@@ -165,6 +170,7 @@ class BasePluginTest extends TestCase
         $this->assertSame($expected, $plugin->getPath());
         $this->assertSame($expected . 'config' . DS, $plugin->getConfigPath());
         $this->assertSame($expected . 'src' . DS, $plugin->getClassPath());
+        $this->assertSame($expected . 'templates' . DS, $plugin->getTemplatePath());
     }
 
     public function testGetPathSubclass()
@@ -174,5 +180,6 @@ class BasePluginTest extends TestCase
         $this->assertSame($expected, $plugin->getPath());
         $this->assertSame($expected . 'config' . DS, $plugin->getConfigPath());
         $this->assertSame($expected . 'src' . DS, $plugin->getClassPath());
+        $this->assertSame($expected . 'templates' . DS, $plugin->getTemplatePath());
     }
 }

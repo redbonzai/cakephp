@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,165 +17,33 @@
 namespace Cake\Test\TestCase\Event;
 
 use Cake\Event\Event;
+use Cake\Event\EventInterface;
 use Cake\Event\EventList;
 use Cake\Event\EventListenerInterface;
 use Cake\Event\EventManager;
 use Cake\TestSuite\TestCase;
-
-/**
- * Mock class used to test event dispatching
- */
-class EventTestListener
-{
-
-    public $callList = [];
-
-    /**
-     * Test function to be used in event dispatching
-     *
-     * @return void
-     */
-    public function listenerFunction()
-    {
-        $this->callList[] = __FUNCTION__;
-    }
-
-    /**
-     * Test function to be used in event dispatching
-     *
-     * @return void
-     */
-    public function secondListenerFunction()
-    {
-        $this->callList[] = __FUNCTION__;
-    }
-
-    /**
-     * Auxiliary function to help in stopPropagation testing
-     *
-     * @param \Cake\Event\Event $event
-     * @return void
-     */
-    public function stopListener($event)
-    {
-        $event->stopPropagation();
-    }
-}
-
-/**
- * Mock used for testing the subscriber objects
- */
-class CustomTestEventListenerInterface extends EventTestListener implements EventListenerInterface
-{
-
-    public function implementedEvents()
-    {
-        return [
-            'fake.event' => 'listenerFunction',
-            'another.event' => ['callable' => 'secondListenerFunction'],
-            'multiple.handlers' => [
-                ['callable' => 'listenerFunction'],
-                ['callable' => 'thirdListenerFunction']
-            ]
-        ];
-    }
-
-    /**
-     * Test function to be used in event dispatching
-     *
-     * @return void
-     */
-    public function thirdListenerFunction()
-    {
-        $this->callList[] = __FUNCTION__;
-    }
-}
+use TestApp\TestCase\Event\CustomTestEventListenerInterface;
+use TestApp\TestCase\Event\EventTestListener;
 
 /**
  * Tests the Cake\Event\EventManager class functionality
  */
 class EventManagerTest extends TestCase
 {
-
-    /**
-     * Tests the attach() method for a single event key in multiple queues
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testAttachListeners()
-    {
-        $this->deprecated(function () {
-            $manager = new EventManager();
-            $manager->attach('fakeFunction', 'fake.event');
-            $expected = [
-                ['callable' => 'fakeFunction']
-            ];
-            $this->assertEquals($expected, $manager->listeners('fake.event'));
-
-            $manager->attach('fakeFunction2', 'fake.event');
-            $expected[] = ['callable' => 'fakeFunction2'];
-            $this->assertEquals($expected, $manager->listeners('fake.event'));
-
-            $manager->attach('inQ5', 'fake.event', ['priority' => 5]);
-            $manager->attach('inQ1', 'fake.event', ['priority' => 1]);
-            $manager->attach('otherInQ5', 'fake.event', ['priority' => 5]);
-
-            $expected = array_merge(
-                [
-                    ['callable' => 'inQ1'],
-                    ['callable' => 'inQ5'],
-                    ['callable' => 'otherInQ5']
-                ],
-                $expected
-            );
-            $this->assertEquals($expected, $manager->listeners('fake.event'));
-        });
-    }
-
     /**
      * Test attach() with a listener interface.
      *
-     * @group deprecated
      * @return void
      */
     public function testAttachListener()
     {
-        $this->deprecated(function () {
-            $manager = new EventManager();
-            $listener = new CustomTestEventListenerInterface();
-            $manager->on($listener);
-            $expected = [
-                ['callable' => [$listener, 'listenerFunction']],
-            ];
-            $this->assertEquals($expected, $manager->listeners('fake.event'));
-        });
-    }
-
-    /**
-     * Tests the attach() method for multiple event key in multiple queues
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testAttachMultipleEventKeys()
-    {
-        $this->deprecated(function () {
-            $manager = new EventManager();
-            $manager->attach('fakeFunction', 'fake.event');
-            $manager->attach('fakeFunction2', 'another.event');
-            $manager->attach('fakeFunction3', 'another.event', ['priority' => 1]);
-            $expected = [
-                ['callable' => 'fakeFunction']
-            ];
-            $this->assertEquals($expected, $manager->listeners('fake.event'));
-
-            $expected = [
-                ['callable' => 'fakeFunction3'],
-                ['callable' => 'fakeFunction2']
-            ];
-            $this->assertEquals($expected, $manager->listeners('another.event'));
-        });
+        $manager = new EventManager();
+        $listener = new CustomTestEventListenerInterface();
+        $manager->on($listener);
+        $expected = [
+            ['callable' => [$listener, 'listenerFunction']],
+        ];
+        $this->assertEquals($expected, $manager->listeners('fake.event'));
     }
 
     /**
@@ -254,16 +124,16 @@ class EventManagerTest extends TestCase
     {
         $count = 1;
         $manager = new EventManager();
-        $manager->on('my.event', 'myfunc');
+        $manager->on('my.event', 'substr');
         $expected = [
-            ['callable' => 'myfunc']
+            ['callable' => 'substr'],
         ];
         $this->assertSame($expected, $manager->listeners('my.event'));
 
-        $manager->on('my.event', ['priority' => 1], 'func2');
+        $manager->on('my.event', ['priority' => 1], 'strpos');
         $expected = [
-            ['callable' => 'func2'],
-            ['callable' => 'myfunc'],
+            ['callable' => 'strpos'],
+            ['callable' => 'substr'],
         ];
         $this->assertSame($expected, $manager->listeners('my.event'));
 
@@ -276,19 +146,6 @@ class EventManagerTest extends TestCase
     }
 
     /**
-     * Test the on() with invalid arguments
-     *
-     * @expectedException InvalidArgumentException
-     * @expectedExceptionMessage Invalid arguments for EventManager::on(). Expected 1, 2 or 3 arguments.
-     * @return void
-     */
-    public function testOnInvalidArgument()
-    {
-        $manager = new EventManager();
-        $manager->on();
-    }
-
-    /**
      * Tests off'ing an event from a event key queue
      *
      * @return void
@@ -298,18 +155,18 @@ class EventManagerTest extends TestCase
         $manager = new EventManager();
         $manager->on('fake.event', ['AClass', 'aMethod']);
         $manager->on('another.event', ['AClass', 'anotherMethod']);
-        $manager->on('another.event', ['priority' => 1], 'fakeFunction');
+        $manager->on('another.event', ['priority' => 1], 'substr');
 
         $manager->off('fake.event', ['AClass', 'aMethod']);
         $this->assertEquals([], $manager->listeners('fake.event'));
 
         $manager->off('another.event', ['AClass', 'anotherMethod']);
         $expected = [
-            ['callable' => 'fakeFunction']
+            ['callable' => 'substr'],
         ];
         $this->assertEquals($expected, $manager->listeners('another.event'));
 
-        $manager->off('another.event', 'fakeFunction');
+        $manager->off('another.event', 'substr');
         $this->assertEquals([], $manager->listeners('another.event'));
     }
 
@@ -321,13 +178,15 @@ class EventManagerTest extends TestCase
     public function testOffFromAll()
     {
         $manager = new EventManager();
-        $manager->on('fake.event', ['AClass', 'aMethod']);
-        $manager->on('another.event', ['AClass', 'aMethod']);
-        $manager->on('another.event', ['priority' => 1], 'fakeFunction');
+        $callable = function () {
+        };
+        $manager->on('fake.event', $callable);
+        $manager->on('another.event', $callable);
+        $manager->on('another.event', ['priority' => 1], 'substr');
 
-        $manager->off(['AClass', 'aMethod']);
+        $manager->off($callable);
         $expected = [
-            ['callable' => 'fakeFunction']
+            ['callable' => 'substr'],
         ];
         $this->assertEquals($expected, $manager->listeners('another.event'));
         $this->assertEquals([], $manager->listeners('fake.event'));
@@ -340,66 +199,16 @@ class EventManagerTest extends TestCase
     {
         $manager = new EventManager();
         $manager->on('fake.event', ['AClass', 'aMethod']);
-        $manager->on('another.event', ['priority' => 1], 'fakeFunction');
+
+        $manager->on('another.event', ['priority' => 1], 'substr');
 
         $manager->off('fake.event');
 
         $expected = [
-            ['callable' => 'fakeFunction']
+            ['callable' => 'substr'],
         ];
         $this->assertEquals($expected, $manager->listeners('another.event'));
         $this->assertEquals([], $manager->listeners('fake.event'));
-    }
-
-    /**
-     * Tests detaching an event from a event key queue
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testDetach()
-    {
-        $this->deprecated(function () {
-            $manager = new EventManager();
-            $manager->attach(['AClass', 'aMethod'], 'fake.event');
-            $manager->attach(['AClass', 'anotherMethod'], 'another.event');
-            $manager->attach('fakeFunction', 'another.event', ['priority' => 1]);
-
-            $manager->detach(['AClass', 'aMethod'], 'fake.event');
-            $this->assertEquals([], $manager->listeners('fake.event'));
-
-            $manager->detach(['AClass', 'anotherMethod'], 'another.event');
-            $expected = [
-                ['callable' => 'fakeFunction']
-            ];
-            $this->assertEquals($expected, $manager->listeners('another.event'));
-
-            $manager->detach('fakeFunction', 'another.event');
-            $this->assertEquals([], $manager->listeners('another.event'));
-        });
-    }
-
-    /**
-     * Tests detaching an event from all event queues
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testDetachFromAll()
-    {
-        $this->deprecated(function () {
-            $manager = new EventManager();
-            $manager->attach(['AClass', 'aMethod'], 'fake.event');
-            $manager->attach(['AClass', 'aMethod'], 'another.event');
-            $manager->attach('fakeFunction', 'another.event', ['priority' => 1]);
-
-            $manager->detach(['AClass', 'aMethod']);
-            $expected = [
-                ['callable' => 'fakeFunction']
-            ];
-            $this->assertEquals($expected, $manager->listeners('another.event'));
-            $this->assertEquals([], $manager->listeners('fake.event'));
-        });
     }
 
     /**
@@ -411,9 +220,9 @@ class EventManagerTest extends TestCase
     public function testDispatch()
     {
         $manager = new EventManager();
-        $listener = $this->getMockBuilder(__NAMESPACE__ . '\EventTestListener')
+        $listener = $this->getMockBuilder(EventTestListener::class)
             ->getMock();
-        $anotherListener = $this->getMockBuilder(__NAMESPACE__ . '\EventTestListener')
+        $anotherListener = $this->getMockBuilder(EventTestListener::class)
             ->getMock();
         $manager->on('fake.event', [$listener, 'listenerFunction']);
         $manager->on('fake.event', [$anotherListener, 'listenerFunction']);
@@ -432,7 +241,7 @@ class EventManagerTest extends TestCase
     public function testDispatchWithKeyName()
     {
         $manager = new EventManager();
-        $listener = new EventTestListener;
+        $listener = new EventTestListener();
         $manager->on('fake.event', [$listener, 'listenerFunction']);
         $event = 'fake.event';
         $manager->dispatch($event);
@@ -449,10 +258,10 @@ class EventManagerTest extends TestCase
      */
     public function testDispatchReturnValue()
     {
-        $manager = new EventManager;
-        $listener = $this->getMockBuilder(__NAMESPACE__ . '\EventTestListener')
+        $manager = new EventManager();
+        $listener = $this->getMockBuilder(EventTestListener::class)
             ->getMock();
-        $anotherListener = $this->getMockBuilder(__NAMESPACE__ . '\EventTestListener')
+        $anotherListener = $this->getMockBuilder(EventTestListener::class)
             ->getMock();
         $manager->on('fake.event', [$listener, 'listenerFunction']);
         $manager->on('fake.event', [$anotherListener, 'listenerFunction']);
@@ -465,8 +274,7 @@ class EventManagerTest extends TestCase
             ->method('listenerFunction')
             ->with($event);
         $manager->dispatch($event);
-        $this->assertEquals('something special', $event->getResult());
-        $this->assertEquals('something special', $event->result);
+        $this->assertSame('something special', $event->getResult());
     }
 
     /**
@@ -478,9 +286,9 @@ class EventManagerTest extends TestCase
     public function testDispatchFalseStopsEvent()
     {
         $manager = new EventManager();
-        $listener = $this->getMockBuilder(__NAMESPACE__ . '\EventTestListener')
+        $listener = $this->getMockBuilder(EventTestListener::class)
             ->getMock();
-        $anotherListener = $this->getMockBuilder(__NAMESPACE__ . '\EventTestListener')
+        $anotherListener = $this->getMockBuilder(EventTestListener::class)
             ->getMock();
         $manager->on('fake.event', [$listener, 'listenerFunction']);
         $manager->on('fake.event', [$anotherListener, 'listenerFunction']);
@@ -504,7 +312,7 @@ class EventManagerTest extends TestCase
     public function testDispatchPrioritized()
     {
         $manager = new EventManager();
-        $listener = new EventTestListener;
+        $listener = new EventTestListener();
         $manager->on('fake.event', [$listener, 'listenerFunction']);
         $manager->on('fake.event', ['priority' => 5], [$listener, 'secondListenerFunction']);
         $event = new Event('fake.event');
@@ -524,7 +332,7 @@ class EventManagerTest extends TestCase
     public function testOnSubscriber()
     {
         $manager = new EventManager();
-        $listener = $this->getMockBuilder(__NAMESPACE__ . '\CustomTestEventListenerInterface')
+        $listener = $this->getMockBuilder(CustomTestEventListenerInterface::class)
             ->setMethods(['secondListenerFunction'])
             ->getMock();
         $manager->on($listener);
@@ -551,7 +359,7 @@ class EventManagerTest extends TestCase
     public function testOnSubscriberMultiple()
     {
         $manager = new EventManager();
-        $listener = $this->getMockBuilder(__NAMESPACE__ . '\CustomTestEventListenerInterface')
+        $listener = $this->getMockBuilder(CustomTestEventListenerInterface::class)
             ->setMethods(['listenerFunction', 'thirdListenerFunction'])
             ->getMock();
         $manager->on($listener);
@@ -573,16 +381,16 @@ class EventManagerTest extends TestCase
     public function testDetachSubscriber()
     {
         $manager = new EventManager();
-        $listener = $this->getMockBuilder(__NAMESPACE__ . '\CustomTestEventListenerInterface')
+        $listener = $this->getMockBuilder(CustomTestEventListenerInterface::class)
             ->setMethods(['secondListenerFunction'])
             ->getMock();
         $manager->on($listener);
         $expected = [
-            ['callable' => [$listener, 'secondListenerFunction']]
+            ['callable' => [$listener, 'secondListenerFunction']],
         ];
         $this->assertEquals($expected, $manager->listeners('another.event'));
         $expected = [
-            ['callable' => [$listener, 'listenerFunction']]
+            ['callable' => [$listener, 'listenerFunction']],
         ];
         $this->assertEquals($expected, $manager->listeners('fake.event'));
         $manager->off($listener);
@@ -672,7 +480,7 @@ class EventManagerTest extends TestCase
                 ->with('fake.event')
                 ->will($this->returnValue(
                     [11 => [
-                        ['callable' => [$listener, 'secondListenerFunction']]
+                        ['callable' => [$listener, 'secondListenerFunction']],
                     ]]
                 ));
 
@@ -705,7 +513,7 @@ class EventManagerTest extends TestCase
                 ->with('fake.event')
                 ->will($this->returnValue(
                     [10 => [
-                        ['callable' => [$listener, 'listenerFunction']]
+                        ['callable' => [$listener, 'listenerFunction']],
                     ]]
                 ));
 
@@ -721,9 +529,9 @@ class EventManagerTest extends TestCase
     /**
      * test callback
      *
-     * @param Event $event
+     * @param \Cake\Event\EventInterface $event
      */
-    public function onMyEvent(Event $event)
+    public function onMyEvent(EventInterface $event)
     {
         $event->setData('callback', 'ok');
     }
@@ -740,7 +548,7 @@ class EventManagerTest extends TestCase
         $manager = new EventManager();
         $event = new Event('my_event', $manager);
         $manager->dispatch($event);
-        $this->assertEquals('ok', $event->getData('callback'));
+        $this->assertSame('ok', $event->getData('callback'));
     }
 
     /**
@@ -782,7 +590,7 @@ class EventManagerTest extends TestCase
         $manager->dispatch($event2);
 
         $result = $manager->getEventList();
-        $this->assertInstanceOf('\Cake\Event\EventList', $result);
+        $this->assertInstanceOf('Cake\Event\EventList', $result);
         $this->assertCount(2, $result);
         $this->assertEquals($result[0], $event);
         $this->assertEquals($result[1], $event2);
@@ -871,7 +679,7 @@ class EventManagerTest extends TestCase
                 '_trackEvents' => true,
                 '_generalManager' => '(object) EventManager',
                 '_dispatchedEvents' => [
-                    'Foo with subject Cake\Test\TestCase\Event\EventManagerTest'
+                    'Foo with subject Cake\Test\TestCase\Event\EventManagerTest',
                 ],
             ],
             $eventManager->__debugInfo()

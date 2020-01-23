@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -16,17 +18,15 @@ namespace Cake\Collection;
 
 use Iterator;
 use JsonSerializable;
+use Traversable;
 
 /**
  * Describes the methods a Collection should implement. A collection is an immutable
  * list of elements exposing a number of traversing and extracting method for
  * generating other collections.
- *
- * @method \Cake\Collection\CollectionInterface cartesianProduct(callable $operation = null, callable $filter = null)
  */
 interface CollectionInterface extends Iterator, JsonSerializable
 {
-
     /**
      * Executes the passed callable for each of the elements in this collection
      * and passes both the value and key for them on each step.
@@ -42,9 +42,9 @@ interface CollectionInterface extends Iterator, JsonSerializable
      *
      * @param callable $c callable function that will receive each of the elements
      * in this collection
-     * @return \Cake\Collection\CollectionInterface
+     * @return $this
      */
-    public function each(callable $c);
+    public function each(callable $c): CollectionInterface;
 
     /**
      * Looks through each value in the collection, and returns another collection with
@@ -71,7 +71,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      *   If left null, a callback that filters out falsey values will be used.
      * @return \Cake\Collection\CollectionInterface
      */
-    public function filter(callable $c = null);
+    public function filter(?callable $c = null): CollectionInterface;
 
     /**
      * Looks through each value in the collection, and returns another collection with
@@ -96,7 +96,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * returns true whether or not they should be out of the resulting collection.
      * @return \Cake\Collection\CollectionInterface
      */
-    public function reject(callable $c);
+    public function reject(callable $c): CollectionInterface;
 
     /**
      * Returns true if all values in this collection pass the truth test provided
@@ -120,7 +120,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * @return bool true if for all elements in this collection the provided
      *   callback returns true, false otherwise.
      */
-    public function every(callable $c);
+    public function every(callable $c): bool;
 
     /**
      * Returns true if any of the values in this collection pass the truth test
@@ -142,7 +142,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * @return bool true if the provided callback returns true for any element in this
      * collection, false otherwise
      */
-    public function some(callable $c);
+    public function some(callable $c): bool;
 
     /**
      * Returns true if $value is present in this collection. Comparisons are made
@@ -151,7 +151,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * @param mixed $value The value to check for
      * @return bool true if $value is present in this collection
      */
-    public function contains($value);
+    public function contains($value): bool;
 
     /**
      * Returns another collection after modifying each of the values in this one using
@@ -175,7 +175,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * returns the new value for the key that is being iterated
      * @return \Cake\Collection\CollectionInterface
      */
-    public function map(callable $c);
+    public function map(callable $c): CollectionInterface;
 
     /**
      * Folds the values in this collection to a single value, as the result of
@@ -229,11 +229,12 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * [1, 2, 3, 4]
      * ```
      *
-     * @param string $matcher a dot separated string symbolizing the path to follow
-     * inside the hierarchy of each value so that the column can be extracted.
+     * @param string|callable $matcher A dot separated path of column to follow
+     * so that the final one can be returned or a callable that will take care
+     * of doing that.
      * @return \Cake\Collection\CollectionInterface
      */
-    public function extract($matcher);
+    public function extract($matcher): CollectionInterface;
 
     /**
      * Returns the top element in this collection after being sorted by a property.
@@ -256,10 +257,10 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * @param callable|string $callback the callback or column name to use for sorting
      * @param int $type the type of comparison to perform, either SORT_STRING
      * SORT_NUMERIC or SORT_NATURAL
-     * @see \Cake\Collection\CollectionIterface::sortBy()
+     * @see \Cake\Collection\CollectionInterface::sortBy()
      * @return mixed The value of the top element in the collection
      */
-    public function max($callback, $type = \SORT_NUMERIC);
+    public function max($callback, int $type = \SORT_NUMERIC);
 
     /**
      * Returns the bottom element in this collection after being sorted by a property.
@@ -285,7 +286,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * @see \Cake\Collection\CollectionInterface::sortBy()
      * @return mixed The value of the bottom element in the collection
      */
-    public function min($callback, $type = \SORT_NUMERIC);
+    public function min($callback, int $type = \SORT_NUMERIC);
 
     /**
      * Returns the average of all the values extracted with $matcher
@@ -380,7 +381,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * SORT_NUMERIC or SORT_NATURAL
      * @return \Cake\Collection\CollectionInterface
      */
-    public function sortBy($callback, $dir = SORT_DESC, $type = \SORT_NUMERIC);
+    public function sortBy($callback, int $dir = SORT_DESC, int $type = \SORT_NUMERIC): CollectionInterface;
 
     /**
      * Splits a collection into sets, grouped by the result of running each value
@@ -423,7 +424,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * or a function returning the grouping key out of the provided element
      * @return \Cake\Collection\CollectionInterface
      */
-    public function groupBy($callback);
+    public function groupBy($callback): CollectionInterface;
 
     /**
      * Given a list and a callback function that returns a key for each element
@@ -462,7 +463,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * or a function returning the indexing key out of the provided element
      * @return \Cake\Collection\CollectionInterface
      */
-    public function indexBy($callback);
+    public function indexBy($callback): CollectionInterface;
 
     /**
      * Sorts a list into groups and returns a count for the number of elements
@@ -500,7 +501,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * or a function returning the indexing key out of the provided element
      * @return \Cake\Collection\CollectionInterface
      */
-    public function countBy($callback);
+    public function countBy($callback): CollectionInterface;
 
     /**
      * Returns the total sum of all the values extracted with $matcher
@@ -535,7 +536,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      *
      * @return \Cake\Collection\CollectionInterface
      */
-    public function shuffle();
+    public function shuffle(): CollectionInterface;
 
     /**
      * Returns a new collection with maximum $size random elements
@@ -545,7 +546,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * take from this collection
      * @return \Cake\Collection\CollectionInterface
      */
-    public function sample($size = 10);
+    public function sample(int $size = 10): CollectionInterface;
 
     /**
      * Returns a new collection with maximum $size elements in the internal
@@ -557,7 +558,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * @param int $from A positional offset from where to take the elements
      * @return \Cake\Collection\CollectionInterface
      */
-    public function take($size = 1, $from = 0);
+    public function take(int $size = 1, int $from = 0): CollectionInterface;
 
     /**
      * Returns the last N elements of a collection
@@ -576,7 +577,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * @param int $howMany The number of elements at the end of the collection
      * @return \Cake\Collection\CollectionInterface
      */
-    public function takeLast($howMany);
+    public function takeLast(int $howMany): CollectionInterface;
 
     /**
      * Returns a new collection that will skip the specified amount of elements
@@ -585,7 +586,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * @param int $howMany The number of elements to skip.
      * @return \Cake\Collection\CollectionInterface
      */
-    public function skip($howMany);
+    public function skip(int $howMany): CollectionInterface;
 
     /**
      * Looks through each value in the list, returning a Collection of all the
@@ -612,7 +613,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * and the value the condition against with each element will be matched
      * @return \Cake\Collection\CollectionInterface
      */
-    public function match(array $conditions);
+    public function match(array $conditions): CollectionInterface;
 
     /**
      * Returns the first result matching all of the key-value pairs listed in
@@ -644,10 +645,36 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * Returns a new collection as the result of concatenating the list of elements
      * in this collection with the passed list of elements
      *
-     * @param array|\Traversable $items Items list.
+     * @param iterable $items Items list.
      * @return \Cake\Collection\CollectionInterface
      */
-    public function append($items);
+    public function append($items): CollectionInterface;
+
+    /**
+     * Append a single item creating a new collection.
+     *
+     * @param mixed $item The item to append.
+     * @param mixed $key The key to append the item with. If null a key will be generated.
+     * @return \Cake\Collection\CollectionInterface
+     */
+    public function appendItem($item, $key = null): CollectionInterface;
+
+    /**
+     * Prepend a set of items to a collection creating a new collection
+     *
+     * @param mixed $items The items to prepend.
+     * @return \Cake\Collection\CollectionInterface
+     */
+    public function prepend($items): CollectionInterface;
+
+    /**
+     * Prepend a single item creating a new collection.
+     *
+     * @param mixed $item The item to prepend.
+     * @param mixed $key The key to prepend the item with. If null a key will be generated.
+     * @return \Cake\Collection\CollectionInterface
+     */
+    public function prependItem($item, $key = null): CollectionInterface;
 
     /**
      * Returns a new collection where the values extracted based on a value path
@@ -689,7 +716,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * grouping key or a function returning the key out of the provided element
      * @return \Cake\Collection\CollectionInterface
      */
-    public function combine($keyPath, $valuePath, $groupPath = null);
+    public function combine($keyPath, $valuePath, $groupPath = null): CollectionInterface;
 
     /**
      * Returns a new collection where the values are nested in a tree-like structure
@@ -702,7 +729,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * @param string $nestingKey The key name under which children are nested
      * @return \Cake\Collection\CollectionInterface
      */
-    public function nest($idPath, $parentPath, $nestingKey = 'children');
+    public function nest($idPath, $parentPath, string $nestingKey = 'children'): CollectionInterface;
 
     /**
      * Returns a new collection containing each of the elements found in `$values` as
@@ -740,7 +767,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * values are matched with the elements in this collection by its positional index.
      * @return \Cake\Collection\CollectionInterface
      */
-    public function insert($path, $values);
+    public function insert(string $path, $values): CollectionInterface;
 
     /**
      * Returns an array representation of the results
@@ -751,7 +778,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * can help getting all items if keys are not important in the result.
      * @return array
      */
-    public function toArray($preserveKeys = true);
+    public function toArray(bool $preserveKeys = true): array;
 
     /**
      * Returns an numerically-indexed array representation of the results.
@@ -759,7 +786,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      *
      * @return array
      */
-    public function toList();
+    public function toList(): array;
 
     /**
      * Convert a result set into JSON.
@@ -768,7 +795,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      *
      * @return array The data to convert to JSON
      */
-    public function jsonSerialize();
+    public function jsonSerialize(): array;
 
     /**
      * Iterates once all elements in this collection and executes all stacked
@@ -802,7 +829,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * can help getting all items if keys are not important in the result.
      * @return \Cake\Collection\CollectionInterface
      */
-    public function compile($preserveKeys = true);
+    public function compile(bool $preserveKeys = true): CollectionInterface;
 
     /**
      * Returns a new collection where any operations chained after it are guaranteed
@@ -812,7 +839,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      *
      * @return \Cake\Collection\CollectionInterface
      */
-    public function lazy();
+    public function lazy(): CollectionInterface;
 
     /**
      * Returns a new collection where the operations performed by this collection.
@@ -823,7 +850,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      *
      * @return \Cake\Collection\CollectionInterface
      */
-    public function buffered();
+    public function buffered(): CollectionInterface;
 
     /**
      * Returns a new collection with each of the elements of this collection
@@ -845,9 +872,9 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * The possible values for the first argument are aliases for the following
      * constants and it is valid to pass those instead of the alias:
      *
-     * - desc: TreeIterator::SELF_FIRST
-     * - asc: TreeIterator::CHILD_FIRST
-     * - leaves: TreeIterator::LEAVES_ONLY
+     * - desc: RecursiveIteratorIterator::SELF_FIRST
+     * - asc: RecursiveIteratorIterator::CHILD_FIRST
+     * - leaves: RecursiveIteratorIterator::LEAVES_ONLY
      *
      * ### Example:
      *
@@ -864,7 +891,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * or a callable function that will return the children list
      * @return \Cake\Collection\CollectionInterface
      */
-    public function listNested($dir = 'desc', $nestingKey = 'children');
+    public function listNested($dir = 'desc', $nestingKey = 'children'): CollectionInterface;
 
     /**
      * Creates a new collection that when iterated will stop yielding results if
@@ -892,14 +919,14 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * $comments = (new Collection($comments))->stopWhen(['is_approved' => false]);
      * ```
      *
-     * @param callable $condition the method that will receive each of the elements and
+     * @param callable|array $condition the method that will receive each of the elements and
      * returns true when the iteration should be stopped.
      * If an array, it will be interpreted as a key-value list of conditions where
      * the key is a property path as accepted by `Collection::extract`,
      * and the value the condition against with each element will be matched.
      * @return \Cake\Collection\CollectionInterface
      */
-    public function stopWhen($condition);
+    public function stopWhen($condition): CollectionInterface;
 
     /**
      * Creates a new collection where the items are the
@@ -934,7 +961,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * the items in the collection and should return an array or Traversable object
      * @return \Cake\Collection\CollectionInterface
      */
-    public function unfold(callable $transformer = null);
+    public function unfold(?callable $transformer = null): CollectionInterface;
 
     /**
      * Passes this collection through a callable as its first argument.
@@ -953,7 +980,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * this collection as first argument.
      * @return \Cake\Collection\CollectionInterface
      */
-    public function through(callable $handler);
+    public function through(callable $handler): CollectionInterface;
 
     /**
      * Combines the elements of this collection with each of the elements of the
@@ -966,10 +993,10 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * $collection->zip([3, 4], [5, 6])->toList(); // returns [[1, 3, 5], [2, 4, 6]]
      * ```
      *
-     * @param array|\Traversable ...$items The collections to zip.
+     * @param iterable ...$items The collections to zip.
      * @return \Cake\Collection\CollectionInterface
      */
-    public function zip($items);
+    public function zip(iterable $items): CollectionInterface;
 
     /**
      * Combines the elements of this collection with each of the elements of the
@@ -987,11 +1014,11 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * $zipped->toList(); // returns [9, 12]; [(1 + 3 + 5), (2 + 4 + 6)]
      * ```
      *
-     * @param array|\Traversable ...$items The collections to zip.
+     * @param iterable ...$items The collections to zip.
      * @param callable $callable The function to use for zipping the elements together.
      * @return \Cake\Collection\CollectionInterface
      */
-    public function zipWith($items, $callable);
+    public function zipWith(iterable $items, $callable): CollectionInterface;
 
     /**
      * Breaks the collection into smaller arrays of the given size.
@@ -1007,7 +1034,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * @param int $chunkSize The maximum size for each chunk
      * @return \Cake\Collection\CollectionInterface
      */
-    public function chunk($chunkSize);
+    public function chunk(int $chunkSize): CollectionInterface;
 
     /**
      * Breaks the collection into smaller arrays of the given size.
@@ -1024,7 +1051,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * @param bool $preserveKeys If the keys of the array should be preserved
      * @return \Cake\Collection\CollectionInterface
      */
-    public function chunkWithKeys($chunkSize, $preserveKeys = true);
+    public function chunkWithKeys(int $chunkSize, bool $preserveKeys = true): CollectionInterface;
 
     /**
      * Returns whether or not there are elements in this collection
@@ -1042,7 +1069,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      *
      * @return bool
      */
-    public function isEmpty();
+    public function isEmpty(): bool;
 
     /**
      * Returns the closest nested iterator that can be safely traversed without
@@ -1051,7 +1078,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      *
      * @return \Traversable
      */
-    public function unwrap();
+    public function unwrap(): Traversable;
 
     /**
      * Transpose rows and columns into columns and rows
@@ -1079,7 +1106,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      *
      * @return \Cake\Collection\CollectionInterface
      */
-    public function transpose();
+    public function transpose(): CollectionInterface;
 
     /**
      * Returns the amount of elements in the collection.
@@ -1116,7 +1143,7 @@ interface CollectionInterface extends Iterator, JsonSerializable
      *
      * @return int
      */
-    public function count();
+    public function count(): int;
 
     /**
      * Returns the number of unique keys in this iterator. This is, the number of
@@ -1128,5 +1155,36 @@ interface CollectionInterface extends Iterator, JsonSerializable
      * @see \Cake\Collection\CollectionInterface::count()
      * @return int
      */
-    public function countKeys();
+    public function countKeys(): int;
+
+    /**
+     * Create a new collection that is the cartesian product of the current collection
+     *
+     * In order to create a carteisan product a collection must contain a single dimension
+     * of data.
+     *
+     * ### Example
+     *
+     * ```
+     * $collection = new Collection([['A', 'B', 'C'], [1, 2, 3]]);
+     * $result = $collection->cartesianProduct()->toArray();
+     * $expected = [
+     *     ['A', 1],
+     *     ['A', 2],
+     *     ['A', 3],
+     *     ['B', 1],
+     *     ['B', 2],
+     *     ['B', 3],
+     *     ['C', 1],
+     *     ['C', 2],
+     *     ['C', 3],
+     * ];
+     * ```
+     *
+     * @param callable|null $operation A callable that allows you to customize the product result.
+     * @param callable|null $filter A filtering callback that must return true for a result to be part
+     *   of the final results.
+     * @return \Cake\Collection\CollectionInterface
+     */
+    public function cartesianProduct(?callable $operation = null, ?callable $filter = null): CollectionInterface;
 }

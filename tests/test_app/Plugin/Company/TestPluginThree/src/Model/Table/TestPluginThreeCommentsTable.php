@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP :  Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -21,6 +23,5 @@ use Cake\ORM\Table;
  */
 class TestPluginThreeCommentsTable extends Table
 {
-
     protected $_table = 'test_plugin_three_comments';
 }

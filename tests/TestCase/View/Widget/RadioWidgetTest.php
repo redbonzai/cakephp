@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,7 +17,9 @@
 namespace Cake\Test\TestCase\View\Widget;
 
 use Cake\Collection\Collection;
+use Cake\Http\ServerRequest;
 use Cake\TestSuite\TestCase;
+use Cake\View\Form\NullContext;
 use Cake\View\StringTemplate;
 use Cake\View\Widget\NestingLabelWidget;
 use Cake\View\Widget\RadioWidget;
@@ -25,22 +29,22 @@ use Cake\View\Widget\RadioWidget;
  */
 class RadioWidgetTest extends TestCase
 {
-
     /**
      * setup method.
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $templates = [
             'radio' => '<input type="radio" name="{{name}}" value="{{value}}"{{attrs}}>',
             'nestingLabel' => '<label{{attrs}}>{{input}}{{text}}</label>',
             'radioWrapper' => '{{label}}',
+            'selectedClass' => 'selected',
         ];
         $this->templates = new StringTemplate($templates);
-        $this->context = $this->getMockBuilder('Cake\View\Form\ContextInterface')->getMock();
+        $this->context = new NullContext(new ServerRequest(), []);
     }
 
     /**
@@ -52,14 +56,14 @@ class RadioWidgetTest extends TestCase
     {
         $this->templates->add([
             'nestingLabel' => '<label{{attrs}}>{{text}}</label>',
-            'radioWrapper' => '{{input}}{{label}}'
+            'radioWrapper' => '{{input}}{{label}}',
         ]);
         $label = new NestingLabelWidget($this->templates);
         $radio = new RadioWidget($this->templates, $label);
         $data = [
             'name' => 'Crayons[color]',
             'label' => null,
-            'options' => ['r' => 'Red', 'b' => 'Black']
+            'options' => ['r' => 'Red', 'b' => 'Black'],
         ];
         $result = $radio->render($data, $this->context);
         $expected = [
@@ -67,7 +71,7 @@ class RadioWidgetTest extends TestCase
                 'type' => 'radio',
                 'name' => 'Crayons[color]',
                 'value' => 'r',
-                'id' => 'crayons-color-r'
+                'id' => 'crayons-color-r',
             ]],
             ['label' => ['for' => 'crayons-color-r']],
             'Red',
@@ -76,7 +80,7 @@ class RadioWidgetTest extends TestCase
                 'type' => 'radio',
                 'name' => 'Crayons[color]',
                 'value' => 'b',
-                'id' => 'crayons-color-b'
+                'id' => 'crayons-color-b',
             ]],
             ['label' => ['for' => 'crayons-color-b']],
             'Black',
@@ -87,7 +91,7 @@ class RadioWidgetTest extends TestCase
         $data = [
             'name' => 'Crayons[color]',
             'label' => false,
-            'options' => ['r' => 'Red', 'b' => 'Black']
+            'options' => ['r' => 'Red', 'b' => 'Black'],
         ];
         $result = $radio->render($data, $this->context);
         $expected = [
@@ -95,13 +99,13 @@ class RadioWidgetTest extends TestCase
                 'type' => 'radio',
                 'name' => 'Crayons[color]',
                 'value' => 'r',
-                'id' => 'crayons-color-r'
+                'id' => 'crayons-color-r',
             ]],
             ['input' => [
                 'type' => 'radio',
                 'name' => 'Crayons[color]',
                 'value' => 'b',
-                'id' => 'crayons-color-b'
+                'id' => 'crayons-color-b',
             ]],
         ];
         $this->assertHtml($expected, $result);
@@ -119,7 +123,7 @@ class RadioWidgetTest extends TestCase
         $data = [
             'name' => 'Crayons[color]',
             'label' => null,
-            'options' => ['r' => 'Red', 'b' => 'Black']
+            'options' => ['r' => 'Red', 'b' => 'Black'],
         ];
         $result = $radio->render($data, $this->context);
         $expected = [
@@ -128,7 +132,7 @@ class RadioWidgetTest extends TestCase
                 'type' => 'radio',
                 'name' => 'Crayons[color]',
                 'value' => 'r',
-                'id' => 'crayons-color-r'
+                'id' => 'crayons-color-r',
             ]],
             'Red',
             '/label',
@@ -137,7 +141,7 @@ class RadioWidgetTest extends TestCase
                 'type' => 'radio',
                 'name' => 'Crayons[color]',
                 'value' => 'b',
-                'id' => 'crayons-color-b'
+                'id' => 'crayons-color-b',
             ]],
             'Black',
             '/label',
@@ -146,7 +150,7 @@ class RadioWidgetTest extends TestCase
 
         $data = [
             'name' => 'Crayons[color]',
-            'options' => new Collection(['r' => 'Red', 'b' => 'Black'])
+            'options' => new Collection(['r' => 'Red', 'b' => 'Black']),
         ];
         $result = $radio->render($data, $this->context);
         $this->assertHtml($expected, $result);
@@ -161,14 +165,14 @@ class RadioWidgetTest extends TestCase
     {
         $this->templates->add([
             'nestingLabel' => '<label class="{{activeClass}}"{{attrs}}>{{text}}</label>',
-            'radioWrapper' => '{{input}}{{label}}'
+            'radioWrapper' => '{{input}}{{label}}',
         ]);
         $label = new NestingLabelWidget($this->templates);
         $radio = new RadioWidget($this->templates, $label);
         $data = [
             'name' => 'Crayons[color]',
             'val' => 'r',
-            'options' => ['r' => 'Red', 'b' => 'Black']
+            'options' => ['r' => 'Red', 'b' => 'Black'],
         ];
         $result = $radio->render($data, $this->context);
         $expected = [
@@ -186,7 +190,7 @@ class RadioWidgetTest extends TestCase
                 'type' => 'radio',
                 'name' => 'Crayons[color]',
                 'value' => 'b',
-                'id' => 'crayons-color-b'
+                'id' => 'crayons-color-b',
             ]],
             ['label' => ['class' => '', 'for' => 'crayons-color-b']],
             'Black',
@@ -209,7 +213,7 @@ class RadioWidgetTest extends TestCase
             'options' => [
                 ['value' => 'r', 'text' => 'Red', 'id' => 'my_id'],
                 ['value' => 'b', 'text' => 'Black', 'id' => 'my_id_2', 'data-test' => 'test'],
-            ]
+            ],
         ];
         $result = $radio->render($data, $this->context);
         $expected = [
@@ -218,7 +222,7 @@ class RadioWidgetTest extends TestCase
                 'type' => 'radio',
                 'name' => 'Crayons[color]',
                 'value' => 'r',
-                'id' => 'my_id'
+                'id' => 'my_id',
             ]],
             'Red',
             '/label',
@@ -228,7 +232,47 @@ class RadioWidgetTest extends TestCase
                 'name' => 'Crayons[color]',
                 'value' => 'b',
                 'id' => 'my_id_2',
-                'data-test' => 'test'
+                'data-test' => 'test',
+            ]],
+            'Black',
+            '/label',
+        ];
+        $this->assertHtml($expected, $result);
+    }
+
+    /**
+     * Test rendering inputs with label options
+     *
+     * @return void
+     */
+    public function testRenderComplexLabelAttributes()
+    {
+        $label = new NestingLabelWidget($this->templates);
+        $radio = new RadioWidget($this->templates, $label);
+        $data = [
+            'name' => 'Crayons[color]',
+            'options' => [
+                ['value' => 'r', 'text' => 'Red', 'label' => ['style' => 'color:red']],
+                ['value' => 'b', 'text' => 'Black', 'label' => ['data-test' => 'yes']],
+            ],
+        ];
+        $result = $radio->render($data, $this->context);
+        $expected = [
+            ['label' => ['for' => 'crayons-color-r', 'style' => 'color:red']],
+            ['input' => [
+                'type' => 'radio',
+                'name' => 'Crayons[color]',
+                'value' => 'r',
+                'id' => 'crayons-color-r',
+            ]],
+            'Red',
+            '/label',
+            ['label' => ['for' => 'crayons-color-b', 'data-test' => 'yes']],
+            ['input' => [
+                'type' => 'radio',
+                'name' => 'Crayons[color]',
+                'value' => 'b',
+                'id' => 'crayons-color-b',
             ]],
             'Black',
             '/label',
@@ -247,7 +291,7 @@ class RadioWidgetTest extends TestCase
         $radio = new RadioWidget($this->templates, $label);
         $data = [
             'name' => 'Thing[value]',
-            'options' => ['a>b' => 'First', 'a<b' => 'Second']
+            'options' => ['a>b' => 'First', 'a<b' => 'Second'],
         ];
         $result = $radio->render($data, $this->context);
         $expected = [
@@ -256,7 +300,7 @@ class RadioWidgetTest extends TestCase
                 'type' => 'radio',
                 'name' => 'Thing[value]',
                 'value' => 'a&gt;b',
-                'id' => 'thing-value-a-b'
+                'id' => 'thing-value-a-b',
             ]],
             'First',
             '/label',
@@ -285,7 +329,7 @@ class RadioWidgetTest extends TestCase
         $data = [
             'name' => 'Model[field]',
             'options' => ['1' => 'Yes', '0' => 'No'],
-            'val' => '0'
+            'val' => '0',
         ];
         $result = $radio->render($data, $this->context);
         $expected = [
@@ -401,7 +445,7 @@ class RadioWidgetTest extends TestCase
                 'type' => 'radio',
                 'name' => 'Crayons[color]',
                 'value' => '',
-                'id' => 'crayons-color'
+                'id' => 'crayons-color',
             ]],
             'empty',
             '/label',
@@ -410,7 +454,7 @@ class RadioWidgetTest extends TestCase
                 'type' => 'radio',
                 'name' => 'Crayons[color]',
                 'value' => 'r',
-                'id' => 'crayons-color-r'
+                'id' => 'crayons-color-r',
             ]],
             'Red',
             '/label',
@@ -425,7 +469,7 @@ class RadioWidgetTest extends TestCase
                 'type' => 'radio',
                 'name' => 'Crayons[color]',
                 'value' => '',
-                'id' => 'crayons-color'
+                'id' => 'crayons-color',
             ]],
             'Choose one',
             '/label',
@@ -434,7 +478,7 @@ class RadioWidgetTest extends TestCase
                 'type' => 'radio',
                 'name' => 'Crayons[color]',
                 'value' => 'r',
-                'id' => 'crayons-color-r'
+                'id' => 'crayons-color-r',
             ]],
             'Red',
             '/label',
@@ -466,7 +510,7 @@ class RadioWidgetTest extends TestCase
                 'type' => 'radio',
                 'name' => 'Crayons[color]',
                 'value' => 'r',
-                'id' => 'crayons-color-r'
+                'id' => 'crayons-color-r',
             ]],
             'Red',
             '/label',
@@ -490,7 +534,7 @@ class RadioWidgetTest extends TestCase
                 1 => 'one',
                 '1x' => 'one x',
                 '2' => 'two',
-            ]
+            ],
         ];
         $result = $radio->render($data, $this->context);
         $expected = [
@@ -500,7 +544,7 @@ class RadioWidgetTest extends TestCase
                 'name' => 'Versions[ver]',
                 'type' => 'radio',
                 'value' => '1',
-                'checked' => 'checked'
+                'checked' => 'checked',
             ]],
             'one',
             '/label',
@@ -509,7 +553,7 @@ class RadioWidgetTest extends TestCase
                 'id' => 'versions-ver-1x',
                 'name' => 'Versions[ver]',
                 'type' => 'radio',
-                'value' => '1x'
+                'value' => '1x',
             ]],
             'one x',
             '/label',
@@ -518,7 +562,7 @@ class RadioWidgetTest extends TestCase
                 'id' => 'versions-ver-2',
                 'name' => 'Versions[ver]',
                 'type' => 'radio',
-                'value' => '2'
+                'value' => '2',
             ]],
             'two',
             '/label',
@@ -552,7 +596,7 @@ class RadioWidgetTest extends TestCase
                 'name' => 'Versions[ver]',
                 'type' => 'radio',
                 'value' => '1',
-                'disabled' => 'disabled'
+                'disabled' => 'disabled',
             ]],
             'one',
             '/label',
@@ -562,7 +606,7 @@ class RadioWidgetTest extends TestCase
                 'name' => 'Versions[ver]',
                 'type' => 'radio',
                 'value' => '1x',
-                'disabled' => 'disabled'
+                'disabled' => 'disabled',
             ]],
             'one x',
             '/label',
@@ -582,7 +626,7 @@ class RadioWidgetTest extends TestCase
                 'name' => 'Versions[ver]',
                 'type' => 'radio',
                 'value' => '1',
-                'disabled' => 'disabled'
+                'disabled' => 'disabled',
             ]],
             'one',
             '/label',
@@ -643,7 +687,7 @@ class RadioWidgetTest extends TestCase
             ],
             'label' => [
                 'class' => 'my-class',
-            ]
+            ],
         ];
         $result = $radio->render($data, $this->context);
         $expected = [
@@ -678,7 +722,7 @@ class RadioWidgetTest extends TestCase
     public function testRenderContainerTemplate()
     {
         $this->templates->add([
-            'radioWrapper' => '<div class="radio">{{input}}{{label}}</div>'
+            'radioWrapper' => '<div class="radio">{{input}}{{label}}</div>',
         ]);
         $label = new NestingLabelWidget($this->templates);
         $radio = new RadioWidget($this->templates, $label);
@@ -691,11 +735,11 @@ class RadioWidgetTest extends TestCase
             ],
         ];
         $result = $radio->render($data, $this->context);
-        $this->assertContains(
+        $this->assertStringContainsString(
             '<div class="radio"><input type="radio"',
             $result
         );
-        $this->assertContains(
+        $this->assertStringContainsString(
             '</label></div>',
             $result
         );
@@ -723,13 +767,13 @@ class RadioWidgetTest extends TestCase
             ],
             'templateVars' => [
                 'wrapperVar' => 'wrap-var',
-            ]
+            ],
         ];
         $result = $radio->render($data, $this->context);
-        $this->assertContains('data-var="wrap-var"><label', $result);
-        $this->assertContains('type="radio" data-i="i-var"', $result);
-        $this->assertContains('one x l-var wrap-var</label>', $result);
-        $this->assertContains('two  wrap-var</label>', $result);
+        $this->assertStringContainsString('data-var="wrap-var"><label', $result);
+        $this->assertStringContainsString('type="radio" data-i="i-var"', $result);
+        $this->assertStringContainsString('one x l-var wrap-var</label>', $result);
+        $this->assertStringContainsString('two  wrap-var</label>', $result);
     }
 
     /**
@@ -748,7 +792,7 @@ class RadioWidgetTest extends TestCase
             'label' => null,
             'options' => ['option A', 'option B'],
             'class' => 'my-class',
-            'data-ref' => 'custom-attr'
+            'data-ref' => 'custom-attr',
         ], $this->context);
         $expected = [
             ['label' => ['for' => 'model-field-0']],
@@ -759,8 +803,8 @@ class RadioWidgetTest extends TestCase
                     'value' => '0',
                     'id' => 'model-field-0',
                     'class' => 'my-class',
-                    'data-ref' => 'custom-attr'
-                ]
+                    'data-ref' => 'custom-attr',
+                ],
             ],
             'option A',
             '/label',
@@ -772,12 +816,103 @@ class RadioWidgetTest extends TestCase
                     'value' => '1',
                     'id' => 'model-field-1',
                     'class' => 'my-class',
-                    'data-ref' => 'custom-attr'
-                ]
+                    'data-ref' => 'custom-attr',
+                ],
             ],
             'option B',
-            '/label'
+            '/label',
         ];
+        $this->assertHtml($expected, $result);
+    }
+
+    /**
+     * testRenderExplicitId method
+     *
+     * Test that the id passed is actually used
+     * Issue: https://github.com/cakephp/cakephp/issues/13342
+     *
+     * @return void
+     */
+    public function testRenderExplicitId()
+    {
+        $label = new NestingLabelWidget($this->templates);
+        $input = new RadioWidget($this->templates, $label);
+        $data = [
+            'name' => 'field',
+            'options' => ['value1', 'value2'],
+            'id' => 'alternative-id',
+            'idPrefix' => 'willBeIgnored',
+        ];
+        $result = $input->render($data, $this->context);
+        $expected = [
+            [
+                'label' => ['for' => 'alternative-id-0'],
+                'input' => ['type' => 'radio', 'name' => 'field', 'value' => '0', 'id' => 'alternative-id-0'],
+            ],
+            'value1',
+            '/label',
+            [
+                'label' => ['for' => 'alternative-id-1'],
+                'input' => ['type' => 'radio', 'name' => 'field', 'value' => '1', 'id' => 'alternative-id-1'],
+            ],
+            'value2',
+            '/label',
+        ];
+        $this->assertHtml($expected, $result);
+
+        $data = [
+            'name' => 'field',
+            'options' => ['value1', 'value2'],
+            'idPrefix' => 'formprefix',
+        ];
+        $result = $input->render($data, $this->context);
+        $expected = [
+            [
+                'label' => ['for' => 'formprefix-field-0'],
+                'input' => ['type' => 'radio', 'name' => 'field', 'value' => '0', 'id' => 'formprefix-field-0'],
+            ],
+            'value1',
+            '/label',
+            [
+                'label' => ['for' => 'formprefix-field-1'],
+                'input' => ['type' => 'radio', 'name' => 'field', 'value' => '1', 'id' => 'formprefix-field-1'],
+            ],
+            'value2',
+            '/label',
+        ];
+        $this->assertHtml($expected, $result);
+    }
+
+    /**
+     * testRenderSelectedClass method
+     *
+     * Test that the custom selected class is passed to label
+     * Issue: https://github.com/cakephp/cakephp/issues/11249
+     *
+     * @return void
+     */
+    public function testRenderSelectedClass()
+    {
+        $this->templates->add(['selectedClass' => 'active']);
+
+        $label = new NestingLabelWidget($this->templates);
+        $input = new RadioWidget($this->templates, $label);
+        $data = [
+            'name' => 'field',
+            'options' => ['value1' => 'title1'],
+            'val' => 'value1',
+            'label' => ['title' => 'my label'],
+        ];
+        $result = $input->render($data, $this->context);
+
+        $expected = [
+            ['label' => [
+                'title' => 'my label',
+                'class' => 'active',
+                'for' => 'field-value1',
+            ]],
+        ];
+
         $this->assertHtml($expected, $result);
     }
 }

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -17,15 +19,17 @@ namespace Cake\Test\TestCase\Http\Middleware;
 use Cake\Http\Middleware\CsrfProtectionMiddleware;
 use Cake\Http\Response;
 use Cake\Http\ServerRequest;
-use Cake\I18n\Time;
 use Cake\TestSuite\TestCase;
+use Laminas\Diactoros\Response as DiactorosResponse;
+use Laminas\Diactoros\Response\RedirectResponse;
+use Psr\Http\Message\ServerRequestInterface;
+use TestApp\Http\TestRequestHandler;
 
 /**
  * Test for CsrfProtection
  */
 class CsrfProtectionMiddlewareTest extends TestCase
 {
-
     /**
      * Data provider for HTTP method tests.
      *
@@ -49,20 +53,20 @@ class CsrfProtectionMiddlewareTest extends TestCase
     public static function httpMethodProvider()
     {
         return [
-            ['OPTIONS'], ['PATCH'], ['PUT'], ['POST'], ['DELETE'], ['PURGE'], ['INVALIDMETHOD']
+            ['OPTIONS'], ['PATCH'], ['PUT'], ['POST'], ['DELETE'], ['PURGE'], ['INVALIDMETHOD'],
         ];
     }
 
     /**
-     * Provides the callback for the next middleware
+     * Provides the request handler
      *
-     * @return callable
+     * @return \Psr\Http\Server\RequestHandlerInterface
      */
-    protected function _getNextClosure()
+    protected function _getRequestHandler()
     {
-        return function ($request, $response) {
-            return $response;
-        };
+        return new TestRequestHandler(function () {
+            return new Response();
+        });
     }
 
     /**
@@ -76,19 +80,23 @@ class CsrfProtectionMiddlewareTest extends TestCase
             'environment' => ['REQUEST_METHOD' => 'GET'],
             'webroot' => '/dir/',
         ]);
-        $response = new Response();
 
-        $closure = function ($request, $response) {
-            $cookie = $response->getCookie('csrfToken');
-            $this->assertNotEmpty($cookie, 'Should set a token.');
-            $this->assertRegExp('/^[a-f0-9]+$/', $cookie['value'], 'Should look like a hash.');
-            $this->assertEquals(0, $cookie['expire'], 'session duration.');
-            $this->assertEquals('/dir/', $cookie['path'], 'session path.');
-            $this->assertEquals($cookie['value'], $request->getParam('_csrfToken'));
-        };
+        $updatedRequest = null;
+        $handler = new TestRequestHandler(function ($request) use (&$updatedRequest) {
+            $updatedRequest = $request;
+
+            return new Response();
+        });
 
         $middleware = new CsrfProtectionMiddleware();
-        $middleware($request, $response, $closure);
+        $response = $middleware->process($request, $handler);
+
+        $cookie = $response->getCookie('csrfToken');
+        $this->assertNotEmpty($cookie, 'Should set a token.');
+        $this->assertRegExp('/^[a-f0-9]+$/', $cookie['value'], 'Should look like a hash.');
+        $this->assertSame(0, $cookie['expires'], 'session duration.');
+        $this->assertSame('/dir/', $cookie['path'], 'session path.');
+        $this->assertEquals($cookie['value'], $updatedRequest->getAttribute('csrfToken'));
     }
 
     /**
@@ -104,14 +112,51 @@ class CsrfProtectionMiddlewareTest extends TestCase
                 'REQUEST_METHOD' => $method,
                 'HTTP_X_CSRF_TOKEN' => 'nope',
             ],
-            'cookies' => ['csrfToken' => 'testing123']
+            'cookies' => ['csrfToken' => 'testing123'],
         ]);
-        $response = new Response();
 
         // No exception means the test is valid
         $middleware = new CsrfProtectionMiddleware();
-        $response = $middleware($request, $response, $this->_getNextClosure());
+        $response = $middleware->process($request, $this->_getRequestHandler());
         $this->assertInstanceOf(Response::class, $response);
+    }
+
+    /**
+     * Test that the CSRF tokens are set for redirect responses
+     *
+     * @return void
+     */
+    public function testRedirectResponseCookies()
+    {
+        $request = new ServerRequest([
+            'environment' => ['REQUEST_METHOD' => 'GET'],
+        ]);
+        $handler = new TestRequestHandler(function () {
+            return new RedirectResponse('/');
+        });
+
+        $middleware = new CsrfProtectionMiddleware();
+        $response = $middleware->process($request, $handler);
+        $this->assertStringContainsString('csrfToken=', $response->getHeaderLine('Set-Cookie'));
+    }
+
+    /**
+     * Test that the CSRF tokens are set for diactoros responses
+     *
+     * @return void
+     */
+    public function testDiactorosResponseCookies()
+    {
+        $request = new ServerRequest([
+            'environment' => ['REQUEST_METHOD' => 'GET'],
+        ]);
+        $handler = new TestRequestHandler(function () {
+            return new DiactorosResponse();
+        });
+
+        $middleware = new CsrfProtectionMiddleware();
+        $response = $middleware->process($request, $handler);
+        $this->assertStringContainsString('csrfToken=', $response->getHeaderLine('Set-Cookie'));
     }
 
     /**
@@ -128,13 +173,13 @@ class CsrfProtectionMiddlewareTest extends TestCase
                 'HTTP_X_CSRF_TOKEN' => 'testing123',
             ],
             'post' => ['a' => 'b'],
-            'cookies' => ['csrfToken' => 'testing123']
+            'cookies' => ['csrfToken' => 'testing123'],
         ]);
         $response = new Response();
 
         // No exception means the test is valid
         $middleware = new CsrfProtectionMiddleware();
-        $response = $middleware($request, $response, $this->_getNextClosure());
+        $response = $middleware->process($request, $this->_getRequestHandler());
         $this->assertInstanceOf(Response::class, $response);
     }
 
@@ -153,12 +198,11 @@ class CsrfProtectionMiddlewareTest extends TestCase
                 'HTTP_X_CSRF_TOKEN' => 'nope',
             ],
             'post' => ['a' => 'b'],
-            'cookies' => ['csrfToken' => 'testing123']
+            'cookies' => ['csrfToken' => 'testing123'],
         ]);
-        $response = new Response();
 
         $middleware = new CsrfProtectionMiddleware();
-        $middleware($request, $response, $this->_getNextClosure());
+        $middleware->process($request, $this->_getRequestHandler());
     }
 
     /**
@@ -174,17 +218,18 @@ class CsrfProtectionMiddlewareTest extends TestCase
                 'REQUEST_METHOD' => $method,
             ],
             'post' => ['_csrfToken' => 'testing123'],
-            'cookies' => ['csrfToken' => 'testing123']
+            'cookies' => ['csrfToken' => 'testing123'],
         ]);
-        $response = new Response();
 
-        $closure = function ($request, $response) {
+        $handler = new TestRequestHandler(function ($request) {
             $this->assertNull($request->getData('_csrfToken'));
-        };
+
+            return new Response();
+        });
 
         // No exception means everything is OK
         $middleware = new CsrfProtectionMiddleware();
-        $middleware($request, $response, $closure);
+        $middleware->process($request, $handler);
     }
 
     /**
@@ -201,12 +246,11 @@ class CsrfProtectionMiddlewareTest extends TestCase
                 'REQUEST_METHOD' => $method,
             ],
             'post' => ['_csrfToken' => 'nope'],
-            'cookies' => ['csrfToken' => 'testing123']
+            'cookies' => ['csrfToken' => 'testing123'],
         ]);
-        $response = new Response();
 
         $middleware = new CsrfProtectionMiddleware();
-        $middleware($request, $response, $this->_getNextClosure());
+        $middleware->process($request, $this->_getRequestHandler());
     }
 
     /**
@@ -222,12 +266,11 @@ class CsrfProtectionMiddlewareTest extends TestCase
                 'REQUEST_METHOD' => 'POST',
             ],
             'post' => [],
-            'cookies' => ['csrfToken' => 'testing123']
+            'cookies' => ['csrfToken' => 'testing123'],
         ]);
-        $response = new Response();
 
         $middleware = new CsrfProtectionMiddleware();
-        $middleware($request, $response, $this->_getNextClosure());
+        $middleware->process($request, $this->_getRequestHandler());
     }
 
     /**
@@ -241,15 +284,14 @@ class CsrfProtectionMiddlewareTest extends TestCase
         $this->expectException(\Cake\Http\Exception\InvalidCsrfTokenException::class);
         $request = new ServerRequest([
             'environment' => [
-                'REQUEST_METHOD' => $method
+                'REQUEST_METHOD' => $method,
             ],
             'post' => ['_csrfToken' => 'could-be-valid'],
-            'cookies' => []
+            'cookies' => [],
         ]);
-        $response = new Response();
 
         $middleware = new CsrfProtectionMiddleware();
-        $middleware($request, $response, $this->_getNextClosure());
+        $middleware->process($request, $this->_getRequestHandler());
     }
 
     /**
@@ -261,28 +303,25 @@ class CsrfProtectionMiddlewareTest extends TestCase
     {
         $request = new ServerRequest([
             'environment' => ['REQUEST_METHOD' => 'GET'],
-            'webroot' => '/dir/'
+            'webroot' => '/dir/',
         ]);
-        $response = new Response();
-
-        $closure = function ($request, $response) {
-            $this->assertEmpty($response->getCookie('csrfToken'));
-            $cookie = $response->getCookie('token');
-            $this->assertNotEmpty($cookie, 'Should set a token.');
-            $this->assertRegExp('/^[a-f0-9]+$/', $cookie['value'], 'Should look like a hash.');
-            $this->assertWithinRange((new Time('+1 hour'))->format('U'), $cookie['expire'], 1, 'session duration.');
-            $this->assertEquals('/dir/', $cookie['path'], 'session path.');
-            $this->assertTrue($cookie['secure'], 'cookie security flag missing');
-            $this->assertTrue($cookie['httpOnly'], 'cookie httpOnly flag missing');
-        };
 
         $middleware = new CsrfProtectionMiddleware([
             'cookieName' => 'token',
             'expiry' => '+1 hour',
             'secure' => true,
-            'httpOnly' => true
+            'httpOnly' => true,
         ]);
-        $middleware($request, $response, $closure);
+        $response = $middleware->process($request, $this->_getRequestHandler());
+
+        $this->assertEmpty($response->getCookie('csrfToken'));
+        $cookie = $response->getCookie('token');
+        $this->assertNotEmpty($cookie, 'Should set a token.');
+        $this->assertRegExp('/^[a-f0-9]+$/', $cookie['value'], 'Should look like a hash.');
+        $this->assertWithinRange(strtotime('+1 hour'), $cookie['expires'], 1, 'session duration.');
+        $this->assertSame('/dir/', $cookie['path'], 'session path.');
+        $this->assertTrue($cookie['secure'], 'cookie security flag missing');
+        $this->assertTrue($cookie['httponly'], 'cookie httpOnly flag missing');
     }
 
     /**
@@ -306,7 +345,39 @@ class CsrfProtectionMiddlewareTest extends TestCase
             'field' => 'token',
             'expiry' => 90,
         ]);
-        $response = $middleware($request, $response, $this->_getNextClosure());
+        $response = $middleware->process($request, $this->_getRequestHandler());
+        $this->assertInstanceOf(Response::class, $response);
+    }
+
+    /**
+     * @return void
+     */
+    public function testSkippingTokenCheckUsingWhitelistCallback()
+    {
+        $request = new ServerRequest([
+            'post' => [
+                '_csrfToken' => 'foo',
+            ],
+            'environment' => [
+                'REQUEST_METHOD' => 'POST',
+            ],
+        ]);
+        $response = new Response();
+
+        $middleware = new CsrfProtectionMiddleware();
+        $middleware->whitelistCallback(function (ServerRequestInterface $request) {
+            $this->assertSame('POST', $request->getServerParams()['REQUEST_METHOD']);
+
+            return true;
+        });
+
+        $handler = new TestRequestHandler(function ($request) {
+            $this->assertEmpty($request->getParsedBody());
+
+            return new Response();
+        });
+
+        $response = $middleware->process($request, $handler);
         $this->assertInstanceOf(Response::class, $response);
     }
 }

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -24,9 +26,8 @@ use PDOException;
  * Used to access information about the tables,
  * and other data in a database.
  */
-class Collection
+class Collection implements CollectionInterface
 {
-
     /**
      * Connection object
      *
@@ -55,11 +56,11 @@ class Collection
     /**
      * Get the list of tables available in the current connection.
      *
-     * @return array The list of tables in the connected database/schema.
+     * @return string[] The list of tables in the connected database/schema.
      */
-    public function listTables()
+    public function listTables(): array
     {
-        list($sql, $params) = $this->_dialect->listTablesSql($this->_connection->config());
+        [$sql, $params] = $this->_dialect->listTablesSql($this->_connection->config());
         $result = [];
         $statement = $this->_connection->execute($sql, $params);
         while ($row = $statement->fetch()) {
@@ -88,13 +89,13 @@ class Collection
      * @return \Cake\Database\Schema\TableSchema Object with column metadata.
      * @throws \Cake\Database\Exception when table cannot be described.
      */
-    public function describe($name, array $options = [])
+    public function describe(string $name, array $options = []): TableSchemaInterface
     {
         $config = $this->_connection->config();
         if (strpos($name, '.')) {
-            list($config['schema'], $name) = explode('.', $name);
+            [$config['schema'], $name] = explode('.', $name);
         }
-        $table = new TableSchema($name);
+        $table = $this->_connection->getDriver()->newTableSchema($name);
 
         $this->_reflect('Column', $name, $config, $table);
         if (count($table->columns()) === 0) {
@@ -114,16 +115,24 @@ class Collection
      * @param string $stage The stage name.
      * @param string $name The table name.
      * @param array $config The config data.
-     * @param \Cake\Database\Schema\TableSchema $schema The table instance
+     * @param \Cake\Database\Schema\TableSchema $schema The table schema instance.
      * @return void
      * @throws \Cake\Database\Exception on query failure.
+     * @uses \Cake\Database\Schema\BaseSchema::describeColumnSql
+     * @uses \Cake\Database\Schema\BaseSchema::describeIndexSql
+     * @uses \Cake\Database\Schema\BaseSchema::describeForeignKeySql
+     * @uses \Cake\Database\Schema\BaseSchema::describeOptionsSql
+     * @uses \Cake\Database\Schema\BaseSchema::convertColumnDescription
+     * @uses \Cake\Database\Schema\BaseSchema::convertIndexDescription
+     * @uses \Cake\Database\Schema\BaseSchema::convertForeignKeyDescription
+     * @uses \Cake\Database\Schema\BaseSchema::convertOptionsDescription
      */
-    protected function _reflect($stage, $name, $config, $schema)
+    protected function _reflect(string $stage, string $name, array $config, TableSchema $schema): void
     {
         $describeMethod = "describe{$stage}Sql";
         $convertMethod = "convert{$stage}Description";
 
-        list($sql, $params) = $this->_dialect->{$describeMethod}($name, $config);
+        [$sql, $params] = $this->_dialect->{$describeMethod}($name, $config);
         if (empty($sql)) {
             return;
         }
@@ -132,6 +141,7 @@ class Collection
         } catch (PDOException $e) {
             throw new Exception($e->getMessage(), 500, $e);
         }
+        /** @psalm-suppress PossiblyFalseIterator */
         foreach ($statement->fetchAll('assoc') as $row) {
             $this->_dialect->{$convertMethod}($schema, $row);
         }

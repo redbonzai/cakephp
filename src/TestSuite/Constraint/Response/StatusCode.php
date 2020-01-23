@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -20,15 +22,14 @@ namespace Cake\TestSuite\Constraint\Response;
  */
 class StatusCode extends StatusCodeBase
 {
-
     /**
      * Assertion message
      *
      * @return string
      */
-    public function toString()
+    public function toString(): string
     {
-        return sprintf('matches response status code %d', $this->response->getStatusCode());
+        return sprintf('matches response status code `%d`', $this->response->getStatusCode());
     }
 
     /**
@@ -37,8 +38,8 @@ class StatusCode extends StatusCodeBase
      * @param mixed $other Expected code
      * @return string
      */
-    public function failureDescription($other)
+    public function failureDescription($other): string
     {
-        return $other . ' ' . $this->toString();
+        return '`' . $other . '` ' . $this->toString();
     }
 }

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -12,7 +14,7 @@
  * @since         3.3.5
  * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
-namespace Cake\Test\TestCase;
+namespace Cake\Test\TestCase\Http;
 
 use Cake\Http\CallbackStream;
 use Cake\Http\Cookie\Cookie;
@@ -27,6 +29,9 @@ require_once __DIR__ . '/server_mocks.php';
  */
 class ResponseEmitterTest extends TestCase
 {
+    /**
+     * @var \Cake\Http\ResponseEmitter
+     */
     protected $emitter;
 
     /**
@@ -34,12 +39,29 @@ class ResponseEmitterTest extends TestCase
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
+
         $GLOBALS['mockedHeadersSent'] = false;
-        $GLOBALS['mockedHeaders'] = $GLOBALS['mockedCookies'] = [];
-        $this->emitter = new ResponseEmitter();
+        $GLOBALS['mockedHeaders'] = [];
+
+        $this->emitter = $this->getMockBuilder(ResponseEmitter::class)
+            ->setMethods(['setCookie'])
+            ->getMock();
+
+        $this->emitter->expects($this->any())
+            ->method('setCookie')
+            ->will($this->returnCallback(function ($cookie) {
+                if (is_string($cookie)) {
+                    $cookie = Cookie::createFromHeaderString($cookie, ['path' => '']);
+                }
+
+                $GLOBALS['mockedCookies'][] = ['name' => $cookie->getName(), 'value' => $cookie->getValue()]
+                    + $cookie->getOptions();
+
+                return true;
+            }));
     }
 
     /**
@@ -47,7 +69,7 @@ class ResponseEmitterTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         unset($GLOBALS['mockedHeadersSent']);
@@ -70,11 +92,11 @@ class ResponseEmitterTest extends TestCase
         $this->emitter->emit($response);
         $out = ob_get_clean();
 
-        $this->assertEquals('It worked', $out);
+        $this->assertSame('It worked', $out);
         $expected = [
             'HTTP/1.1 201 Created',
             'Content-Type: text/html',
-            'Location: http://example.com/cake/1'
+            'Location: http://example.com/cake/1',
         ];
         $this->assertEquals($expected, $GLOBALS['mockedHeaders']);
     }
@@ -95,7 +117,7 @@ class ResponseEmitterTest extends TestCase
         $this->emitter->emit($response);
         $out = ob_get_clean();
 
-        $this->assertEquals('', $out);
+        $this->assertSame('', $out);
         $expected = [
             'HTTP/1.1 204 No Content',
             'X-testing: value',
@@ -120,10 +142,10 @@ class ResponseEmitterTest extends TestCase
         $this->emitter->emit($response);
         $out = ob_get_clean();
 
-        $this->assertEquals('ok', $out);
+        $this->assertSame('ok', $out);
         $expected = [
             'HTTP/1.1 200 OK',
-            'Content-Type: text/plain'
+            'Content-Type: text/plain',
         ];
         $this->assertEquals($expected, $GLOBALS['mockedHeaders']);
         $expected = [
@@ -131,19 +153,19 @@ class ResponseEmitterTest extends TestCase
                 'name' => 'simple',
                 'value' => 'val',
                 'path' => '/',
-                'expire' => 0,
+                'expires' => 0,
                 'domain' => '',
                 'secure' => true,
-                'httponly' => false
+                'httponly' => false,
             ],
             [
                 'name' => 'google',
                 'value' => 'not=nice',
                 'path' => '/accounts',
-                'expire' => 0,
+                'expires' => 0,
                 'domain' => '',
                 'secure' => false,
-                'httponly' => true
+                'httponly' => true,
             ],
         ];
         $this->assertEquals($expected, $GLOBALS['mockedCookies']);
@@ -159,7 +181,7 @@ class ResponseEmitterTest extends TestCase
         $response = (new Response())
             ->withAddedHeader('Set-Cookie', "simple=val;\tSecure")
             ->withAddedHeader('Set-Cookie', 'people=jim,jack,jonny";";Path=/accounts')
-            ->withAddedHeader('Set-Cookie', 'google=not=nice;Path=/accounts; HttpOnly')
+            ->withAddedHeader('Set-Cookie', 'google=not=nice;Path=/accounts; HttpOnly; samesite=Strict')
             ->withAddedHeader('Set-Cookie', 'a=b;  Expires=Wed, 13 Jan 2021 22:23:01 GMT; Domain=www.example.com;')
             ->withAddedHeader('Set-Cookie', 'list%5B%5D=a%20b%20c')
             ->withHeader('Content-Type', 'text/plain');
@@ -169,10 +191,10 @@ class ResponseEmitterTest extends TestCase
         $this->emitter->emit($response);
         $out = ob_get_clean();
 
-        $this->assertEquals('ok', $out);
+        $this->assertSame('ok', $out);
         $expected = [
             'HTTP/1.1 200 OK',
-            'Content-Type: text/plain'
+            'Content-Type: text/plain',
         ];
         $this->assertEquals($expected, $GLOBALS['mockedHeaders']);
         $expected = [
@@ -180,46 +202,47 @@ class ResponseEmitterTest extends TestCase
                 'name' => 'simple',
                 'value' => 'val',
                 'path' => '',
-                'expire' => 0,
+                'expires' => 0,
                 'domain' => '',
                 'secure' => true,
-                'httponly' => false
+                'httponly' => false,
             ],
             [
                 'name' => 'people',
                 'value' => 'jim,jack,jonny";"',
                 'path' => '/accounts',
-                'expire' => 0,
+                'expires' => 0,
                 'domain' => '',
                 'secure' => false,
-                'httponly' => false
+                'httponly' => false,
             ],
             [
                 'name' => 'google',
                 'value' => 'not=nice',
                 'path' => '/accounts',
-                'expire' => 0,
+                'expires' => 0,
                 'domain' => '',
                 'secure' => false,
-                'httponly' => true
+                'httponly' => true,
+                'samesite' => 'Strict',
             ],
             [
                 'name' => 'a',
                 'value' => 'b',
                 'path' => '',
-                'expire' => 1610576581,
+                'expires' => 1610576581,
                 'domain' => 'www.example.com',
                 'secure' => false,
-                'httponly' => false
+                'httponly' => false,
             ],
             [
                 'name' => 'list[]',
                 'value' => 'a b c',
                 'path' => '',
-                'expire' => 0,
+                'expires' => 0,
                 'domain' => '',
                 'secure' => false,
-                'httponly' => false
+                'httponly' => false,
             ],
         ];
         $this->assertEquals($expected, $GLOBALS['mockedCookies']);
@@ -246,7 +269,7 @@ class ResponseEmitterTest extends TestCase
         $this->emitter->emit($response);
         $out = ob_get_clean();
 
-        $this->assertEquals('It worked', $out);
+        $this->assertSame('It worked', $out);
         $expected = [
             'HTTP/1.1 201 Created',
             'Content-Type: text/plain',
@@ -270,7 +293,7 @@ class ResponseEmitterTest extends TestCase
         $this->emitter->emit($response);
         $out = ob_get_clean();
 
-        $this->assertEquals('t wo', $out);
+        $this->assertSame('t wo', $out);
         $expected = [
             'HTTP/1.1 200 OK',
             'Content-Type: text/plain',
@@ -295,7 +318,7 @@ class ResponseEmitterTest extends TestCase
         $this->emitter->emit($response, 2);
         $out = ob_get_clean();
 
-        $this->assertEquals('It worked', $out);
+        $this->assertSame('It worked', $out);
     }
 
     /**
@@ -314,7 +337,7 @@ class ResponseEmitterTest extends TestCase
         $this->emitter->emit($response);
         $out = ob_get_clean();
 
-        $this->assertEquals('rked', $out);
+        $this->assertSame('rked', $out);
     }
 
     /**
@@ -333,7 +356,7 @@ class ResponseEmitterTest extends TestCase
         $this->emitter->emit($response);
         $out = ob_get_clean();
 
-        $this->assertEquals('It worked', $out);
+        $this->assertSame('It worked', $out);
     }
 
     /**
@@ -356,7 +379,7 @@ class ResponseEmitterTest extends TestCase
         $this->emitter->emit($response);
         $out = ob_get_clean();
 
-        $this->assertEquals('t wo', $out);
+        $this->assertSame('t wo', $out);
         $expected = [
             'HTTP/1.1 201 Created',
             'Content-Range: bytes 1-4/9',

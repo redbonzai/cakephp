@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace Cake\Test\TestCase\TestSuite\Constraint;
 
 use Cake\Event\Event;
@@ -6,13 +8,13 @@ use Cake\Event\EventList;
 use Cake\Event\EventManager;
 use Cake\TestSuite\Constraint\EventFiredWith;
 use Cake\TestSuite\TestCase;
+use stdClass;
 
 /**
  * EventFiredWith Test
  */
 class EventFiredWithTest extends TestCase
 {
-
     /**
      * tests EventFiredWith constraint
      *
@@ -25,14 +27,20 @@ class EventFiredWithTest extends TestCase
         $manager->trackEvents(true);
 
         $myEvent = new Event('my.event', $this, [
-            'key' => 'value'
+            'key' => 'value',
         ]);
         $myOtherEvent = new Event('my.other.event', $this, [
-            'key' => null
+            'key' => null,
+        ]);
+
+        $obj = new stdClass();
+        $myEventWithObject = new Event('my.obj.event', $this, [
+            'key' => $obj,
         ]);
 
         $manager->getEventList()->add($myEvent);
         $manager->getEventList()->add($myOtherEvent);
+        $manager->getEventList()->add($myEventWithObject);
 
         $constraint = new EventFiredWith($manager, 'key', 'value');
 
@@ -44,6 +52,10 @@ class EventFiredWithTest extends TestCase
 
         $this->assertTrue($constraint->matches('my.other.event'));
         $this->assertFalse($constraint->matches('my.event'));
+
+        $constraint = new EventFiredWith($manager, 'key', $obj);
+
+        $this->assertTrue($constraint->matches('my.obj.event'));
     }
 
     /**
@@ -59,7 +71,7 @@ class EventFiredWithTest extends TestCase
         $manager->trackEvents(true);
 
         $myEvent = new Event('my.event', $this, [
-            'key' => 'value'
+            'key' => 'value',
         ]);
 
         $manager->getEventList()->add($myEvent);

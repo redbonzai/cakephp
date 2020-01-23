@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,7 +16,7 @@
  */
 namespace TestApp\Controller;
 
-use Cake\Event\Event;
+use Cake\Event\EventInterface;
 use Cake\Http\Cookie\Cookie;
 
 /**
@@ -22,29 +24,25 @@ use Cake\Http\Cookie\Cookie;
  */
 class PostsController extends AppController
 {
-    /**
-     * Components array
-     *
-     * @var array
-     */
-    public $components = [
-        'Flash',
-        'RequestHandler' => [
-            'enableBeforeRedirect' => false
-        ],
-        'Security',
-    ];
+    public function initialize(): void
+    {
+        $this->loadComponent('Flash');
+        $this->loadComponent('RequestHandler');
+        $this->loadComponent('FormProtection');
+    }
 
     /**
      * beforeFilter
      *
-     * @return void
+     * @return \Cake\Http\Response|null|void
      */
-    public function beforeFilter(Event $event)
+    public function beforeFilter(EventInterface $event)
     {
         if ($this->request->getParam('action') !== 'securePost') {
-            $this->getEventManager()->off($this->Security);
+            $this->getEventManager()->off($this->FormProtection);
         }
+
+        $this->FormProtection->setConfig('unlockedFields', ['some_unlocked_field']);
     }
 
     /**
@@ -93,7 +91,7 @@ class PostsController extends AppController
         $data = [];
 
         $this->set(compact('data'));
-        $this->set('_serialize', ['data']);
+        $this->viewBuilder()->setOption('serialize', ['data']);
     }
 
     /**
@@ -129,6 +127,13 @@ class PostsController extends AppController
     public function empty_response()
     {
         return $this->getResponse()->withStringBody('');
+    }
+
+    public function secretCookie()
+    {
+        return $this->response
+            ->withCookie(new Cookie('secrets', 'name'))
+            ->withStringBody('ok');
     }
 
     public function stacked_flash()

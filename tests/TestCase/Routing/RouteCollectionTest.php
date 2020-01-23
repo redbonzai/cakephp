@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -16,20 +18,24 @@ namespace Cake\Test\TestCase\Routing;
 
 use Cake\Http\ServerRequest;
 use Cake\Routing\Exception\MissingRouteException;
+use Cake\Routing\Route\Route;
 use Cake\Routing\RouteBuilder;
 use Cake\Routing\RouteCollection;
-use Cake\Routing\Route\Route;
 use Cake\TestSuite\TestCase;
 
 class RouteCollectionTest extends TestCase
 {
+    /**
+     * @var \Cake\Routing\RouteCollection
+     */
+    protected $collection;
 
     /**
      * Setup method
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->collection = new RouteCollection();
@@ -38,6 +44,7 @@ class RouteCollectionTest extends TestCase
     /**
      * Test parse() throws an error on unknown routes.
      *
+     * @return void
      */
     public function testParseMissingRoute()
     {
@@ -54,6 +61,7 @@ class RouteCollectionTest extends TestCase
     /**
      * Test parse() throws an error on known routes called with unknown methods.
      *
+     * @return void
      */
     public function testParseMissingRouteMethod()
     {
@@ -171,7 +179,7 @@ class RouteCollectionTest extends TestCase
             'controller' => 'Media',
             'action' => 'search',
             '_matchedRoute' => '/b/media/search/*',
-            '_name' => 'media_search'
+            '_name' => 'media_search',
         ];
         $this->assertEquals($expected, $result);
 
@@ -183,7 +191,7 @@ class RouteCollectionTest extends TestCase
             'controller' => 'Media',
             'action' => 'search',
             '_matchedRoute' => '/b/media/search/*',
-            '_name' => 'media_search'
+            '_name' => 'media_search',
         ];
         $this->assertEquals($expected, $result);
     }
@@ -245,6 +253,7 @@ class RouteCollectionTest extends TestCase
     /**
      * Test parseRequest() throws an error on unknown routes.
      *
+     * @return void
      */
     public function testParseRequestMissingRoute()
     {
@@ -276,8 +285,8 @@ class RouteCollectionTest extends TestCase
         $request = new ServerRequest([
             'environment' => [
                 'HTTP_HOST' => 'a.example.com',
-                'PATH_INFO' => '/fallback'
-            ]
+                'PATH_INFO' => '/fallback',
+            ],
         ]);
         $result = $this->collection->parseRequest($request);
         $expected = [
@@ -285,15 +294,15 @@ class RouteCollectionTest extends TestCase
             'action' => 'index',
             'pass' => [],
             'plugin' => null,
-            '_matchedRoute' => '/fallback'
+            '_matchedRoute' => '/fallback',
         ];
         $this->assertEquals($expected, $result, 'Should match, domain is correct');
 
         $request = new ServerRequest([
             'environment' => [
                 'HTTP_HOST' => 'foo.bar.example.com',
-                'PATH_INFO' => '/fallback'
-            ]
+                'PATH_INFO' => '/fallback',
+            ],
         ]);
         $result = $this->collection->parseRequest($request);
         $this->assertEquals($expected, $result, 'Should match, domain is a matching subdomain');
@@ -301,14 +310,14 @@ class RouteCollectionTest extends TestCase
         $request = new ServerRequest([
             'environment' => [
                 'HTTP_HOST' => 'example.test.com',
-                'PATH_INFO' => '/fallback'
-            ]
+                'PATH_INFO' => '/fallback',
+            ],
         ]);
         try {
             $this->collection->parseRequest($request);
             $this->fail('No exception raised');
         } catch (MissingRouteException $e) {
-            $this->assertContains('/fallback', $e->getMessage());
+            $this->assertStringContainsString('/fallback', $e->getMessage());
         }
     }
 
@@ -345,8 +354,8 @@ class RouteCollectionTest extends TestCase
         $request = new ServerRequest([
             'environment' => [
                 'HTTP_HOST' => $host,
-                'PATH_INFO' => '/fallback'
-            ]
+                'PATH_INFO' => '/fallback',
+            ],
         ]);
         $this->collection->parseRequest($request);
     }
@@ -443,6 +452,7 @@ class RouteCollectionTest extends TestCase
     /**
      * Test match() throws an error on unknown routes.
      *
+     * @return void
      */
     public function testMatchError()
     {
@@ -476,13 +486,13 @@ class RouteCollectionTest extends TestCase
         $routes->connect('/:id', ['controller' => 'Articles', 'action' => 'view']);
 
         $result = $this->collection->match(['plugin' => null, 'controller' => 'Articles', 'action' => 'index'], $context);
-        $this->assertEquals('b', $result);
+        $this->assertSame('b', $result);
 
         $result = $this->collection->match(
             ['id' => 'thing', 'plugin' => null, 'controller' => 'Articles', 'action' => 'view'],
             $context
         );
-        $this->assertEquals('b/thing', $result);
+        $this->assertSame('b/thing', $result);
     }
 
     /**
@@ -502,15 +512,16 @@ class RouteCollectionTest extends TestCase
         $routes->connect('/:id', ['controller' => 'Articles', 'action' => 'view'], ['_name' => 'article:view']);
 
         $result = $this->collection->match(['_name' => 'article:view', 'id' => '2'], $context);
-        $this->assertEquals('/b/2', $result);
+        $this->assertSame('/b/2', $result);
 
         $result = $this->collection->match(['plugin' => null, 'controller' => 'Articles', 'action' => 'view', 'id' => '2'], $context);
-        $this->assertEquals('b/2', $result);
+        $this->assertSame('b/2', $result);
     }
 
     /**
      * Test match() throws an error on named routes that fail to match
      *
+     * @return void
      */
     public function testMatchNamedError()
     {
@@ -562,7 +573,7 @@ class RouteCollectionTest extends TestCase
         $routes->connect('/', ['controller' => 'Contacts']);
 
         $result = $this->collection->match(['plugin' => 'Contacts', 'controller' => 'Contacts', 'action' => 'index'], $context);
-        $this->assertEquals('contacts', $result);
+        $this->assertSame('contacts', $result);
     }
 
     /**
@@ -582,24 +593,24 @@ class RouteCollectionTest extends TestCase
         ];
         $routes = new RouteBuilder($this->collection, '/');
         $routes->connect('/:action/*', ['controller' => 'Users']);
-        $routes->connect('/admin/:controller', ['prefix' => 'admin', 'action' => 'index']);
+        $routes->connect('/admin/{controller}', ['prefix' => 'admin', 'action' => 'index']);
 
         $url = [
             'plugin' => null,
             'prefix' => 'admin',
             'controller' => 'Users',
-            'action' => 'index'
+            'action' => 'index',
         ];
         $result = $this->collection->match($url, $context);
-        $this->assertEquals('admin/Users', $result);
+        $this->assertSame('admin/Users', $result);
 
         $url = [
             'plugin' => null,
             'controller' => 'Users',
-            'action' => 'index'
+            'action' => 'index',
         ];
         $result = $this->collection->match($url, $context);
-        $this->assertEquals('index', $result);
+        $this->assertSame('index', $result);
     }
 
     /**
@@ -616,7 +627,7 @@ class RouteCollectionTest extends TestCase
         $all = $this->collection->named();
         $this->assertCount(1, $all);
         $this->assertInstanceOf('Cake\Routing\Route\Route', $all['cntrl']);
-        $this->assertEquals('/l/:controller', $all['cntrl']->template);
+        $this->assertSame('/l/:controller', $all['cntrl']->template);
     }
 
     /**
@@ -640,7 +651,6 @@ class RouteCollectionTest extends TestCase
     /**
      * Test the add() with some _name.
      *
-     *
      * @return void
      */
     public function testAddingDuplicateNamedRoutes()
@@ -650,28 +660,6 @@ class RouteCollectionTest extends TestCase
         $two = new Route('/', ['controller' => 'Dashboards', 'action' => 'display']);
         $this->collection->add($one, ['_name' => 'test']);
         $this->collection->add($two, ['_name' => 'test']);
-    }
-
-    /**
-     * Test combined get/set method.
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testExtensions()
-    {
-        $this->deprecated(function () {
-            $this->assertEquals([], $this->collection->extensions());
-
-            $this->collection->extensions('json');
-            $this->assertEquals(['json'], $this->collection->extensions());
-
-            $this->collection->extensions(['rss', 'xml']);
-            $this->assertEquals(['json', 'rss', 'xml'], $this->collection->extensions());
-
-            $this->collection->extensions(['csv'], false);
-            $this->assertEquals(['csv'], $this->collection->extensions());
-        });
     }
 
     /**

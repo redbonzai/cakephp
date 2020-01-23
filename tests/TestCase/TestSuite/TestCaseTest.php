@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,38 +16,26 @@
  */
 namespace Cake\Test\TestCase\TestSuite;
 
-use Cake\Core\Plugin;
+use Cake\Core\Configure;
 use Cake\Datasource\ConnectionManager;
 use Cake\Event\Event;
 use Cake\Event\EventList;
 use Cake\Event\EventManager;
 use Cake\ORM\Entity;
 use Cake\ORM\Table;
+use Cake\Routing\Exception\MissingRouteException;
+use Cake\Routing\Router;
+use Cake\Test\Fixture\FixturizedTestCase;
 use Cake\TestSuite\Fixture\FixtureManager;
 use Cake\TestSuite\TestCase;
-use Cake\Test\Fixture\FixturizedTestCase;
-
-/**
- * Testing stub.
- */
-class SecondaryPostsTable extends Table
-{
-
-    /**
-     * @return string
-     */
-    public static function defaultConnectionName()
-    {
-        return 'secondary';
-    }
-}
+use PHPUnit\Framework\AssertionFailedError;
+use TestApp\Model\Table\SecondaryPostsTable;
 
 /**
  * TestCaseTest
  */
 class TestCaseTest extends TestCase
 {
-
     /**
      * tests trying to assertEventFired without configuring an event list
      *
@@ -80,7 +70,7 @@ class TestCaseTest extends TestCase
         $manager->trackEvents(true);
 
         $event = new Event('my.event', $this, [
-            'some' => 'data'
+            'some' => 'data',
         ]);
         $manager->dispatch($event);
         $this->assertEventFiredWith('my.event', 'some', 'data');
@@ -90,7 +80,7 @@ class TestCaseTest extends TestCase
         $manager->trackEvents(true);
 
         $event = new Event('my.event', $this, [
-            'other' => 'data'
+            'other' => 'data',
         ]);
         $manager->dispatch($event);
         $this->assertEventFiredWith('my.event', 'other', 'data', $manager);
@@ -135,7 +125,7 @@ class TestCaseTest extends TestCase
         $manager->expects($this->once())->method('loadSingle');
         $result = $test->run();
 
-        $this->assertEquals(0, $result->errorCount());
+        $this->assertSame(0, $result->errorCount());
     }
 
     /**
@@ -153,7 +143,7 @@ class TestCaseTest extends TestCase
 
         $result = $test->run();
 
-        $this->assertEquals(0, $result->errorCount());
+        $this->assertSame(0, $result->errorCount());
         $this->assertCount(1, $result->passed());
         $this->assertFalse($test->autoFixtures);
     }
@@ -167,11 +157,11 @@ class TestCaseTest extends TestCase
     {
         $test = new FixturizedTestCase('testSkipIfTrue');
         $result = $test->run();
-        $this->assertEquals(1, $result->skippedCount());
+        $this->assertSame(1, $result->skippedCount());
 
         $test = new FixturizedTestCase('testSkipIfFalse');
         $result = $test->run();
-        $this->assertEquals(0, $result->skippedCount());
+        $this->assertSame(0, $result->skippedCount());
     }
 
     /**
@@ -191,11 +181,12 @@ class TestCaseTest extends TestCase
     /**
      * test withErrorReporting with exceptions
      *
-     * @expectedException \PHPUnit\Framework\AssertionFailedError
      * @return void
      */
     public function testWithErrorReportingWithException()
     {
+        $this->expectException(AssertionFailedError::class);
+
         $errorLevel = error_reporting();
         try {
             $this->withErrorReporting(E_USER_WARNING, function () {
@@ -204,45 +195,6 @@ class TestCaseTest extends TestCase
         } finally {
             $this->assertSame($errorLevel, error_reporting());
         }
-    }
-
-    /**
-     * testDeprecated
-     *
-     * @return void
-     */
-    public function testDeprecated()
-    {
-        $value = 'custom';
-        $setter = 'setLayout';
-        $getter = 'getLayout';
-        $property = 'layout';
-        $controller = new \Cake\Controller\Controller();
-        $controller->viewBuilder()->{$setter}($value);
-        $this->deprecated(function () use ($value, $getter, $controller, $property) {
-              $this->assertSame($value, $controller->$property);
-              $this->assertSame($value, $controller->viewBuilder()->{$getter}());
-        });
-    }
-
-    /**
-     * testDeprecated
-     *
-     * @expectedException \PHPUnit\Framework\AssertionFailedError
-     * @return void
-     */
-    public function testDeprecatedWithException()
-    {
-        $value = 'custom';
-        $setter = 'setLayout';
-        $getter = 'getLayout';
-        $property = 'layout';
-        $controller = new \Cake\Controller\Controller();
-        $controller->viewBuilder()->{$setter}($value);
-        $this->deprecated(function () use ($value, $getter, $controller, $property) {
-              $this->assertSame($value, $controller->$property);
-              $this->assertSame('Derp', $controller->viewBuilder()->{$getter}());
-        });
     }
 
     /**
@@ -287,7 +239,6 @@ class TestCaseTest extends TestCase
     public function testAssertTextStartsWith()
     {
         $stringDirty = "some\nstring\r\nwith\rdifferent\nline endings!";
-        $stringClean = "some\nstring\nwith\ndifferent\nline endings!";
 
         $this->assertStringStartsWith("some\nstring", $stringDirty);
         $this->assertStringStartsNotWith("some\r\nstring\r\nwith", $stringDirty);
@@ -305,7 +256,6 @@ class TestCaseTest extends TestCase
     public function testAssertTextStartsNotWith()
     {
         $stringDirty = "some\nstring\r\nwith\rdifferent\nline endings!";
-        $stringClean = "some\nstring\nwith\ndifferent\nline endings!";
 
         $this->assertTextStartsNotWith("some\nstring\nwithout", $stringDirty);
     }
@@ -318,7 +268,6 @@ class TestCaseTest extends TestCase
     public function testAssertTextEndsWith()
     {
         $stringDirty = "some\nstring\r\nwith\rdifferent\nline endings!";
-        $stringClean = "some\nstring\nwith\ndifferent\nline endings!";
 
         $this->assertTextEndsWith("string\nwith\r\ndifferent\rline endings!", $stringDirty);
         $this->assertTextEndsWith("string\r\nwith\ndifferent\nline endings!", $stringDirty);
@@ -332,7 +281,6 @@ class TestCaseTest extends TestCase
     public function testAssertTextEndsNotWith()
     {
         $stringDirty = "some\nstring\r\nwith\rdifferent\nline endings!";
-        $stringClean = "some\nstring\nwith\ndifferent\nline endings!";
 
         $this->assertStringEndsNotWith("different\nline endings", $stringDirty);
         $this->assertTextEndsNotWith("different\rline endings", $stringDirty);
@@ -346,10 +294,9 @@ class TestCaseTest extends TestCase
     public function testAssertTextContains()
     {
         $stringDirty = "some\nstring\r\nwith\rdifferent\nline endings!";
-        $stringClean = "some\nstring\nwith\ndifferent\nline endings!";
 
-        $this->assertContains('different', $stringDirty);
-        $this->assertNotContains("different\rline", $stringDirty);
+        $this->assertStringContainsString('different', $stringDirty);
+        $this->assertStringNotContainsString("different\rline", $stringDirty);
 
         $this->assertTextContains("different\rline", $stringDirty);
     }
@@ -362,7 +309,6 @@ class TestCaseTest extends TestCase
     public function testAssertTextNotContains()
     {
         $stringDirty = "some\nstring\r\nwith\rdifferent\nline endings!";
-        $stringClean = "some\nstring\nwith\ndifferent\nline endings!";
 
         $this->assertTextNotContains("different\rlines", $stringDirty);
     }
@@ -397,26 +343,24 @@ class TestCaseTest extends TestCase
     public function testGetMockForModel()
     {
         static::setAppNamespace();
+        // No methods will be mocked if $methods argument of getMockForModel() is empty.
         $Posts = $this->getMockForModel('Posts');
         $entity = new Entity([]);
 
         $this->assertInstanceOf('TestApp\Model\Table\PostsTable', $Posts);
-        $this->assertNull($Posts->save($entity));
-        $this->assertNull($Posts->getTable());
+        $this->assertSame('posts', $Posts->getTable());
 
         $Posts = $this->getMockForModel('Posts', ['save']);
         $Posts->expects($this->at(0))
             ->method('save')
             ->will($this->returnValue('mocked'));
-        $this->assertEquals('mocked', $Posts->save($entity));
-        $this->assertEquals('Cake\ORM\Entity', $Posts->getEntityClass());
-
-        $Posts = $this->getMockForModel('Posts', ['doSomething']);
+        $this->assertSame('mocked', $Posts->save($entity));
+        $this->assertSame('Cake\ORM\Entity', $Posts->getEntityClass());
         $this->assertInstanceOf('Cake\Database\Connection', $Posts->getConnection());
-        $this->assertEquals('test', $Posts->getConnection()->configName());
+        $this->assertSame('test', $Posts->getConnection()->configName());
 
-        $Tags = $this->getMockForModel('Tags', ['doSomething']);
-        $this->assertEquals('TestApp\Model\Entity\Tag', $Tags->getEntityClass());
+        $Tags = $this->getMockForModel('Tags', ['save']);
+        $this->assertSame('TestApp\Model\Entity\Tag', $Tags->getEntityClass());
     }
 
     /**
@@ -428,8 +372,8 @@ class TestCaseTest extends TestCase
     {
         ConnectionManager::alias('test', 'secondary');
 
-        $post = $this->getMockForModel(__NAMESPACE__ . '\SecondaryPostsTable', ['save']);
-        $this->assertEquals('test', $post->getConnection()->configName());
+        $post = $this->getMockForModel(SecondaryPostsTable::class, ['save']);
+        $this->assertSame('test', $post->getConnection()->configName());
     }
 
     /**
@@ -450,7 +394,7 @@ class TestCaseTest extends TestCase
         $TestPluginComment = $this->getMockForModel('TestPlugin.TestPluginComments', ['save']);
 
         $this->assertInstanceOf('TestPlugin\Model\Table\TestPluginCommentsTable', $TestPluginComment);
-        $this->assertEquals('Cake\ORM\Entity', $TestPluginComment->getEntityClass());
+        $this->assertSame('Cake\ORM\Entity', $TestPluginComment->getEntityClass());
         $TestPluginComment->expects($this->at(0))
             ->method('save')
             ->will($this->returnValue(true));
@@ -462,9 +406,9 @@ class TestCaseTest extends TestCase
         $this->assertTrue($TestPluginComment->save($entity));
         $this->assertFalse($TestPluginComment->save($entity));
 
-        $TestPluginAuthors = $this->getMockForModel('TestPlugin.Authors', ['doSomething']);
+        $TestPluginAuthors = $this->getMockForModel('TestPlugin.Authors', ['save']);
         $this->assertInstanceOf('TestPlugin\Model\Table\AuthorsTable', $TestPluginAuthors);
-        $this->assertEquals('TestPlugin\Model\Entity\Author', $TestPluginAuthors->getEntityClass());
+        $this->assertSame('TestPlugin\Model\Entity\Author', $TestPluginAuthors->getEntityClass());
         $this->clearPlugins();
     }
 
@@ -478,12 +422,12 @@ class TestCaseTest extends TestCase
         $Mock = $this->getMockForModel(
             'Table',
             ['save'],
-            ['alias' => 'Comments', 'className' => '\Cake\ORM\Table']
+            ['alias' => 'Comments', 'className' => Table::class]
         );
 
         $result = $this->getTableLocator()->get('Comments');
-        $this->assertInstanceOf('Cake\ORM\Table', $result);
-        $this->assertEquals('Comments', $Mock->getAlias());
+        $this->assertInstanceOf(Table::class, $result);
+        $this->assertSame('Comments', $Mock->getAlias());
 
         $Mock->expects($this->at(0))
             ->method('save')
@@ -499,22 +443,11 @@ class TestCaseTest extends TestCase
         $allMethodsStubs = $this->getMockForModel(
             'Table',
             [],
-            ['alias' => 'Comments', 'className' => '\Cake\ORM\Table']
+            ['alias' => 'Comments', 'className' => Table::class]
         );
         $result = $this->getTableLocator()->get('Comments');
-        $this->assertInstanceOf('Cake\ORM\Table', $result);
+        $this->assertInstanceOf(Table::class, $result);
         $this->assertEmpty([], $allMethodsStubs->getAlias());
-
-        $allMethodsMocks = $this->getMockForModel(
-            'Table',
-            null,
-            ['alias' => 'Comments', 'className' => '\Cake\ORM\Table']
-        );
-        $result = $this->getTableLocator()->get('Comments');
-        $this->assertInstanceOf('Cake\ORM\Table', $result);
-        $this->assertEquals('Comments', $allMethodsMocks->getAlias());
-
-        $this->assertNotEquals($allMethodsStubs, $allMethodsMocks);
     }
 
     /**
@@ -526,10 +459,30 @@ class TestCaseTest extends TestCase
     {
         static::setAppNamespace();
 
-        $I18n = $this->getMockForModel('I18n', ['doSomething']);
-        $this->assertEquals('custom_i18n_table', $I18n->getTable());
+        $I18n = $this->getMockForModel('I18n', ['save']);
+        $this->assertSame('custom_i18n_table', $I18n->getTable());
 
-        $Tags = $this->getMockForModel('Tags', ['doSomething']);
-        $this->assertEquals('tags', $Tags->getTable());
+        $Tags = $this->getMockForModel('Tags', ['save']);
+        $this->assertSame('tags', $Tags->getTable());
+    }
+
+    /**
+     * Test loadRoutes() helper
+     *
+     * @return void
+     */
+    public function testLoadRoutes()
+    {
+        $url = ['controller' => 'Articles', 'action' => 'index'];
+        try {
+            Router::url($url);
+            $this->fail('Missing URL should throw an exception');
+        } catch (MissingRouteException $e) {
+        }
+        Configure::write('App.namespace', 'TestApp');
+        $this->loadRoutes();
+
+        $result = Router::url($url);
+        $this->assertSame('/app/articles', $result);
     }
 }

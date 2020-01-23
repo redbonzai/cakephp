@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,9 +16,12 @@
  */
 namespace Cake\Test\TestCase\ORM;
 
-use Cake\Event\Event;
+use Cake\Datasource\EntityInterface;
+use Cake\Event\EventInterface;
+use Cake\I18n\I18n;
 use Cake\ORM\Entity;
 use Cake\ORM\RulesChecker;
+use Cake\ORM\Table;
 use Cake\TestSuite\TestCase;
 
 /**
@@ -24,28 +29,16 @@ use Cake\TestSuite\TestCase;
  */
 class RulesCheckerIntegrationTest extends TestCase
 {
-
     /**
      * Fixtures to be loaded
      *
      * @var array
      */
-    public $fixtures = [
-        'core.Articles', 'core.ArticlesTags', 'core.Authors', 'core.Tags',
+    protected $fixtures = [
+        'core.Articles', 'core.ArticlesTags', 'core.Authors', 'core.Comments', 'core.Tags',
         'core.SpecialTags', 'core.Categories', 'core.SiteArticles', 'core.SiteAuthors',
         'core.Comments',
     ];
-
-    /**
-     * Tear down
-     *
-     * @return void
-     */
-    public function tearDown()
-    {
-        parent::tearDown();
-        $this->getTableLocator()->clear();
-    }
 
     /**
      * Tests saving belongsTo association and get a validation error
@@ -57,10 +50,10 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'title' => 'A Title',
-            'body' => 'A body'
+            'body' => 'A body',
         ]);
         $entity->author = new Entity([
-            'name' => 'Jose'
+            'name' => 'Jose',
         ]);
 
         $table = $this->getTableLocator()->get('articles');
@@ -95,11 +88,11 @@ class RulesCheckerIntegrationTest extends TestCase
     public function testSaveHasOneWithValidationError()
     {
         $entity = new Entity([
-            'name' => 'Jose'
+            'name' => 'Jose',
         ]);
         $entity->article = new Entity([
             'title' => 'A Title',
-            'body' => 'A body'
+            'body' => 'A body',
         ]);
 
         $table = $this->getTableLocator()->get('authors');
@@ -108,7 +101,7 @@ class RulesCheckerIntegrationTest extends TestCase
             ->getTarget()
             ->rulesChecker()
             ->add(
-                function (Entity $entity) {
+                function (EntityInterface $entity) {
                     return false;
                 },
                 ['errorField' => 'title', 'message' => 'This is an error']
@@ -134,17 +127,17 @@ class RulesCheckerIntegrationTest extends TestCase
     public function testSaveHasManyWithErrorsAtomic()
     {
         $entity = new Entity([
-            'name' => 'Jose'
+            'name' => 'Jose',
         ]);
         $entity->articles = [
             new Entity([
                 'title' => '1',
-                'body' => 'A body'
+                'body' => 'A body',
             ]),
             new Entity([
                 'title' => 'Another Title',
-                'body' => 'Another body'
-            ])
+                'body' => 'Another body',
+            ]),
         ];
 
         $table = $this->getTableLocator()->get('authors');
@@ -183,17 +176,17 @@ class RulesCheckerIntegrationTest extends TestCase
     public function testSaveHasManyWithErrorsNonAtomic()
     {
         $entity = new Entity([
-            'name' => 'Jose'
+            'name' => 'Jose',
         ]);
         $entity->articles = [
             new Entity([
                 'title' => 'A title',
-                'body' => 'A body'
+                'body' => 'A body',
             ]),
             new Entity([
                 'title' => '1',
-                'body' => 'Another body'
-            ])
+                'body' => 'Another body',
+            ]),
         ];
 
         $table = $this->getTableLocator()->get('authors');
@@ -228,15 +221,15 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'title' => 'A Title',
-            'body' => 'A body'
+            'body' => 'A body',
         ]);
         $entity->tags = [
             new Entity([
-                'name' => 'Something New'
+                'name' => 'Something New',
             ]),
             new Entity([
-                'name' => '100'
-            ])
+                'name' => '100',
+            ]),
         ];
         $table = $this->getTableLocator()->get('articles');
         $table->belongsToMany('tags');
@@ -268,15 +261,15 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'title' => 'A Title',
-            'body' => 'A body'
+            'body' => 'A body',
         ]);
         $entity->tags = [
             new Entity([
-                'name' => 'Something New'
+                'name' => 'Something New',
             ]),
             new Entity([
-                'name' => 'New one'
-            ])
+                'name' => 'New one',
+            ]),
         ];
         $table = $this->getTableLocator()->get('articles');
         $table->belongsToMany('tags');
@@ -307,7 +300,7 @@ class RulesCheckerIntegrationTest extends TestCase
     public function testAddingRuleWithName()
     {
         $entity = new Entity([
-            'name' => 'larry'
+            'name' => 'larry',
         ]);
 
         $table = $this->getTableLocator()->get('Authors');
@@ -332,7 +325,7 @@ class RulesCheckerIntegrationTest extends TestCase
     public function testIsUniqueRuleSingleInvocation()
     {
         $entity = new Entity([
-            'name' => 'larry'
+            'name' => 'larry',
         ]);
 
         $table = $this->getTableLocator()->get('Authors');
@@ -357,7 +350,7 @@ class RulesCheckerIntegrationTest extends TestCase
     public function testIsUniqueDomainRule()
     {
         $entity = new Entity([
-            'name' => 'larry'
+            'name' => 'larry',
         ]);
 
         $table = $this->getTableLocator()->get('Authors');
@@ -385,7 +378,7 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'author_id' => 1,
-            'title' => 'First Article'
+            'title' => 'First Article',
         ]);
 
         $table = $this->getTableLocator()->get('Articles');
@@ -411,15 +404,12 @@ class RulesCheckerIntegrationTest extends TestCase
         $entity = new Entity([
             'article_id' => 11,
             'tag_id' => 11,
-            'author_id' => null
+            'author_id' => null,
         ]);
 
         $table = $this->getTableLocator()->get('SpecialTags');
         $rules = $table->rulesChecker();
-        $rules->add($rules->isUnique(['author_id'], [
-            'allowMultipleNulls' => false,
-            'message' => 'All fields are required'
-        ]));
+        $rules->add($rules->isUnique(['author_id'], 'All fields are required'));
 
         $this->assertFalse($table->save($entity));
         $this->assertEquals(['_isUnique' => 'All fields are required'], $entity->getError('author_id'));
@@ -443,15 +433,12 @@ class RulesCheckerIntegrationTest extends TestCase
         $entity = new Entity([
             'article_id' => 10,
             'tag_id' => 12,
-            'author_id' => null
+            'author_id' => null,
         ]);
 
         $table = $this->getTableLocator()->get('SpecialTags');
         $rules = $table->rulesChecker();
-        $rules->add($rules->isUnique(['author_id', 'article_id'], [
-            'allowMultipleNulls' => false,
-            'message' => 'Nope'
-        ]));
+        $rules->add($rules->isUnique(['author_id', 'article_id'], 'Nope'));
 
         $this->assertFalse($table->save($entity));
         $this->assertEquals(['author_id' => ['_isUnique' => 'Nope']], $entity->getErrors());
@@ -473,7 +460,7 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'author_id' => null,
-            'title' => 'First Article'
+            'title' => 'First Article',
         ]);
         $table = $this->getTableLocator()->get('Articles');
         $rules = $table->rulesChecker();
@@ -484,7 +471,7 @@ class RulesCheckerIntegrationTest extends TestCase
         // Make a matching record
         $entity = new Entity([
             'author_id' => null,
-            'title' => 'New Article'
+            'title' => 'New Article',
         ]);
         $this->assertSame($entity, $table->save($entity));
     }
@@ -499,7 +486,7 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'title' => 'An Article',
-            'author_id' => 500
+            'author_id' => 500,
         ]);
 
         $table = $this->getTableLocator()->get('Articles');
@@ -547,7 +534,7 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'title' => 'An Article',
-            'author_id' => 500
+            'author_id' => 500,
         ]);
 
         $table = $this->getTableLocator()->get('Articles');
@@ -567,7 +554,7 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'title' => 'An Article',
-            'author_id' => null
+            'author_id' => null,
         ]);
 
         $table = $this->getTableLocator()->get('Articles');
@@ -617,7 +604,7 @@ class RulesCheckerIntegrationTest extends TestCase
         $table = $this->getTableLocator()->get('Articles');
         $table->belongsTo('Authors', [
             'bindingKey' => 'name',
-            'foreignKey' => 'title'
+            'foreignKey' => 'title',
         ]);
         $rules = $table->rulesChecker();
         $rules->add($rules->existsIn('title', 'Authors'));
@@ -642,7 +629,7 @@ class RulesCheckerIntegrationTest extends TestCase
         $this->expectExceptionMessage('ExistsIn rule for \'author_id\' is invalid. \'NotValid\' is not associated with \'Cake\ORM\Table\'.');
         $entity = new Entity([
             'title' => 'An Article',
-            'author_id' => 500
+            'author_id' => 500,
         ]);
 
         $table = $this->getTableLocator()->get('Articles');
@@ -678,7 +665,7 @@ class RulesCheckerIntegrationTest extends TestCase
                     'user_id' => 1,
                     'comment' => 'comment 2',
                 ]),
-            ]
+            ],
         ]);
 
         $this->assertNotFalse($table->save($article));
@@ -707,7 +694,7 @@ class RulesCheckerIntegrationTest extends TestCase
             $table->Comments->newEntity([
                 'user_id' => 1,
                 'comment' => 'test',
-            ])
+            ]),
         ];
 
         $this->assertNotFalse($table->save($article));
@@ -723,7 +710,7 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'title' => 'An Article',
-            'author_id' => 500
+            'author_id' => 500,
         ]);
 
         $table = $this->getTableLocator()->get('Articles');
@@ -743,7 +730,7 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'title' => 'An Article',
-            'author_id' => 500
+            'author_id' => 500,
         ]);
 
         $table = $this->getTableLocator()->get('Articles');
@@ -752,7 +739,7 @@ class RulesCheckerIntegrationTest extends TestCase
 
         $table->getEventManager()->on(
             'Model.beforeRules',
-            function (Event $event, Entity $entity, \ArrayObject $options, $operation) {
+            function (EventInterface $event, EntityInterface $entity, \ArrayObject $options, $operation) {
                 $this->assertEquals(
                     [
                         'atomic' => true,
@@ -763,7 +750,7 @@ class RulesCheckerIntegrationTest extends TestCase
                     ],
                     $options->getArrayCopy()
                 );
-                $this->assertEquals('create', $operation);
+                $this->assertSame('create', $operation);
                 $event->stopPropagation();
 
                 return true;
@@ -783,7 +770,7 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'title' => 'An Article',
-            'author_id' => 500
+            'author_id' => 500,
         ]);
 
         $table = $this->getTableLocator()->get('Articles');
@@ -792,7 +779,7 @@ class RulesCheckerIntegrationTest extends TestCase
 
         $table->getEventManager()->on(
             'Model.afterRules',
-            function (Event $event, Entity $entity, \ArrayObject $options, $result, $operation) {
+            function (EventInterface $event, EntityInterface $entity, \ArrayObject $options, $result, $operation) {
                 $this->assertEquals(
                     [
                         'atomic' => true,
@@ -803,7 +790,7 @@ class RulesCheckerIntegrationTest extends TestCase
                     ],
                     $options->getArrayCopy()
                 );
-                $this->assertEquals('create', $operation);
+                $this->assertSame('create', $operation);
                 $this->assertFalse($result);
                 $event->stopPropagation();
 
@@ -824,11 +811,11 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'title' => 'An Article',
-            'author_id' => 500
+            'author_id' => 500,
         ]);
 
         $table = $this->getTableLocator()->get('Articles');
-        $table->getEventManager()->on('Model.buildRules', function (Event $event, RulesChecker $rules) {
+        $table->getEventManager()->on('Model.buildRules', function (EventInterface $event, RulesChecker $rules) {
             $rules->add($rules->existsIn('author_id', $this->getTableLocator()->get('Authors'), 'Nope'));
         });
 
@@ -865,7 +852,7 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'title' => 'An Article',
-            'author_id' => 1
+            'author_id' => 1,
         ]);
 
         $table = $this->getTableLocator()->get('Articles');
@@ -873,7 +860,7 @@ class RulesCheckerIntegrationTest extends TestCase
         $rules = $table->rulesChecker();
         $rules->add($rules->isUnique(['author_id']));
 
-        $table->Authors->getEventManager()->on('Model.beforeFind', function (Event $event, $query) {
+        $table->Authors->getEventManager()->on('Model.beforeFind', function (EventInterface $event, $query) {
             $query->leftJoin(['a2' => 'authors']);
         });
 
@@ -911,7 +898,7 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'title' => 'An Article',
-            'author_id' => 500
+            'author_id' => 500,
         ]);
 
         $table = $this->getTableLocator()->get('Articles');
@@ -919,7 +906,7 @@ class RulesCheckerIntegrationTest extends TestCase
         $rules = $table->rulesChecker();
         $rules->add($rules->existsIn('author_id', 'Authors'));
 
-        $table->Authors->getEventManager()->on('Model.beforeFind', function (Event $event, $query) {
+        $table->Authors->getEventManager()->on('Model.beforeFind', function (EventInterface $event, $query) {
             $query->leftJoin(['a2' => 'authors']);
         });
 
@@ -936,7 +923,7 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'title' => 'An Article',
-            'author_id' => 500
+            'author_id' => 500,
         ]);
 
         $table = $this->getTableLocator()->get('Articles');
@@ -966,7 +953,7 @@ class RulesCheckerIntegrationTest extends TestCase
         $rules = $table->rulesChecker();
 
         $rules->add($rules->existsIn(['author_id', 'site_id'], 'SiteAuthors', [
-            'allowNullableNulls' => true
+            'allowNullableNulls' => true,
         ]));
         $this->assertInstanceOf('Cake\ORM\Entity', $table->save($entity));
     }
@@ -989,7 +976,7 @@ class RulesCheckerIntegrationTest extends TestCase
         $rules = $table->rulesChecker();
 
         $rules->add($rules->existsIn(['author_id', 'site_id'], 'SiteAuthors', [
-            'allowNullableNulls' => false
+            'allowNullableNulls' => false,
         ]));
         $this->assertFalse($table->save($entity));
     }
@@ -1034,7 +1021,7 @@ class RulesCheckerIntegrationTest extends TestCase
 
         $rules->add($rules->existsIn(['author_id', 'site_id'], 'SiteAuthors', [
             'allowNullableNulls' => false,
-            'message' => 'Niente'
+            'message' => 'Niente',
         ]));
         $this->assertFalse($table->save($entity));
         $this->assertEquals(['author_id' => ['_existsIn' => 'Niente']], $entity->getErrors());
@@ -1244,14 +1231,14 @@ class RulesCheckerIntegrationTest extends TestCase
     public function testCustomOptionsPassingSave()
     {
         $entity = new Entity([
-            'name' => 'jose'
+            'name' => 'jose',
         ]);
 
         $table = $this->getTableLocator()->get('Authors');
         $rules = $table->rulesChecker();
         $rules->add(function ($entity, $options) {
-            $this->assertEquals('bar', $options['foo']);
-            $this->assertEquals('option', $options['another']);
+            $this->assertSame('bar', $options['foo']);
+            $this->assertSame('option', $options['another']);
 
             return false;
         }, ['another' => 'option']);
@@ -1270,8 +1257,8 @@ class RulesCheckerIntegrationTest extends TestCase
         $table = $this->getTableLocator()->get('Articles');
         $rules = $table->rulesChecker();
         $rules->addDelete(function ($entity, $options) {
-            $this->assertEquals('bar', $options['foo']);
-            $this->assertEquals('option', $options['another']);
+            $this->assertSame('bar', $options['foo']);
+            $this->assertSame('option', $options['another']);
 
             return false;
         }, ['another' => 'option']);
@@ -1289,7 +1276,7 @@ class RulesCheckerIntegrationTest extends TestCase
     public function testCustomErrorMessageFromRule()
     {
         $entity = new Entity([
-            'name' => 'larry'
+            'name' => 'larry',
         ]);
 
         $table = $this->getTableLocator()->get('Authors');
@@ -1311,7 +1298,7 @@ class RulesCheckerIntegrationTest extends TestCase
     public function testCustomErrorMessageFromRuleNoErrorField()
     {
         $entity = new Entity([
-            'name' => 'larry'
+            'name' => 'larry',
         ]);
 
         $table = $this->getTableLocator()->get('Authors');
@@ -1334,17 +1321,17 @@ class RulesCheckerIntegrationTest extends TestCase
     public function testAvoidExistsInOnAutomaticSaving()
     {
         $entity = new Entity([
-            'name' => 'Jose'
+            'name' => 'Jose',
         ]);
         $entity->articles = [
             new Entity([
                 'title' => '1',
-                'body' => 'A body'
+                'body' => 'A body',
             ]),
             new Entity([
                 'title' => 'Another Title',
-                'body' => 'Another body'
-            ])
+                'body' => 'Another body',
+            ]),
         ];
 
         $table = $this->getTableLocator()->get('authors');
@@ -1375,12 +1362,12 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'title' => 'An Article',
-            'author_id' => 1
+            'author_id' => 1,
         ]);
 
         $table = $this->getTableLocator()->get('Articles');
         $table->belongsTo('Authors', [
-            'conditions' => ['Authors.name !=' => 'mariano']
+            'conditions' => ['Authors.name !=' => 'mariano'],
         ]);
         $rules = $table->rulesChecker();
         $rules->add($rules->existsIn('author_id', 'Authors'));
@@ -1398,15 +1385,15 @@ class RulesCheckerIntegrationTest extends TestCase
     {
         $entity = new Entity([
             'title' => 'A Title',
-            'body' => 'A body'
+            'body' => 'A body',
         ]);
         $entity->tags = [
             new Entity([
-                'name' => 'Something New'
+                'name' => 'Something New',
             ]),
             new Entity([
-                'name' => '100'
-            ])
+                'name' => '100',
+            ]),
         ];
 
         $this->getTableLocator()->get('ArticlesTags');
@@ -1420,8 +1407,8 @@ class RulesCheckerIntegrationTest extends TestCase
         $this->assertFalse($table->save($entity));
         $this->assertEquals($entity->getErrors(), [
             'tags' => [
-                '_validCount' => 'The count does not match >3'
-            ]
+                '_validCount' => 'The count does not match >3',
+            ],
         ]);
 
         // Testing that undesired types fail
@@ -1439,5 +1426,582 @@ class RulesCheckerIntegrationTest extends TestCase
 
         $entity->tags = 0.512;
         $this->assertFalse($table->save($entity));
+    }
+
+    /**
+     * Tests that an exception is thrown when passing an invalid value for the `$association` argument.
+     *
+     * @return void
+     */
+    public function testIsLinkedToInvalidArgumentOne(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Argument 1 is expected to be of type `\Cake\ORM\Association|string`, `NULL` given.');
+
+        $Comments = $this->getTableLocator()->get('Comments');
+
+        /** @var \Cake\ORM\RulesChecker $rulesChecker */
+        $rulesChecker = $Comments->rulesChecker();
+        $rulesChecker->isLinkedTo(null);
+    }
+
+    /**
+     * Tests that an exception is thrown when passing an invalid value for the `$association` argument.
+     *
+     * @return void
+     */
+    public function testIsNotLinkedToInvalidArgumentOne(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Argument 1 is expected to be of type `\Cake\ORM\Association|string`, `NULL` given.');
+
+        $Comments = $this->getTableLocator()->get('Comments');
+
+        /** @var \Cake\ORM\RulesChecker $rulesChecker */
+        $rulesChecker = $Comments->rulesChecker();
+        $rulesChecker->isNotLinkedTo(null);
+    }
+
+    /**
+     * Tests that the error field name is inferred from the association name in case no name is provided.
+     *
+     * @return void
+     */
+    public function testIsLinkedToInferFieldFromAssociationName(): void
+    {
+        $Comments = $this->getTableLocator()->get('Comments');
+        $Comments->belongsTo('Articles');
+
+        $comment = $Comments->save($Comments->newEntity([
+            'article_id' => 9999,
+            'user_id' => 1,
+            'comment' => 'Orphaned Comment',
+        ]));
+
+        /** @var \Cake\ORM\RulesChecker $rulesChecker */
+        $rulesChecker = $Comments->rulesChecker();
+        $rulesChecker->addUpdate(
+            $rulesChecker->isLinkedTo('Articles')
+        );
+
+        $comment->setDirty('comment', true);
+        $this->assertFalse($Comments->save($comment));
+
+        $expected = [
+            'article' => [
+                '_isLinkedTo' => 'Cannot modify row: a constraint for the `Articles` association fails.',
+            ],
+        ];
+        $this->assertEquals($expected, $comment->getErrors());
+    }
+
+    /**
+     * Tests that the error field name is inferred from the association name in case no name is provided.
+     *
+     * @return void
+     */
+    public function testIsNotLinkedToInferFieldFromAssociationName(): void
+    {
+        $Articles = $this->getTableLocator()->get('Articles');
+        $Articles->hasMany('Comments');
+
+        /** @var \Cake\ORM\RulesChecker $rulesChecker */
+        $rulesChecker = $Articles->rulesChecker();
+        $rulesChecker->addDelete(
+            $rulesChecker->isNotLinkedTo('Comments')
+        );
+
+        $article = $Articles->get(1);
+        $this->assertFalse($Articles->delete($article));
+
+        $expected = [
+            'comments' => [
+                '_isNotLinkedTo' => 'Cannot modify row: a constraint for the `Comments` association fails.',
+            ],
+        ];
+        $this->assertEquals($expected, $article->getErrors());
+    }
+
+    /**
+     * Tests that the error field name is inferred from the association name in case no name is provided,
+     * and no repository is available at the time of creating the rule.
+     *
+     * @return void
+     */
+    public function testIsLinkedToInferFieldFromAssociationNameWithNoRepositoryAvailable(): void
+    {
+        $rulesChecker = new RulesChecker();
+
+        /** @var \Cake\ORM\Table|\PHPUnit\Framework\MockObject\MockObject $Comments */
+        $Comments = $this->getMockForModel('Comments', ['rulesChecker'], ['className' => Table::class]);
+        $Comments
+            ->expects($this->any())
+            ->method('rulesChecker')
+            ->willReturn($rulesChecker);
+
+        $Comments->belongsTo('Articles');
+
+        $comment = $Comments->save($Comments->newEntity([
+            'article_id' => 9999,
+            'user_id' => 1,
+            'comment' => 'Orphaned Comment',
+        ]));
+
+        $rulesChecker->addUpdate(
+            $rulesChecker->isLinkedTo('Articles'),
+            ['repository' => $Comments]
+        );
+
+        $comment->setDirty('comment', true);
+        $this->assertFalse($Comments->save($comment));
+
+        $expected = [
+            'articles' => [
+                '_isLinkedTo' => 'Cannot modify row: a constraint for the `Articles` association fails.',
+            ],
+        ];
+        $this->assertEquals($expected, $comment->getErrors());
+    }
+
+    /**
+     * Tests that the error field name is inferred from the association name in case no name is provided,
+     * and no repository is available at the time of creating the rule.
+     *
+     * @return void
+     */
+    public function testIsNotLinkedToInferFieldFromAssociationNameWithNoRepositoryAvailable(): void
+    {
+        $rulesChecker = new RulesChecker();
+
+        /** @var \Cake\ORM\Table&\PHPUnit\Framework\MockObject\MockObject $Articles */
+        $Articles = $this->getMockForModel('Articles', ['rulesChecker'], ['className' => Table::class]);
+        $Articles
+            ->expects($this->any())
+            ->method('rulesChecker')
+            ->willReturn($rulesChecker);
+
+        $Articles->hasMany('Comments');
+
+        $rulesChecker->addDelete(
+            $rulesChecker->isNotLinkedTo('Comments'),
+            ['repository' => $Articles]
+        );
+
+        $article = $Articles->get(1);
+        $this->assertFalse($Articles->delete($article));
+
+        $expected = [
+            'comments' => [
+                '_isNotLinkedTo' => 'Cannot modify row: a constraint for the `Comments` association fails.',
+            ],
+        ];
+        $this->assertEquals($expected, $article->getErrors());
+    }
+
+    /**
+     * Tests that the error field name is inferred from the association object in case no name is provided.
+     *
+     * @return void
+     */
+    public function testIsLinkedToInferFieldFromAssociationObject(): void
+    {
+        $Comments = $this->getTableLocator()->get('Comments');
+        $Comments->belongsTo('Articles');
+
+        $comment = $Comments->save($Comments->newEntity([
+            'article_id' => 9999,
+            'user_id' => 1,
+            'comment' => 'Orphaned Comment',
+        ]));
+
+        /** @var \Cake\ORM\RulesChecker $rulesChecker */
+        $rulesChecker = $Comments->rulesChecker();
+        $rulesChecker->addUpdate(
+            $rulesChecker->isLinkedTo($Comments->getAssociation('Articles'))
+        );
+
+        $comment->setDirty('comment', true);
+        $this->assertFalse($Comments->save($comment));
+
+        $expected = [
+            'article' => [
+                '_isLinkedTo' => 'Cannot modify row: a constraint for the `Articles` association fails.',
+            ],
+        ];
+        $this->assertEquals($expected, $comment->getErrors());
+    }
+
+    /**
+     * Tests that the error field name is inferred from the association object in case no name is provided.
+     *
+     * @return void
+     */
+    public function testIsNotLinkedToInferFieldFromAssociationObject(): void
+    {
+        $Articles = $this->getTableLocator()->get('Articles');
+        $Articles->hasMany('Comments');
+
+        /** @var \Cake\ORM\RulesChecker $rulesChecker */
+        $rulesChecker = $Articles->rulesChecker();
+        $rulesChecker->addDelete(
+            $rulesChecker->isNotLinkedTo($Articles->getAssociation('Comments'))
+        );
+
+        $article = $Articles->get(1);
+        $this->assertFalse($Articles->delete($article));
+
+        $expected = [
+            'comments' => [
+                '_isNotLinkedTo' => 'Cannot modify row: a constraint for the `Comments` association fails.',
+            ],
+        ];
+        $this->assertEquals($expected, $article->getErrors());
+    }
+
+    /**
+     * Tests that the custom error field name is being used.
+     *
+     * @return void
+     */
+    public function testIsLinkedToWithCustomField(): void
+    {
+        $Comments = $this->getTableLocator()->get('Comments');
+        $Comments->belongsTo('Articles');
+
+        $comment = $Comments->save($Comments->newEntity([
+            'article_id' => 9999,
+            'user_id' => 1,
+            'comment' => 'Orphaned Comment',
+        ]));
+
+        /** @var \Cake\ORM\RulesChecker $rulesChecker */
+        $rulesChecker = $Comments->rulesChecker();
+        $rulesChecker->addUpdate(
+            $rulesChecker->isLinkedTo('Articles', 'custom')
+        );
+
+        $comment->setDirty('comment', true);
+        $this->assertFalse($Comments->save($comment));
+
+        $expected = [
+            'custom' => [
+                '_isLinkedTo' => 'Cannot modify row: a constraint for the `Articles` association fails.',
+            ],
+        ];
+        $this->assertEquals($expected, $comment->getErrors());
+    }
+
+    /**
+     * Tests that the custom error field name is being used.
+     *
+     * @return void
+     */
+    public function testIsNotLinkedToWithCustomField(): void
+    {
+        $Articles = $this->getTableLocator()->get('Articles');
+        $Articles->hasMany('Comments');
+
+        /** @var \Cake\ORM\RulesChecker $rulesChecker */
+        $rulesChecker = $Articles->rulesChecker();
+        $rulesChecker->addDelete(
+            $rulesChecker->isNotLinkedTo('Comments', 'custom')
+        );
+
+        $article = $Articles->get(1);
+        $this->assertFalse($Articles->delete($article));
+
+        $expected = [
+            'custom' => [
+                '_isNotLinkedTo' => 'Cannot modify row: a constraint for the `Comments` association fails.',
+            ],
+        ];
+        $this->assertEquals($expected, $article->getErrors());
+    }
+
+    /**
+     * Tests that the custom error message is being used.
+     *
+     * @return void
+     */
+    public function testIsLinkedToWithCustomMessage(): void
+    {
+        $Comments = $this->getTableLocator()->get('Comments');
+        $Comments->belongsTo('Articles');
+
+        $comment = $Comments->save($Comments->newEntity([
+            'article_id' => 9999,
+            'user_id' => 1,
+            'comment' => 'Orphaned Comment',
+        ]));
+
+        /** @var \Cake\ORM\RulesChecker $rulesChecker */
+        $rulesChecker = $Comments->rulesChecker();
+        $rulesChecker->addUpdate(
+            $rulesChecker->isLinkedTo('Articles', 'article', 'custom')
+        );
+
+        $comment->setDirty('comment', true);
+        $this->assertFalse($Comments->save($comment));
+
+        $expected = [
+            'article' => [
+                '_isLinkedTo' => 'custom',
+            ],
+        ];
+        $this->assertEquals($expected, $comment->getErrors());
+    }
+
+    /**
+     * Tests that the custom error message is being used.
+     *
+     * @return void
+     */
+    public function testIsNotLinkedToWithCustomMessage(): void
+    {
+        $Articles = $this->getTableLocator()->get('Articles');
+        $Articles->hasMany('Comments');
+
+        /** @var \Cake\ORM\RulesChecker $rulesChecker */
+        $rulesChecker = $Articles->rulesChecker();
+        $rulesChecker->addDelete(
+            $rulesChecker->isNotLinkedTo('Comments', 'comments', 'custom')
+        );
+
+        $article = $Articles->get(1);
+        $this->assertFalse($Articles->delete($article));
+
+        $expected = [
+            'comments' => [
+                '_isNotLinkedTo' => 'custom',
+            ],
+        ];
+        $this->assertEquals($expected, $article->getErrors());
+    }
+
+    /**
+     * Tests that the default error message can be translated.
+     *
+     * @return void
+     */
+    public function testIsLinkedToMessageWithI18n(): void
+    {
+        /** @var \Cake\I18n\Translator $translator */
+        $translator = I18n::getTranslator('cake');
+
+        $messageId = 'Cannot modify row: a constraint for the `{0}` association fails.';
+        $translator->getPackage()->addMessage(
+            $messageId,
+            'Zeile kann nicht geändert werden: Eine Einschränkung für die "{0}" Beziehung schlägt fehl.'
+        );
+
+        $Comments = $this->getTableLocator()->get('Comments');
+        $Comments->belongsTo('Articles');
+
+        $comment = $Comments->save($Comments->newEntity([
+            'article_id' => 9999,
+            'user_id' => 1,
+            'comment' => 'Orphaned Comment',
+        ]));
+
+        /** @var \Cake\ORM\RulesChecker $rulesChecker */
+        $rulesChecker = $Comments->rulesChecker();
+
+        $rulesChecker->addUpdate(
+            $rulesChecker->isLinkedTo('Articles', 'article')
+        );
+
+        $comment->setDirty('comment', true);
+        $this->assertFalse($Comments->save($comment));
+
+        $expected = [
+            'article' => [
+                '_isLinkedTo' => 'Zeile kann nicht geändert werden: Eine Einschränkung für die "Articles" Beziehung schlägt fehl.',
+            ],
+        ];
+        $this->assertEquals($expected, $comment->getErrors());
+
+        $translator->getPackage()->addMessage($messageId, null);
+    }
+
+    /**
+     * Tests that the default error message can be translated.
+     *
+     * @return void
+     */
+    public function testIsNotLinkedToMessageWithI18n(): void
+    {
+        /** @var \Cake\I18n\Translator $translator */
+        $translator = I18n::getTranslator('cake');
+
+        $messageId = 'Cannot modify row: a constraint for the `{0}` association fails.';
+        $translator->getPackage()->addMessage(
+            $messageId,
+            'Zeile kann nicht geändert werden: Eine Einschränkung für die "{0}" Beziehung schlägt fehl.'
+        );
+
+        $Comments = $this->getTableLocator()->get('Comments');
+        $Comments->belongsTo('Articles');
+
+        /** @var \Cake\ORM\RulesChecker $rulesChecker */
+        $rulesChecker = $Comments->rulesChecker();
+
+        $rulesChecker->addUpdate(
+            $rulesChecker->isNotLinkedTo('Articles', 'articles')
+        );
+
+        $comment = $Comments->get(1);
+        $comment->setDirty('comment', true);
+        $this->assertFalse($Comments->save($comment));
+
+        $expected = [
+            'articles' => [
+                '_isNotLinkedTo' => 'Zeile kann nicht geändert werden: Eine Einschränkung für die "Articles" Beziehung schlägt fehl.',
+            ],
+        ];
+        $this->assertEquals($expected, $comment->getErrors());
+
+        $translator->getPackage()->addMessage($messageId, null);
+    }
+
+    /**
+     * Tests that the default error message works without I18n.
+     *
+     * @return void
+     */
+    public function testIsLinkedToMessageWithoutI18n(): void
+    {
+        /** @var \Cake\I18n\Translator $translator */
+        $translator = I18n::getTranslator('cake');
+
+        $messageId = 'Cannot modify row: a constraint for the `{0}` association fails.';
+        $translator->getPackage()->addMessage(
+            $messageId,
+            'translated'
+        );
+
+        $Comments = $this->getTableLocator()->get('Comments');
+        $Comments->belongsTo('Articles');
+
+        $comment = $Comments->save($Comments->newEntity([
+            'article_id' => 9999,
+            'user_id' => 1,
+            'comment' => 'Orphaned Comment',
+        ]));
+
+        /** @var \Cake\ORM\RulesChecker $rulesChecker */
+        $rulesChecker = $Comments->rulesChecker();
+
+        \Closure::bind(
+            function () use ($rulesChecker) {
+                $rulesChecker->{'_useI18n'} = false;
+            },
+            null,
+            RulesChecker::class
+        )();
+
+        $rulesChecker->addUpdate(
+            $rulesChecker->isLinkedTo('Articles', 'article')
+        );
+
+        $comment->setDirty('comment', true);
+        $this->assertFalse($Comments->save($comment));
+
+        $expected = [
+            'article' => [
+                '_isLinkedTo' => 'Cannot modify row: a constraint for the `Articles` association fails.',
+            ],
+        ];
+        $this->assertEquals($expected, $comment->getErrors());
+
+        $translator->getPackage()->addMessage($messageId, null);
+    }
+
+    /**
+     * Tests that the default error message works without I18n.
+     *
+     * @return void
+     */
+    public function testIsNotLinkedToMessageWithoutI18n(): void
+    {
+        /** @var \Cake\I18n\Translator $translator */
+        $translator = I18n::getTranslator('cake');
+
+        $messageId = 'Cannot modify row: a constraint for the `{0}` association fails.';
+        $translator->getPackage()->addMessage(
+            $messageId,
+            'translated'
+        );
+
+        $Comments = $this->getTableLocator()->get('Comments');
+        $Comments->belongsTo('Articles');
+
+        /** @var \Cake\ORM\RulesChecker $rulesChecker */
+        $rulesChecker = $Comments->rulesChecker();
+
+        \Closure::bind(
+            function () use ($rulesChecker) {
+                $rulesChecker->{'_useI18n'} = false;
+            },
+            null,
+            RulesChecker::class
+        )();
+
+        $rulesChecker->addUpdate(
+            $rulesChecker->isNotLinkedTo('Articles', 'articles')
+        );
+
+        $comment = $Comments->get(1);
+        $comment->setDirty('comment', true);
+        $this->assertFalse($Comments->save($comment));
+
+        $expected = [
+            'articles' => [
+                '_isNotLinkedTo' => 'Cannot modify row: a constraint for the `Articles` association fails.',
+            ],
+        ];
+        $this->assertEquals($expected, $comment->getErrors());
+
+        $translator->getPackage()->addMessage($messageId, null);
+    }
+
+    /**
+     * Tests that the rule can pass.
+     *
+     * @return void
+     */
+    public function testIsLinkedToIsLinked(): void
+    {
+        $Comments = $this->getTableLocator()->get('Comments');
+        $Comments->belongsTo('Articles');
+
+        /** @var \Cake\ORM\RulesChecker $rulesChecker */
+        $rulesChecker = $Comments->rulesChecker();
+        $rulesChecker->addUpdate(
+            $rulesChecker->isLinkedTo('Articles', 'articles')
+        );
+
+        $comment = $Comments->get(1);
+        $comment->setDirty('comment', true);
+        $this->assertNotFalse($Comments->save($comment));
+    }
+
+    /**
+     * Tests that the rule can pass.
+     *
+     * @return void
+     */
+    public function testIsNotLinkedToIsNotLinked(): void
+    {
+        $Articles = $this->getTableLocator()->get('Articles');
+        $Articles->hasMany('Comments');
+
+        /** @var \Cake\ORM\RulesChecker $rulesChecker */
+        $rulesChecker = $Articles->rulesChecker();
+        $rulesChecker->addDelete(
+            $rulesChecker->isNotLinkedTo('Comments', 'comments')
+        );
+
+        $article = $Articles->get(3);
+        $this->assertTrue($Articles->delete($article));
     }
 }

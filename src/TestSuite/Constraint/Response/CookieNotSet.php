@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -20,14 +22,13 @@ namespace Cake\TestSuite\Constraint\Response;
  */
 class CookieNotSet extends CookieSet
 {
-
     /**
      * Checks assertion
      *
      * @param mixed $other Expected content
      * @return bool
      */
-    public function matches($other)
+    public function matches($other): bool
     {
         return parent::matches($other) === false;
     }
@@ -37,8 +38,8 @@ class CookieNotSet extends CookieSet
      *
      * @return string
      */
-    public function toString()
+    public function toString(): string
     {
-        return 'cookie was not set';
+        return 'cookie is not set';
     }
 }

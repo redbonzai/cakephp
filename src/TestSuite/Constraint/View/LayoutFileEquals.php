@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -20,14 +22,13 @@ namespace Cake\TestSuite\Constraint\View;
  */
 class LayoutFileEquals extends TemplateFileEquals
 {
-
     /**
      * Assertion message
      *
      * @return string
      */
-    public function toString()
+    public function toString(): string
     {
-        return sprintf('equals layout file %s', $this->filename);
+        return sprintf('equals layout file `%s`', $this->filename);
     }
 }

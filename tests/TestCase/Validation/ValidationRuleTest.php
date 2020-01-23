@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) Tests <https://book.cakephp.org/view/1196/Testing>
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -22,7 +24,6 @@ use Cake\Validation\ValidationRule;
  */
 class ValidationRuleTest extends TestCase
 {
-
     /**
      * Auxiliary method to test custom validators
      *
@@ -71,10 +72,10 @@ class ValidationRuleTest extends TestCase
         $this->assertTrue($Rule->process($data, $providers, $context));
 
         $Rule = new ValidationRule(['rule' => 'willFail3']);
-        $this->assertEquals('string', $Rule->process($data, $providers, $context));
+        $this->assertSame('string', $Rule->process($data, $providers, $context));
 
         $Rule = new ValidationRule(['rule' => 'willFail', 'message' => 'foo']);
-        $this->assertEquals('foo', $Rule->process($data, $providers, $context));
+        $this->assertSame('foo', $Rule->process($data, $providers, $context));
     }
 
     /**
@@ -89,7 +90,7 @@ class ValidationRuleTest extends TestCase
         $providers = ['default' => ''];
 
         $rule = new ValidationRule([
-            'rule' => [$this, 'willFail']
+            'rule' => [$this, 'willFail'],
         ]);
         $this->assertFalse($rule->process($data, $providers, $context));
     }
@@ -123,19 +124,19 @@ class ValidationRuleTest extends TestCase
 
         $Rule = new ValidationRule([
             'rule' => 'willFail',
-            'on' => 'create'
+            'on' => 'create',
         ]);
         $this->assertFalse($Rule->process($data, $providers, ['newRecord' => true]));
 
         $Rule = new ValidationRule([
             'rule' => 'willFail',
-            'on' => 'update'
+            'on' => 'update',
         ]);
         $this->assertTrue($Rule->process($data, $providers, ['newRecord' => true]));
 
         $Rule = new ValidationRule([
             'rule' => 'willFail',
-            'on' => 'update'
+            'on' => 'update',
         ]);
         $this->assertFalse($Rule->process($data, $providers, ['newRecord' => false]));
     }
@@ -157,7 +158,7 @@ class ValidationRuleTest extends TestCase
                 $this->assertEquals($expected, $context);
 
                 return true;
-            }
+            },
         ]);
         $this->assertFalse($Rule->process($data, $providers, ['newRecord' => true]));
 
@@ -168,7 +169,7 @@ class ValidationRuleTest extends TestCase
                 $this->assertEquals($expected, $context);
 
                 return false;
-            }
+            },
         ]);
         $this->assertTrue($Rule->process($data, $providers, ['newRecord' => true]));
     }
@@ -182,16 +183,16 @@ class ValidationRuleTest extends TestCase
     {
         $Rule = new ValidationRule(['rule' => 'willFail', 'message' => 'foo']);
 
-        $this->assertEquals('willFail', $Rule->get('rule'));
-        $this->assertEquals('foo', $Rule->get('message'));
-        $this->assertEquals('default', $Rule->get('provider'));
+        $this->assertSame('willFail', $Rule->get('rule'));
+        $this->assertSame('foo', $Rule->get('message'));
+        $this->assertSame('default', $Rule->get('provider'));
         $this->assertEquals([], $Rule->get('pass'));
         $this->assertNull($Rule->get('non-existent'));
 
         $Rule = new ValidationRule(['rule' => ['willPass', 'param'], 'message' => 'bar']);
 
-        $this->assertEquals('willPass', $Rule->get('rule'));
-        $this->assertEquals('bar', $Rule->get('message'));
+        $this->assertSame('willPass', $Rule->get('rule'));
+        $this->assertSame('bar', $Rule->get('message'));
         $this->assertEquals(['param'], $Rule->get('pass'));
     }
 }

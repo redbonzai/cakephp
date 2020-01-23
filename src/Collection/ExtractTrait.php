@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,6 +16,7 @@
  */
 namespace Cake\Collection;
 
+use Closure;
 use Traversable;
 
 /**
@@ -22,7 +25,6 @@ use Traversable;
  */
 trait ExtractTrait
 {
-
     /**
      * Returns a callable that can be used to extract a property or column from
      * an array or object based on a dot separated path.
@@ -32,7 +34,7 @@ trait ExtractTrait
      * of doing that.
      * @return callable
      */
-    protected function _propertyExtractor($callback)
+    protected function _propertyExtractor($callback): callable
     {
         if (!is_string($callback)) {
             return $callback;
@@ -57,10 +59,10 @@ trait ExtractTrait
      * It will return arrays for elements in represented with `{*}`
      *
      * @param array|\ArrayAccess $data Data.
-     * @param array $path Path to extract from.
+     * @param string[] $path Path to extract from.
      * @return mixed
      */
-    protected function _extract($data, $path)
+    protected function _extract($data, array $path)
     {
         $value = null;
         $collectionTransform = false;
@@ -71,8 +73,13 @@ trait ExtractTrait
                 continue;
             }
 
-            if ($collectionTransform &&
-                !($data instanceof Traversable || is_array($data))) {
+            if (
+                $collectionTransform &&
+                !(
+                    $data instanceof Traversable ||
+                    is_array($data)
+                )
+            ) {
                 return null;
             }
 
@@ -98,10 +105,10 @@ trait ExtractTrait
      * by iterating over the column names contained in $path
      *
      * @param array|\ArrayAccess $data Data.
-     * @param array $path Path to extract from.
+     * @param string[] $path Path to extract from.
      * @return mixed
      */
-    protected function _simpleExtract($data, $path)
+    protected function _simpleExtract($data, array $path)
     {
         $value = null;
         foreach ($path as $column) {
@@ -122,9 +129,9 @@ trait ExtractTrait
      * @param array $conditions A key-value list of conditions to match where the
      * key is the property path to get from the current item and the value is the
      * value to be compared the item with.
-     * @return callable
+     * @return \Closure
      */
-    protected function _createMatcherFilter(array $conditions)
+    protected function _createMatcherFilter(array $conditions): Closure
     {
         $matchers = [];
         foreach ($conditions as $property => $value) {

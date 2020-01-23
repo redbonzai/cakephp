@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -23,7 +25,6 @@ use Cake\TestSuite\TestCase;
  */
 class TreeIteratorTest extends TestCase
 {
-
     /**
      * Tests the printer function with defaults
      *
@@ -36,10 +37,10 @@ class TreeIteratorTest extends TestCase
                 'id' => 1,
                 'name' => 'a',
                 'stuff' => [
-                    ['id' => 2, 'name' => 'b', 'stuff' => [['id' => 3, 'name' => 'c']]]
-                ]
+                    ['id' => 2, 'name' => 'b', 'stuff' => [['id' => 3, 'name' => 'c']]],
+                ],
             ],
-            ['id' => 4, 'name' => 'd', 'stuff' => [['id' => 5, 'name' => 'e']]]
+            ['id' => 4, 'name' => 'd', 'stuff' => [['id' => 5, 'name' => 'e']]],
         ];
         $items = new NestIterator($items, 'stuff');
         $result = (new TreeIterator($items))->printer('name')->toArray();
@@ -48,7 +49,7 @@ class TreeIteratorTest extends TestCase
             '__b',
             '____c',
             'd',
-            '__e'
+            '__e',
         ];
         $this->assertEquals($expected, $result);
     }
@@ -65,10 +66,10 @@ class TreeIteratorTest extends TestCase
                 'id' => 1,
                 'name' => 'a',
                 'stuff' => [
-                    ['id' => 2, 'name' => 'b', 'stuff' => [['id' => 3, 'name' => 'c']]]
-                ]
+                    ['id' => 2, 'name' => 'b', 'stuff' => [['id' => 3, 'name' => 'c']]],
+                ],
             ],
-            ['id' => 4, 'name' => 'd', 'stuff' => [['id' => 5, 'name' => 'e']]]
+            ['id' => 4, 'name' => 'd', 'stuff' => [['id' => 5, 'name' => 'e']]],
         ];
         $items = new NestIterator($items, 'stuff');
         $result = (new TreeIterator($items))->printer('id', 'name', '@@')->toArray();
@@ -77,7 +78,7 @@ class TreeIteratorTest extends TestCase
             'b' => '@@2',
             'c' => '@@@@3',
             'd' => '4',
-            'e' => '@@5'
+            'e' => '@@5',
         ];
         $this->assertEquals($expected, $result);
     }
@@ -94,23 +95,23 @@ class TreeIteratorTest extends TestCase
                 'id' => 1,
                 'name' => 'a',
                 'stuff' => [
-                    ['id' => 2, 'name' => 'b', 'stuff' => [['id' => 3, 'name' => 'c']]]
-                ]
+                    ['id' => 2, 'name' => 'b', 'stuff' => [['id' => 3, 'name' => 'c']]],
+                ],
             ],
-            ['id' => 4, 'name' => 'd', 'stuff' => [['id' => 5, 'name' => 'e']]]
+            ['id' => 4, 'name' => 'd', 'stuff' => [['id' => 5, 'name' => 'e']]],
         ];
         $items = new NestIterator($items, 'stuff');
         $result = (new TreeIterator($items))
             ->printer(function ($element, $key, $iterator) {
                 return ($iterator->getDepth() + 1 ) . '.' . $key . ' ' . $element['name'];
-            }, null, null)
+            }, null, '')
             ->toArray();
         $expected = [
             '1.0 a',
             '2.0 b',
             '3.0 c',
             '1.1 d',
-            '2.0 e'
+            '2.0 e',
         ];
         $this->assertEquals($expected, $result);
     }

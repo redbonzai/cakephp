@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -20,8 +22,7 @@ use Cake\ORM\Table;
  */
 class AuthorsTable extends Table
 {
-
-    public function initialize(array $config)
+    public function initialize(array $config): void
     {
         $this->hasMany('articles');
     }
@@ -33,5 +34,23 @@ class AuthorsTable extends Table
         }
 
         return $query;
+    }
+
+    /**
+     * Finder that applies a formatter to test dirty associations
+     *
+     * @param \Cake\ORM\Query $query The query
+     * @param array $options The options
+     * @return \Cake\ORM\Query
+     */
+    public function findFormatted(Query $query, array $options = [])
+    {
+        return $query->formatResults(function ($results) {
+            return $results->map(function ($author) {
+                $author->formatted = $author->name . '!!';
+
+                return $author;
+            });
+        });
     }
 }

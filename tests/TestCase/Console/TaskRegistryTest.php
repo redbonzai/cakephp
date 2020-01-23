@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,7 +17,6 @@
 namespace Cake\Test\TestCase\Console;
 
 use Cake\Console\TaskRegistry;
-use Cake\Core\Plugin;
 use Cake\TestSuite\TestCase;
 
 /**
@@ -23,13 +24,12 @@ use Cake\TestSuite\TestCase;
  */
 class TaskRegistryTest extends TestCase
 {
-
     /**
      * setUp
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $shell = $this->getMockBuilder('Cake\Console\Shell')
@@ -43,7 +43,7 @@ class TaskRegistryTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         unset($this->Tasks);
         parent::tearDown();

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,6 +16,7 @@
  */
 namespace Cake\Test\TestCase\View;
 
+use Cake\Event\EventManager;
 use Cake\Http\Response;
 use Cake\Http\ServerRequest;
 use Cake\TestSuite\TestCase;
@@ -43,7 +46,7 @@ class ViewBuilderTest extends TestCase
         $update = ['test' => 'updated'];
         $builder->setVars($update);
         $this->assertEquals(
-            ['test' => 'val', 'foo' => 'bar', 'test' => 'updated'],
+            ['foo' => 'bar', 'test' => 'updated'],
             $builder->getVars()
         );
 
@@ -88,14 +91,15 @@ class ViewBuilderTest extends TestCase
     }
 
     /**
-     * data provider for string properties.
+     * data provider for boolean properties.
+     * Format: [key, expectedDefault, newValue]
      *
      * @return array
      */
     public function boolPropertyProvider()
     {
         return [
-            ['autoLayout', true],
+            ['autoLayout', true, false],
         ];
     }
 
@@ -132,17 +136,16 @@ class ViewBuilderTest extends TestCase
     /**
      * Test string property accessor/mutator methods.
      *
-     * @deprecated
      * @dataProvider boolPropertyProvider
      * @return void
      */
-    public function testBoolProperties($property, $value)
+    public function testBoolProperties($property, $default, $value)
     {
         $set = 'enable' . ucfirst($property);
         $get = 'is' . ucfirst($property) . 'Enabled';
 
         $builder = new ViewBuilder();
-        $this->assertNull($builder->{$get}(), 'Default value should be null');
+        $this->assertSame($default, $builder->{$get}(), 'Default value not as expected');
         $this->assertSame($builder, $builder->{$set}($value), 'Setter returns this');
         $this->assertSame($value, $builder->{$get}(), 'Getter gets value.');
     }
@@ -186,78 +189,6 @@ class ViewBuilderTest extends TestCase
     }
 
     /**
-     * Test string property accessor/mutator methods.
-     *
-     * @deprecated
-     * @dataProvider stringPropertyProvider
-     * @return void
-     */
-    public function testStringPropertiesDeprecated($property, $value)
-    {
-        $this->deprecated(function () use ($value, $property) {
-            $builder = new ViewBuilder();
-            $this->assertNull($builder->{$property}(), 'Default value should be null');
-            $this->assertSame($builder, $builder->{$property}($value), 'Setter returns this');
-            $this->assertSame($value, $builder->{$property}(), 'Getter gets value.');
-        });
-    }
-
-    /**
-     * Test string property accessor/mutator methods.
-     *
-     * @deprecated
-     * @dataProvider boolPropertyProvider
-     * @return void
-     */
-    public function testBoolPropertiesDeprecated($property, $value)
-    {
-        $this->deprecated(function () use ($value, $property) {
-            $builder = new ViewBuilder();
-            $this->assertNull($builder->{$property}(), 'Default value should be null');
-            $this->assertSame($builder, $builder->{$property}($value), 'Setter returns this');
-            $this->assertSame($value, $builder->{$property}(), 'Getter gets value.');
-        });
-    }
-
-    /**
-     * Test array property accessor/mutator methods.
-     *
-     * @deprecated
-     * @dataProvider arrayPropertyProvider
-     * @return void
-     */
-    public function testArrayPropertiesDeprecated($property, $value)
-    {
-        $this->deprecated(function () use ($value, $property) {
-            $builder = new ViewBuilder();
-            $this->assertSame([], $builder->{$property}(), 'Default value should be empty list');
-            $this->assertSame($builder, $builder->{$property}($value), 'Setter returns this');
-            $this->assertSame($value, $builder->{$property}(), 'Getter gets value.');
-        });
-    }
-
-    /**
-     * Test array property accessor/mutator methods.
-     *
-     * @deprecated
-     * @dataProvider arrayPropertyProvider
-     * @return void
-     */
-    public function testArrayPropertyMergeDeprecated($property, $value)
-    {
-        $this->deprecated(function () use ($value, $property) {
-            $builder = new ViewBuilder();
-            $builder->{$property}($value);
-
-            $builder->{$property}(['Merged'], true);
-            $this->assertSame(array_merge($value, ['Merged']), $builder->{$property}(), 'Should merge');
-
-            $builder->{$property}($value, false);
-            $this->assertSame($value, $builder->{$property}(), 'Should replace');
-        });
-    }
-
-    /**
      * test building with all the options.
      *
      * @return void
@@ -266,7 +197,7 @@ class ViewBuilderTest extends TestCase
     {
         $request = new ServerRequest();
         $response = new Response();
-        $events = $this->getMockBuilder('Cake\Event\EventManager')->getMock();
+        $events = new EventManager();
 
         $builder = new ViewBuilder();
         $builder->setName('Articles')
@@ -286,19 +217,18 @@ class ViewBuilderTest extends TestCase
             $events
         );
         $this->assertInstanceOf('Cake\View\AjaxView', $view);
-        $this->assertEquals('edit', $view->getTemplate());
-        $this->assertEquals('default', $view->getLayout());
-        $this->assertEquals('Articles/', $view->getTemplatePath());
-        $this->assertEquals('Admin/', $view->getLayoutPath());
-        $this->assertEquals('TestPlugin', $view->getPlugin());
-        $this->assertEquals('TestTheme', $view->getTheme());
+        $this->assertSame('edit', $view->getTemplate());
+        $this->assertSame('default', $view->getLayout());
+        $this->assertSame('Articles/', $view->getTemplatePath());
+        $this->assertSame('Admin/', $view->getLayoutPath());
+        $this->assertSame('TestPlugin', $view->getPlugin());
+        $this->assertSame('TestTheme', $view->getTheme());
         $this->assertSame($request, $view->getRequest());
         $this->assertInstanceOf(Response::class, $view->getResponse());
         $this->assertSame($events, $view->getEventManager());
-        $this->assertEquals(
-            ['one' => 'value', 'foo' => 'bar', 'x' => 'new'],
-            $view->viewVars
-        );
+        $this->assertSame(['one', 'x', 'foo'], $view->getVars());
+        $this->assertSame('value', $view->get('one'));
+        $this->assertSame('bar', $view->get('foo'));
         $this->assertInstanceOf('Cake\View\Helper\HtmlHelper', $view->Html);
         $this->assertInstanceOf('Cake\View\Helper\FormHelper', $view->Form);
     }
@@ -365,6 +295,7 @@ class ViewBuilderTest extends TestCase
             '_layout' => 'test',
             '_helpers' => ['Html'],
             '_className' => 'JsonView',
+            '_autoLayout' => true,
         ];
         $this->assertEquals($expected, $result);
 
@@ -392,10 +323,96 @@ class ViewBuilderTest extends TestCase
         $builder = new ViewBuilder();
         $builder->createFromArray(json_decode($result, true));
 
-        $this->assertEquals('default', $builder->getTemplate());
-        $this->assertEquals('test', $builder->getLayout());
+        $this->assertSame('default', $builder->getTemplate());
+        $this->assertSame('test', $builder->getLayout());
         $this->assertEquals(['Html'], $builder->getHelpers());
-        $this->assertEquals('JsonView', $builder->getClassName());
+        $this->assertSame('JsonView', $builder->getClassName());
+    }
+
+    /**
+     * test setOptions() with 1 string param, merge true
+     *
+     * @return void
+     */
+    public function testSetOptionsOne()
+    {
+        $builder = new ViewBuilder();
+        $this->assertSame($builder, $builder->setOptions(['newOption']));
+        $this->assertContains('newOption', $builder->getOptions());
+    }
+
+    /**
+     * test setOptions() with 2 strings in array, merge true.
+     *
+     * @return void
+     */
+    public function testSetOptionsMultiple()
+    {
+        $builder = new ViewBuilder();
+        $builder->setOptions(['oldOption'], false);
+
+        $option = ['newOption', 'anotherOption'];
+        $builder->setOptions($option);
+        $expects = ['oldOption', 'newOption', 'anotherOption'];
+
+        $result = $builder->getOptions();
+        $this->assertContainsOnly('string', $result);
+        $this->assertEquals($expects, $result);
+    }
+
+    /**
+     * test empty params reads _viewOptions.
+     *
+     * @return void
+     */
+    public function testReadingViewOptions()
+    {
+        $builder = new ViewBuilder();
+        $builder->setOptions(['one', 'two', 'three'], false);
+
+        $this->assertEquals(['one', 'two', 'three'], $builder->getOptions());
+    }
+
+    /**
+     * test setting $merge `false` overrides correct options.
+     *
+     * @return void
+     */
+    public function testMergeFalseViewOptions()
+    {
+        $builder = new ViewBuilder();
+        $builder->setOptions(['one', 'two', 'three'], false);
+
+        $expected = ['four', 'five', 'six'];
+        $builder->setOptions($expected, false);
+        $this->assertEquals($expected, $builder->getOptions());
+    }
+
+    /**
+     * test _viewOptions is undefined and $opts is null, an empty array is returned.
+     *
+     * @return void
+     */
+    public function testUndefinedValidViewOptions()
+    {
+        $builder = new ViewBuilder();
+        $builder->setOptions([], false);
+        $result = $builder->getOptions();
+        $this->assertIsArray($result);
+        $this->assertEmpty($result);
+    }
+
+    public function testOptionSetGet()
+    {
+        $builder = new ViewBuilder();
+        $result = $builder->setOption('foo', 'bar');
+        $this->assertSame($builder, $result);
+        $this->assertSame('bar', $builder->getOption('foo'));
+
+        $builder->setOption('foo', 'overwrite');
+        $this->assertSame('overwrite', $builder->getOption('foo'));
+
+        $this->assertNull($builder->getOption('non-existent'));
     }
 
     /**
@@ -406,7 +423,7 @@ class ViewBuilderTest extends TestCase
     public function testDisableAutoLayout()
     {
         $builder = new ViewBuilder();
-        $this->assertNull($builder->isAutoLayoutEnabled());
+        $this->assertTrue($builder->isAutoLayoutEnabled());
 
         $builder->disableAutoLayout();
         $this->assertFalse($builder->isAutoLayoutEnabled());

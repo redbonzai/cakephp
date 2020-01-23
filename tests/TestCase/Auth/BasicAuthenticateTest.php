@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -27,33 +29,41 @@ use Cake\TestSuite\TestCase;
  */
 class BasicAuthenticateTest extends TestCase
 {
-
     /**
      * Fixtures
      *
      * @var array
      */
-    public $fixtures = ['core.AuthUsers', 'core.Users'];
+    protected $fixtures = ['core.AuthUsers', 'core.Users'];
+
+    /**
+     * @var \Cake\Controller\ComponentRegistry
+     */
+    protected $collection;
+
+    /**
+     * @var \Cake\Auth\BasicAuthenticate
+     */
+    protected $auth;
 
     /**
      * setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
-        $this->Collection = $this->getMockBuilder(ComponentRegistry::class)->getMock();
-        $this->auth = new BasicAuthenticate($this->Collection, [
+        $this->collection = new ComponentRegistry();
+        $this->auth = new BasicAuthenticate($this->collection, [
             'userModel' => 'Users',
-            'realm' => 'localhost'
+            'realm' => 'localhost',
         ]);
 
         $password = password_hash('password', PASSWORD_BCRYPT);
         $User = $this->getTableLocator()->get('Users');
         $User->updateAll(['password' => $password], []);
-        $this->response = $this->getMockBuilder(Response::class)->getMock();
     }
 
     /**
@@ -61,13 +71,13 @@ class BasicAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testConstructor()
+    public function testConstructor(): void
     {
-        $object = new BasicAuthenticate($this->Collection, [
+        $object = new BasicAuthenticate($this->collection, [
             'userModel' => 'AuthUser',
-            'fields' => ['username' => 'user', 'password' => 'password']
+            'fields' => ['username' => 'user', 'password' => 'password'],
         ]);
-        $this->assertEquals('AuthUser', $object->getConfig('userModel'));
+        $this->assertSame('AuthUser', $object->getConfig('userModel'));
         $this->assertEquals(['username' => 'user', 'password' => 'password'], $object->getConfig('fields'));
     }
 
@@ -76,12 +86,9 @@ class BasicAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testAuthenticateNoData()
+    public function testAuthenticateNoData(): void
     {
-        $request = new ServerRequest('posts/index');
-
-        $this->response->expects($this->never())
-            ->method('header');
+        $request = new ServerRequest(['url' => 'posts/index']);
 
         $this->assertFalse($this->auth->getUser($request));
     }
@@ -91,14 +98,14 @@ class BasicAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testAuthenticateNoUsername()
+    public function testAuthenticateNoUsername(): void
     {
         $request = new ServerRequest([
             'url' => 'posts/index',
-            'environment' => ['PHP_AUTH_PW' => 'foobar']
+            'environment' => ['PHP_AUTH_PW' => 'foobar'],
         ]);
 
-        $this->assertFalse($this->auth->authenticate($request, $this->response));
+        $this->assertFalse($this->auth->authenticate($request, new Response()));
     }
 
     /**
@@ -106,14 +113,14 @@ class BasicAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testAuthenticateNoPassword()
+    public function testAuthenticateNoPassword(): void
     {
         $request = new ServerRequest([
             'url' => 'posts/index',
-            'environment' => ['PHP_AUTH_USER' => 'mariano']
+            'environment' => ['PHP_AUTH_USER' => 'mariano'],
         ]);
 
-        $this->assertFalse($this->auth->authenticate($request, $this->response));
+        $this->assertFalse($this->auth->authenticate($request, new Response()));
     }
 
     /**
@@ -121,18 +128,18 @@ class BasicAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testAuthenticateInjection()
+    public function testAuthenticateInjection(): void
     {
         $request = new ServerRequest([
             'url' => 'posts/index',
             'environment' => [
                 'PHP_AUTH_USER' => '> 1',
-                'PHP_AUTH_PW' => "' OR 1 = 1"
+                'PHP_AUTH_PW' => "' OR 1 = 1",
             ],
         ]);
 
         $this->assertFalse($this->auth->getUser($request));
-        $this->assertFalse($this->auth->authenticate($request, $this->response));
+        $this->assertFalse($this->auth->authenticate($request, new Response()));
     }
 
     /**
@@ -140,7 +147,7 @@ class BasicAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testAuthenticateUsernameZero()
+    public function testAuthenticateUsernameZero(): void
     {
         $User = $this->getTableLocator()->get('Users');
         $User->updateAll(['username' => '0'], ['username' => 'mariano']);
@@ -150,9 +157,9 @@ class BasicAuthenticateTest extends TestCase
             'data' => [
                 'User' => [
                     'user' => '0',
-                    'password' => 'password'
-                ]
-            ]
+                    'password' => 'password',
+                ],
+            ],
         ]);
         $_SERVER['PHP_AUTH_USER'] = '0';
         $_SERVER['PHP_AUTH_PW'] = 'password';
@@ -163,7 +170,7 @@ class BasicAuthenticateTest extends TestCase
             'created' => new Time('2007-03-17 01:16:23'),
             'updated' => new Time('2007-03-17 01:18:31'),
         ];
-        $this->assertEquals($expected, $this->auth->authenticate($request, $this->response));
+        $this->assertEquals($expected, $this->auth->authenticate($request, new Response()));
     }
 
     /**
@@ -171,12 +178,12 @@ class BasicAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testAuthenticateChallenge()
+    public function testAuthenticateChallenge(): void
     {
-        $request = new ServerRequest('posts/index');
+        $request = new ServerRequest(['url' => 'posts/index']);
 
         try {
-            $this->auth->unauthenticated($request, $this->response);
+            $this->auth->unauthenticated($request, new Response());
         } catch (UnauthorizedException $e) {
         }
 
@@ -191,44 +198,23 @@ class BasicAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testAuthenticateSuccess()
+    public function testAuthenticateSuccess(): void
     {
         $request = new ServerRequest([
             'url' => 'posts/index',
             'environment' => [
                 'PHP_AUTH_USER' => 'mariano',
-                'PHP_AUTH_PW' => 'password'
-            ]
+                'PHP_AUTH_PW' => 'password',
+            ],
         ]);
 
-        $result = $this->auth->authenticate($request, $this->response);
+        $result = $this->auth->authenticate($request, new Response());
         $expected = [
             'id' => 1,
             'username' => 'mariano',
             'created' => new Time('2007-03-17 01:16:23'),
-            'updated' => new Time('2007-03-17 01:18:31')
+            'updated' => new Time('2007-03-17 01:18:31'),
         ];
         $this->assertEquals($expected, $result);
-    }
-
-    /**
-     * test scope failure.
-     *
-     * @return void
-     */
-    public function testAuthenticateFailReChallenge()
-    {
-        $this->expectException(\Cake\Http\Exception\UnauthorizedException::class);
-        $this->expectExceptionCode(401);
-        $this->auth->setConfig('scope.username', 'nate');
-        $request = new ServerRequest([
-            'url' => 'posts/index',
-            'environment' => [
-                'PHP_AUTH_USER' => 'mariano',
-                'PHP_AUTH_PW' => 'password'
-            ]
-        ]);
-
-        $this->auth->unauthenticated($request, $this->response);
     }
 }

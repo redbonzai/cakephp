@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * DigestAuthenticateTest file
  *
@@ -18,56 +20,57 @@ namespace Cake\Test\TestCase\Auth;
 
 use Cake\Auth\DigestAuthenticate;
 use Cake\Controller\ComponentRegistry;
-use Cake\Core\Configure;
 use Cake\Http\Exception\UnauthorizedException;
 use Cake\Http\Response;
 use Cake\Http\ServerRequest;
 use Cake\I18n\Time;
-use Cake\ORM\Entity;
 use Cake\TestSuite\TestCase;
-
-/**
- * Entity for testing with hidden fields.
- */
-class ProtectedUser extends Entity
-{
-    protected $_hidden = ['password'];
-}
+use Cake\Utility\Security;
+use TestApp\Model\Entity\ProtectedUser;
 
 /**
  * Test case for DigestAuthentication
  */
 class DigestAuthenticateTest extends TestCase
 {
-
     /**
      * Fixtures
      *
      * @var array
      */
-    public $fixtures = ['core.AuthUsers', 'core.Users'];
+    protected $fixtures = ['core.AuthUsers', 'core.Users'];
+
+    /**
+     * @var \Cake\Controller\ComponentRegistry
+     */
+    protected $collection;
+
+    /**
+     * @var \Cake\Auth\DigestAuthenticate
+     */
+    protected $auth;
 
     /**
      * setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
-        $this->Collection = $this->getMockBuilder(ComponentRegistry::class)->getMock();
-        $this->auth = new DigestAuthenticate($this->Collection, [
+        $this->collection = new ComponentRegistry();
+        $this->auth = new DigestAuthenticate($this->collection, [
             'realm' => 'localhost',
             'nonce' => 123,
-            'opaque' => '123abc'
+            'opaque' => '123abc',
+            'secret' => Security::getSalt(),
+            'passwordHasher' => 'ShouldNeverTryToUsePasswordHasher',
         ]);
 
         $password = DigestAuthenticate::password('mariano', 'cake', 'localhost');
         $User = $this->getTableLocator()->get('Users');
         $User->updateAll(['password' => $password], []);
-
-        $this->response = $this->getMockBuilder(Response::class)->getMock();
     }
 
     /**
@@ -75,14 +78,14 @@ class DigestAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testConstructor()
+    public function testConstructor(): void
     {
-        $object = new DigestAuthenticate($this->Collection, [
+        $object = new DigestAuthenticate($this->collection, [
             'userModel' => 'AuthUser',
             'fields' => ['username' => 'user', 'password' => 'pass'],
-            'nonce' => 123456
+            'nonce' => 123456,
         ]);
-        $this->assertEquals('AuthUser', $object->getConfig('userModel'));
+        $this->assertSame('AuthUser', $object->getConfig('userModel'));
         $this->assertEquals(['username' => 'user', 'password' => 'pass'], $object->getConfig('fields'));
         $this->assertEquals(123456, $object->getConfig('nonce'));
         $this->assertEquals(env('SERVER_NAME'), $object->getConfig('realm'));
@@ -93,14 +96,11 @@ class DigestAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testAuthenticateNoData()
+    public function testAuthenticateNoData(): void
     {
-        $request = new ServerRequest('posts/index');
+        $request = new ServerRequest(['url' => 'posts/index']);
 
-        $this->response->expects($this->never())
-            ->method('header');
-
-        $this->assertFalse($this->auth->getUser($request, $this->response));
+        $this->assertFalse($this->auth->getUser($request));
     }
 
     /**
@@ -108,10 +108,8 @@ class DigestAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testAuthenticateWrongUsername()
+    public function testAuthenticateWrongUsername(): void
     {
-        $this->expectException(\Cake\Http\Exception\UnauthorizedException::class);
-        $this->expectExceptionCode(401);
         $request = new ServerRequest(['url' => 'posts/index']);
 
         $data = [
@@ -121,12 +119,16 @@ class DigestAuthenticateTest extends TestCase
             'uri' => '/dir/index.html',
             'qop' => 'auth',
             'nc' => 0000001,
-            'cnonce' => '0a4f113b'
+            'cnonce' => '0a4f113b',
         ];
         $data['response'] = $this->auth->generateResponseHash($data, '09faa9931501bf30f0d4253fa7763022', 'GET');
         $request = $request->withEnv('PHP_AUTH_DIGEST', $this->digestHeader($data));
 
-        $this->auth->unauthenticated($request, $this->response);
+        $this->assertFalse($this->auth->authenticate($request, new Response()));
+
+        $this->expectException(UnauthorizedException::class);
+        $this->expectExceptionCode(401);
+        $this->auth->unauthenticated($request, new Response());
     }
 
     /**
@@ -134,15 +136,15 @@ class DigestAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testAuthenticateChallenge()
+    public function testAuthenticateChallenge(): void
     {
         $request = new ServerRequest([
             'url' => 'posts/index',
-            'environment' => ['REQUEST_METHOD' => 'GET']
+            'environment' => ['REQUEST_METHOD' => 'GET'],
         ]);
 
         try {
-            $this->auth->unauthenticated($request, $this->response);
+            $this->auth->unauthenticated($request, new Response());
         } catch (UnauthorizedException $e) {
         }
 
@@ -160,11 +162,11 @@ class DigestAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testAuthenticateChallengeIncludesStaleAttributeOnStaleNonce()
+    public function testAuthenticateChallengeIncludesStaleAttributeOnStaleNonce(): void
     {
         $request = new ServerRequest([
             'url' => 'posts/index',
-            'environment' => ['REQUEST_METHOD' => 'GET']
+            'environment' => ['REQUEST_METHOD' => 'GET'],
         ]);
         $data = [
             'uri' => '/dir/index.html',
@@ -177,13 +179,13 @@ class DigestAuthenticateTest extends TestCase
         $request = $request->withEnv('PHP_AUTH_DIGEST', $this->digestHeader($data));
 
         try {
-            $this->auth->unauthenticated($request, $this->response);
+            $this->auth->unauthenticated($request, new Response());
         } catch (UnauthorizedException $e) {
         }
         $this->assertNotEmpty($e);
 
         $header = $e->responseHeader()['WWW-Authenticate'];
-        $this->assertContains('stale=true', $header);
+        $this->assertStringContainsString('stale=true', $header);
     }
 
     /**
@@ -191,11 +193,11 @@ class DigestAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testAuthenticateFailsOnStaleNonce()
+    public function testAuthenticateFailsOnStaleNonce(): void
     {
         $request = new ServerRequest([
             'url' => 'posts/index',
-            'environment' => ['REQUEST_METHOD' => 'GET']
+            'environment' => ['REQUEST_METHOD' => 'GET'],
         ]);
 
         $data = [
@@ -207,7 +209,7 @@ class DigestAuthenticateTest extends TestCase
         ];
         $data['response'] = $this->auth->generateResponseHash($data, '09faa9931501bf30f0d4253fa7763022', 'GET');
         $request = $request->withEnv('PHP_AUTH_DIGEST', $this->digestHeader($data));
-        $result = $this->auth->authenticate($request, $this->response);
+        $result = $this->auth->authenticate($request, new Response());
         $this->assertFalse($result, 'Stale nonce should fail');
     }
 
@@ -216,11 +218,11 @@ class DigestAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testAuthenticateValidUsernamePasswordNoNonce()
+    public function testAuthenticateValidUsernamePasswordNoNonce(): void
     {
         $request = new ServerRequest([
             'url' => 'posts/index',
-            'environment' => ['REQUEST_METHOD' => 'GET']
+            'environment' => ['REQUEST_METHOD' => 'GET'],
         ]);
 
         $data = [
@@ -234,7 +236,7 @@ class DigestAuthenticateTest extends TestCase
         ];
         $data['response'] = $this->auth->generateResponseHash($data, '09faa9931501bf30f0d4253fa7763022', 'GET');
         $request = $request->withEnv('PHP_AUTH_DIGEST', $this->digestHeader($data));
-        $result = $this->auth->authenticate($request, $this->response);
+        $result = $this->auth->authenticate($request, new Response());
         $this->assertFalse($result, 'Empty nonce should fail');
     }
 
@@ -243,11 +245,11 @@ class DigestAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testAuthenticateSuccess()
+    public function testAuthenticateSuccess(): void
     {
         $request = new ServerRequest([
             'url' => 'posts/index',
-            'environment' => ['REQUEST_METHOD' => 'GET']
+            'environment' => ['REQUEST_METHOD' => 'GET'],
         ]);
 
         $data = [
@@ -260,12 +262,12 @@ class DigestAuthenticateTest extends TestCase
         $data['response'] = $this->auth->generateResponseHash($data, '09faa9931501bf30f0d4253fa7763022', 'GET');
         $request = $request->withEnv('PHP_AUTH_DIGEST', $this->digestHeader($data));
 
-        $result = $this->auth->authenticate($request, $this->response);
+        $result = $this->auth->authenticate($request, new Response());
         $expected = [
             'id' => 1,
             'username' => 'mariano',
             'created' => new Time('2007-03-17 01:16:23'),
-            'updated' => new Time('2007-03-17 01:18:31')
+            'updated' => new Time('2007-03-17 01:18:31'),
         ];
         $this->assertEquals($expected, $result);
     }
@@ -275,14 +277,14 @@ class DigestAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testAuthenticateSuccessHiddenPasswordField()
+    public function testAuthenticateSuccessHiddenPasswordField(): void
     {
         $User = $this->getTableLocator()->get('Users');
         $User->setEntityClass(ProtectedUser::class);
 
         $request = new ServerRequest([
             'url' => 'posts/index',
-            'environment' => ['REQUEST_METHOD' => 'GET']
+            'environment' => ['REQUEST_METHOD' => 'GET'],
         ]);
 
         $data = [
@@ -295,12 +297,12 @@ class DigestAuthenticateTest extends TestCase
         $data['response'] = $this->auth->generateResponseHash($data, '09faa9931501bf30f0d4253fa7763022', 'GET');
         $request = $request->withEnv('PHP_AUTH_DIGEST', $this->digestHeader($data));
 
-        $result = $this->auth->authenticate($request, $this->response);
+        $result = $this->auth->authenticate($request, new Response());
         $expected = [
             'id' => 1,
             'username' => 'mariano',
             'created' => new Time('2007-03-17 01:16:23'),
-            'updated' => new Time('2007-03-17 01:18:31')
+            'updated' => new Time('2007-03-17 01:18:31'),
         ];
         $this->assertEquals($expected, $result);
     }
@@ -310,12 +312,12 @@ class DigestAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testAuthenticateSuccessSimulatedRequestMethod()
+    public function testAuthenticateSuccessSimulatedRequestMethod(): void
     {
         $request = new ServerRequest([
             'url' => 'posts/index',
             'post' => ['_method' => 'PUT'],
-            'environment' => ['REQUEST_METHOD' => 'GET']
+            'environment' => ['REQUEST_METHOD' => 'GET'],
         ]);
 
         $data = [
@@ -329,42 +331,14 @@ class DigestAuthenticateTest extends TestCase
         $data['response'] = $this->auth->generateResponseHash($data, '09faa9931501bf30f0d4253fa7763022', 'GET');
         $request = $request->withEnv('PHP_AUTH_DIGEST', $this->digestHeader($data));
 
-        $result = $this->auth->authenticate($request, $this->response);
+        $result = $this->auth->authenticate($request, new Response());
         $expected = [
             'id' => 1,
             'username' => 'mariano',
             'created' => new Time('2007-03-17 01:16:23'),
-            'updated' => new Time('2007-03-17 01:18:31')
+            'updated' => new Time('2007-03-17 01:18:31'),
         ];
         $this->assertEquals($expected, $result);
-    }
-
-    /**
-     * test scope failure.
-     *
-     * @return void
-     */
-    public function testAuthenticateFailReChallenge()
-    {
-        $this->expectException(\Cake\Http\Exception\UnauthorizedException::class);
-        $this->expectExceptionCode(401);
-        $this->auth->setConfig('scope.username', 'nate');
-        $request = new ServerRequest([
-            'url' => 'posts/index',
-            'environment' => ['REQUEST_METHOD' => 'GET']
-        ]);
-
-        $data = [
-            'username' => 'invalid',
-            'uri' => '/dir/index.html',
-            'nonce' => $this->generateNonce(),
-            'nc' => 1,
-            'cnonce' => '123',
-            'qop' => 'auth',
-        ];
-        $data['response'] = $this->auth->generateResponseHash($data, '09faa9931501bf30f0d4253fa7763022', 'GET');
-        $request = $request->withEnv('PHP_AUTH_DIGEST', $this->digestHeader($data));
-        $this->auth->unauthenticated($request, $this->response);
     }
 
     /**
@@ -372,12 +346,12 @@ class DigestAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testLoginHeaders()
+    public function testLoginHeaders(): void
     {
         $request = new ServerRequest([
-            'environment' => ['SERVER_NAME' => 'localhost']
+            'environment' => ['SERVER_NAME' => 'localhost'],
         ]);
-        $this->auth = new DigestAuthenticate($this->Collection, [
+        $this->auth = new DigestAuthenticate($this->collection, [
             'realm' => 'localhost',
         ]);
         $result = $this->auth->loginHeaders($request);
@@ -393,7 +367,7 @@ class DigestAuthenticateTest extends TestCase
      *
      * @return void
      */
-    public function testParseAuthData()
+    public function testParseAuthData(): void
     {
         $digest = <<<DIGEST
             Digest username="Mufasa",
@@ -415,7 +389,7 @@ DIGEST;
             'nc' => '00000001',
             'cnonce' => '0a4f113b',
             'response' => '6629fae49393a05397450978507c4ef1',
-            'opaque' => '5ccc069c403ebaf9f0171e9517f40e41'
+            'opaque' => '5ccc069c403ebaf9f0171e9517f40e41',
         ];
         $result = $this->auth->parseAuthData($digest);
         $this->assertSame($expected, $result);
@@ -429,7 +403,7 @@ DIGEST;
      *
      * @return void
      */
-    public function testParseAuthDataFullUri()
+    public function testParseAuthDataFullUri(): void
     {
         $digest = <<<DIGEST
             Digest username="admin",
@@ -453,7 +427,7 @@ DIGEST;
      *
      * @return void
      */
-    public function testParseAuthEmailAddress()
+    public function testParseAuthEmailAddress(): void
     {
         $digest = <<<DIGEST
             Digest username="mark@example.com",
@@ -475,7 +449,7 @@ DIGEST;
             'nc' => '00000001',
             'cnonce' => '0a4f113b',
             'response' => '6629fae49393a05397450978507c4ef1',
-            'opaque' => '5ccc069c403ebaf9f0171e9517f40e41'
+            'opaque' => '5ccc069c403ebaf9f0171e9517f40e41',
         ];
         $result = $this->auth->parseAuthData($digest);
         $this->assertSame($expected, $result);
@@ -486,7 +460,7 @@ DIGEST;
      *
      * @return void
      */
-    public function testPassword()
+    public function testPassword(): void
     {
         $result = DigestAuthenticate::password('mark', 'password', 'localhost');
         $expected = md5('mark:localhost:password');
@@ -498,11 +472,12 @@ DIGEST;
      *
      * @param string $secret The secret to use.
      * @param int $expires Time to live
+     * @param int $time Current time in microseconds
      * @return string
      */
-    protected function generateNonce($secret = null, $expires = 300, $time = null)
+    protected function generateNonce(?string $secret = null, ?int $expires = 300, ?int $time = null): string
     {
-        $secret = $secret ?: Configure::read('Security.salt');
+        $secret = $secret ?: Security::getSalt();
         $time = $time ?: microtime(true);
         $expiryTime = $time + $expires;
         $signatureValue = hash_hmac('sha256', $expiryTime . ':' . $secret, $secret);
@@ -517,15 +492,15 @@ DIGEST;
      * @param array $data the data to convert into a header.
      * @return string
      */
-    protected function digestHeader($data)
+    protected function digestHeader(array $data): string
     {
         $data += [
             'username' => 'mariano',
             'realm' => 'localhost',
-            'opaque' => '123abc'
+            'opaque' => '123abc',
         ];
         $digest = <<<DIGEST
-Digest username="mariano",
+Digest username="{$data['username']}",
 realm="{$data['realm']}",
 nonce="{$data['nonce']}",
 uri="{$data['uri']}",

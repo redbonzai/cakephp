@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * MailTransportTest file
  *
@@ -16,6 +18,8 @@
  */
 namespace Cake\Test\TestCase\Mailer\Transport;
 
+use Cake\Core\Exception\Exception;
+use Cake\Mailer\Message;
 use Cake\TestSuite\TestCase;
 
 /**
@@ -23,13 +27,12 @@ use Cake\TestSuite\TestCase;
  */
 class MailTransportTest extends TestCase
 {
-
     /**
      * Setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->MailTransport = $this->getMockBuilder('Cake\Mailer\Transport\MailTransport')
@@ -39,31 +42,42 @@ class MailTransportTest extends TestCase
     }
 
     /**
+     * testSendWithoutRecipient method
+     *
+     * @return void
+     */
+    public function testSendWithoutRecipient()
+    {
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage('You must specify at least one recipient. Use one of `setTo`, `setCc` or `setBcc` to define a recipient.');
+
+        $message = new Message();
+        $this->MailTransport->send($message);
+    }
+
+    /**
      * testSend method
      *
      * @return void
      */
     public function testSendData()
     {
-        $email = $this->getMockBuilder('Cake\Mailer\Email')
-            ->setMethods(['message'])
-            ->getMock();
-        $email->setFrom('noreply@cakephp.org', 'CakePHP Test');
-        $email->setReturnPath('pleasereply@cakephp.org', 'CakePHP Return');
-        $email->setTo('cake@cakephp.org', 'CakePHP');
-        $email->setCc(['mark@cakephp.org' => 'Mark Story', 'juan@cakephp.org' => 'Juan Basso']);
-        $email->setBcc('phpnut@cakephp.org');
-        $email->setMessageId('<4d9946cf-0a44-4907-88fe-1d0ccbdd56cb@localhost>');
+        $message = new Message();
+        $message->setFrom('noreply@cakephp.org', 'CakePHP Test');
+        $message->setReturnPath('pleasereply@cakephp.org', 'CakePHP Return');
+        $message->setTo('cake@cakephp.org', 'CakePHP');
+        $message->setCc(['mark@cakephp.org' => 'Mark Story', 'juan@cakephp.org' => 'Juan Basso']);
+        $message->setBcc('phpnut@cakephp.org');
+        $message->setMessageId('<4d9946cf-0a44-4907-88fe-1d0ccbdd56cb@localhost>');
         $longNonAscii = 'Foø Bår Béz Foø Bår Béz Foø Bår Béz Foø Bår Béz';
-        $email->setSubject($longNonAscii);
+        $message->setSubject($longNonAscii);
         $date = date(DATE_RFC2822);
-        $email->setHeaders([
+        $message->setHeaders([
             'X-Mailer' => 'CakePHP Email',
             'Date' => $date,
             'X-add' => mb_encode_mimeheader($longNonAscii, 'utf8', 'B'),
         ]);
-        $email->expects($this->any())->method('message')
-            ->will($this->returnValue(['First Line', 'Second Line', '.Third Line', '']));
+        $message->setBody(['text' => "First Line\nSecond Line\n.Third Line"]);
 
         $encoded = '=?UTF-8?B?Rm/DuCBCw6VyIELDqXogRm/DuCBCw6VyIELDqXogRm/DuCBCw6VyIELDqXog?=';
         $encoded .= ' =?UTF-8?B?Rm/DuCBCw6VyIELDqXo=?=';
@@ -84,14 +98,14 @@ class MailTransportTest extends TestCase
             ->with(
                 'CakePHP <cake@cakephp.org>',
                 $encoded,
-                implode(PHP_EOL, ['First Line', 'Second Line', '.Third Line', '']),
+                implode(PHP_EOL, ['First Line', 'Second Line', '.Third Line', '', '']),
                 $data,
                 '-f'
             );
 
-        $result = $this->MailTransport->send($email);
+        $result = $this->MailTransport->send($message);
 
-        $this->assertContains('Subject: ', $result['headers']);
-        $this->assertContains('To: ', $result['headers']);
+        $this->assertStringContainsString('Subject: ', $result['headers']);
+        $this->assertStringContainsString('To: ', $result['headers']);
     }
 }

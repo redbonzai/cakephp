@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * HelperTest file
  *
@@ -17,50 +19,27 @@
 namespace Cake\Test\TestCase\View;
 
 use Cake\Core\Configure;
-use Cake\Core\Plugin;
 use Cake\Routing\Router;
 use Cake\TestSuite\TestCase;
-use Cake\View\Helper;
 use Cake\View\View;
-
-class TestHelper extends Helper
-{
-
-    /**
-     * Settings for this helper.
-     *
-     * @var array
-     */
-    protected $_defaultConfig = [
-        'key1' => 'val1',
-        'key2' => ['key2.1' => 'val2.1', 'key2.2' => 'val2.2']
-    ];
-
-    /**
-     * Helpers for this helper.
-     *
-     * @var array
-     */
-    public $helpers = ['Html', 'TestPlugin.OtherHelper'];
-}
+use TestApp\View\Helper\TestHelper;
 
 /**
  * HelperTest class
  */
 class HelperTest extends TestCase
 {
-
     /**
      * @var \Cake\View\View
      */
-    public $View;
+    protected $View;
 
     /**
      * setUp method
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -73,7 +52,7 @@ class HelperTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         Configure::delete('Asset');
@@ -91,12 +70,12 @@ class HelperTest extends TestCase
     {
         $Helper = new TestHelper($this->View, [
             'key3' => 'val3',
-            'key2' => ['key2.2' => 'newval']
+            'key2' => ['key2.2' => 'newval'],
         ]);
         $expected = [
             'key1' => 'val1',
             'key2' => ['key2.1' => 'val2.1', 'key2.2' => 'newval'],
-            'key3' => 'val3'
+            'key3' => 'val3',
         ];
         $this->assertEquals($expected, $Helper->getConfig());
     }
@@ -122,11 +101,11 @@ class HelperTest extends TestCase
      */
     public function testThatHelperHelpersAreNotAttached()
     {
-        $events = $this->getMockBuilder('\Cake\Event\EventManager')->getMock();
+        $events = $this->getMockBuilder('Cake\Event\EventManager')->getMock();
         $this->View->setEventManager($events);
 
         $events->expects($this->never())
-            ->method('attach');
+            ->method('on');
 
         $Helper = new TestHelper($this->View);
         $Helper->OtherHelper;
@@ -170,14 +149,14 @@ class HelperTest extends TestCase
         $expected = [
             'helpers' => [
                 'Html',
-                'TestPlugin.OtherHelper'
+                'TestPlugin.OtherHelper',
             ],
             'implementedEvents' => [
             ],
             '_config' => [
                 'key1' => 'val1',
-                'key2' => ['key2.1' => 'val2.1', 'key2.2' => 'val2.2']
-            ]
+                'key2' => ['key2.1' => 'val2.1', 'key2.2' => 'val2.2'],
+            ],
         ];
         $result = $Helper->__debugInfo();
         $this->assertEquals($expected, $result);
@@ -195,7 +174,7 @@ class HelperTest extends TestCase
         $expected = ['class' => [
             'element1',
             'element2',
-            'element3'
+            'element3',
         ]];
 
         $this->assertEquals($expected, $helper->addClass($input, 'element3'));
@@ -229,18 +208,5 @@ class HelperTest extends TestCase
         $expected = ['class' => 'element3'];
 
         $this->assertEquals($expected, $helper->addClass($input, 'element3'));
-    }
-
-    /**
-     * Test addClass() with adding null class
-     */
-    public function testAddClassNull()
-    {
-        $helper = new TestHelper($this->View);
-
-        $input = [];
-        $expected = ['class' => ''];
-
-        $this->assertEquals($expected, $helper->addClass($input, null));
     }
 }

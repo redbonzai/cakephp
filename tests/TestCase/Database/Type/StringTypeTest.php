@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,7 +16,8 @@
  */
 namespace Cake\Test\TestCase\Database\Type;
 
-use Cake\Database\Type;
+use Cake\Database\Driver;
+use Cake\Database\TypeFactory;
 use Cake\TestSuite\TestCase;
 use PDO;
 
@@ -23,17 +26,26 @@ use PDO;
  */
 class StringTypeTest extends TestCase
 {
+    /**
+     * @var \Cake\Database\TypeInterface
+     */
+    protected $type;
+
+    /**
+     * @var \Cake\Database\Driver|\PHPUnit\Framework\MockObject\MockObject
+     */
+    protected $driver;
 
     /**
      * Setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
-        $this->type = Type::build('string');
-        $this->driver = $this->getMockBuilder('Cake\Database\Driver')->getMock();
+        $this->type = TypeFactory::build('string');
+        $this->driver = $this->getMockBuilder(Driver::class)->getMock();
     }
 
     /**
@@ -85,9 +97,9 @@ class StringTypeTest extends TestCase
     public function testMarshal()
     {
         $this->assertNull($this->type->marshal(null));
+        $this->assertNull($this->type->marshal([1, 2, 3]));
         $this->assertSame('word', $this->type->marshal('word'));
         $this->assertSame('2.123', $this->type->marshal(2.123));
-        $this->assertSame('', $this->type->marshal([1, 2, 3]));
     }
 
     /**

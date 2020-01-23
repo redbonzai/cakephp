@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -25,13 +27,17 @@ use Cake\TestSuite\TestCase;
  */
 class SessionStorageTest extends TestCase
 {
+    /**
+     * @var \Cake\Auth\Storage\SessionStorage
+     */
+    protected $storage;
 
     /**
      * setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -47,7 +53,7 @@ class SessionStorageTest extends TestCase
      *
      * @return void
      */
-    public function testWrite()
+    public function testWrite(): void
     {
         $this->session->expects($this->once())
             ->method('write')
@@ -62,7 +68,7 @@ class SessionStorageTest extends TestCase
      *
      * @return void
      */
-    public function testRead()
+    public function testRead(): void
     {
         $this->session->expects($this->once())
             ->method('read')
@@ -78,7 +84,7 @@ class SessionStorageTest extends TestCase
      *
      * @return void
      */
-    public function testGetFromLocalVar()
+    public function testGetFromLocalVar(): void
     {
         $this->storage->write($this->user);
 
@@ -94,7 +100,7 @@ class SessionStorageTest extends TestCase
      *
      * @return void
      */
-    public function testDelete()
+    public function testDelete(): void
     {
         $this->session->expects($this->once())
             ->method('delete')
@@ -108,7 +114,7 @@ class SessionStorageTest extends TestCase
      *
      * @return void
      */
-    public function redirectUrl()
+    public function redirectUrl(): void
     {
         $url = '/url';
 

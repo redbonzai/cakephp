@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -25,7 +27,6 @@ use Cake\Utility\Hash;
  */
 class FormContext implements ContextInterface
 {
-
     /**
      * The request object.
      *
@@ -56,37 +57,48 @@ class FormContext implements ContextInterface
     }
 
     /**
-     * {@inheritDoc}
+     * Get the fields used in the context as a primary key.
+     *
+     * @return string[]
+     * @deprecated 4.0.0 Renamed to getPrimaryKey()
      */
-    public function primaryKey()
+    public function primaryKey(): array
     {
         return [];
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function isPrimaryKey($field)
+    public function getPrimaryKey(): array
+    {
+        return [];
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function isPrimaryKey(string $field): bool
     {
         return false;
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function isCreate()
+    public function isCreate(): bool
     {
         return true;
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function val($field, $options = [])
+    public function val(string $field, array $options = [])
     {
         $options += [
             'default' => null,
-            'schemaDefault' => true
+            'schemaDefault' => true,
         ];
 
         $val = $this->_request->getData($field);
@@ -112,7 +124,7 @@ class FormContext implements ContextInterface
      * @param string $field Field name.
      * @return mixed
      */
-    protected function _schemaDefault($field)
+    protected function _schemaDefault(string $field)
     {
         $field = $this->_form->schema()->field($field);
         if ($field) {
@@ -123,25 +135,25 @@ class FormContext implements ContextInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function isRequired($field)
+    public function isRequired(string $field): ?bool
     {
         $validator = $this->_form->getValidator();
         if (!$validator->hasField($field)) {
-            return false;
+            return null;
         }
         if ($this->type($field) !== 'boolean') {
-            return $validator->isEmptyAllowed($field, $this->isCreate()) === false;
+            return !$validator->isEmptyAllowed($field, $this->isCreate());
         }
 
         return false;
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function getRequiredMessage($field)
+    public function getRequiredMessage(string $field): ?string
     {
         $parts = explode('.', $field);
 
@@ -152,24 +164,17 @@ class FormContext implements ContextInterface
         }
 
         $ruleset = $validator->field($fieldName);
-
-        $requiredMessage = $validator->getRequiredMessage($fieldName);
-        $emptyMessage = $validator->getNotEmptyMessage($fieldName);
-
-        if ($ruleset->isPresenceRequired() && $requiredMessage) {
-            return $requiredMessage;
-        }
-        if (!$ruleset->isEmptyAllowed() && $emptyMessage) {
-            return $emptyMessage;
+        if (!$ruleset->isEmptyAllowed()) {
+            return $validator->getNotEmptyMessage($fieldName);
         }
 
         return null;
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function getMaxLength($field)
+    public function getMaxLength(string $field): ?int
     {
         $validator = $this->_form->getValidator();
         if (!$validator->hasField($field)) {
@@ -181,29 +186,34 @@ class FormContext implements ContextInterface
             }
         }
 
+        $attributes = $this->attributes($field);
+        if (!empty($attributes['length'])) {
+            return $attributes['length'];
+        }
+
         return null;
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function fieldNames()
+    public function fieldNames(): array
     {
         return $this->_form->schema()->fields();
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function type($field)
+    public function type(string $field): ?string
     {
         return $this->_form->schema()->fieldType($field);
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function attributes($field)
+    public function attributes(string $field): array
     {
         $column = (array)$this->_form->schema()->field($field);
         $whiteList = ['length' => null, 'precision' => null];
@@ -212,9 +222,9 @@ class FormContext implements ContextInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function hasError($field)
+    public function hasError(string $field): bool
     {
         $errors = $this->error($field);
 
@@ -222,9 +232,9 @@ class FormContext implements ContextInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function error($field)
+    public function error(string $field): array
     {
         return (array)Hash::get($this->_form->getErrors(), $field, []);
     }

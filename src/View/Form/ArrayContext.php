@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -16,7 +18,6 @@ namespace Cake\View\Form;
 
 use Cake\Http\ServerRequest;
 use Cake\Utility\Hash;
-use Cake\Validation\Validator;
 
 /**
  * Provides a basic array based context provider for FormHelper.
@@ -66,7 +67,6 @@ use Cake\Validation\Validator;
  */
 class ArrayContext implements ContextInterface
 {
-
     /**
      * The request object.
      *
@@ -102,18 +102,30 @@ class ArrayContext implements ContextInterface
     /**
      * Get the fields used in the context as a primary key.
      *
-     * @return array
+     * @return string[]
+     * @deprecated 4.0.0 Renamed to getPrimaryKey()
      */
-    public function primaryKey()
+    public function primaryKey(): array
     {
-        if (empty($this->_context['schema']['_constraints']) ||
+        return $this->getPrimaryKey();
+    }
+
+    /**
+     * Get the fields used in the context as a primary key.
+     *
+     * @return string[]
+     */
+    public function getPrimaryKey(): array
+    {
+        if (
+            empty($this->_context['schema']['_constraints']) ||
             !is_array($this->_context['schema']['_constraints'])
         ) {
             return [];
         }
         foreach ($this->_context['schema']['_constraints'] as $data) {
             if (isset($data['type']) && $data['type'] === 'primary') {
-                return isset($data['columns']) ? (array)$data['columns'] : [];
+                return (array)($data['columns'] ?? []);
             }
         }
 
@@ -121,13 +133,13 @@ class ArrayContext implements ContextInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function isPrimaryKey($field)
+    public function isPrimaryKey(string $field): bool
     {
-        $primaryKey = $this->primaryKey();
+        $primaryKey = $this->getPrimaryKey();
 
-        return in_array($field, $primaryKey);
+        return in_array($field, $primaryKey, true);
     }
 
     /**
@@ -139,9 +151,9 @@ class ArrayContext implements ContextInterface
      *
      * @return bool
      */
-    public function isCreate()
+    public function isCreate(): bool
     {
-        $primary = $this->primaryKey();
+        $primary = $this->getPrimaryKey();
         foreach ($primary as $column) {
             if (!empty($this->_context['defaults'][$column])) {
                 return false;
@@ -160,17 +172,19 @@ class ArrayContext implements ContextInterface
      * @param string $field A dot separated path to the field a value
      *   is needed for.
      * @param array $options Options:
+     *
      *   - `default`: Default value to return if no value found in request
      *     data or context record.
      *   - `schemaDefault`: Boolean indicating whether default value from
      *      context's schema should be used if it's not explicitly provided.
+     *
      * @return mixed
      */
-    public function val($field, $options = [])
+    public function val(string $field, array $options = [])
     {
         $options += [
             'default' => null,
-            'schemaDefault' => true
+            'schemaDefault' => true,
         ];
 
         $val = $this->_request->getData($field);
@@ -198,17 +212,31 @@ class ArrayContext implements ContextInterface
      * In this context class, this is simply defined by the 'required' array.
      *
      * @param string $field A dot separated path to check required-ness for.
-     * @return bool
+     * @return bool|null
      */
-    public function isRequired($field)
+    public function isRequired(string $field): ?bool
     {
-        return (bool)$this->getRequiredMessage($field);
+        if (!is_array($this->_context['required'])) {
+            return null;
+        }
+
+        $required = Hash::get($this->_context['required'], $field);
+
+        if ($required === null) {
+            $required = Hash::get($this->_context['required'], $this->stripNesting($field));
+        }
+
+        if (!empty($required) || $required === '0') {
+            return true;
+        }
+
+        return $required;
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function getRequiredMessage($field)
+    public function getRequiredMessage(string $field): ?string
     {
         if (!is_array($this->_context['required'])) {
             return null;
@@ -223,7 +251,7 @@ class ArrayContext implements ContextInterface
         }
 
         if ($required === true) {
-            $required = __d('cake', 'This field is required');
+            $required = __d('cake', 'This field cannot be left empty');
         }
 
         return $required;
@@ -237,7 +265,7 @@ class ArrayContext implements ContextInterface
      * @param string $field A dot separated path to check required-ness for.
      * @return int|null
      */
-    public function getMaxLength($field)
+    public function getMaxLength(string $field): ?int
     {
         if (!is_array($this->_context['schema'])) {
             return null;
@@ -247,9 +275,9 @@ class ArrayContext implements ContextInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function fieldNames()
+    public function fieldNames(): array
     {
         $schema = $this->_context['schema'];
         unset($schema['_constraints'], $schema['_indexes']);
@@ -261,10 +289,10 @@ class ArrayContext implements ContextInterface
      * Get the abstract field type for a given field name.
      *
      * @param string $field A dot separated path to get a schema type for.
-     * @return null|string An abstract data type or null.
-     * @see \Cake\Database\Type
+     * @return string|null An abstract data type or null.
+     * @see \Cake\Database\TypeFactory
      */
-    public function type($field)
+    public function type(string $field): ?string
     {
         if (!is_array($this->_context['schema'])) {
             return null;
@@ -275,7 +303,7 @@ class ArrayContext implements ContextInterface
             $schema = Hash::get($this->_context['schema'], $this->stripNesting($field));
         }
 
-        return isset($schema['type']) ? $schema['type'] : null;
+        return $schema['type'] ?? null;
     }
 
     /**
@@ -284,7 +312,7 @@ class ArrayContext implements ContextInterface
      * @param string $field A dot separated path to get additional data on.
      * @return array An array of data describing the additional attributes on a field.
      */
-    public function attributes($field)
+    public function attributes(string $field): array
     {
         if (!is_array($this->_context['schema'])) {
             return [];
@@ -304,13 +332,13 @@ class ArrayContext implements ContextInterface
      * @param string $field A dot separated path to check errors on.
      * @return bool Returns true if the errors for the field are not empty.
      */
-    public function hasError($field)
+    public function hasError(string $field): bool
     {
         if (empty($this->_context['errors'])) {
             return false;
         }
 
-        return (bool)Hash::check($this->_context['errors'], $field);
+        return Hash::check($this->_context['errors'], $field);
     }
 
     /**
@@ -320,7 +348,7 @@ class ArrayContext implements ContextInterface
      * @return array An array of errors, an empty array will be returned when the
      *    context has no errors.
      */
-    public function error($field)
+    public function error(string $field): array
     {
         if (empty($this->_context['errors'])) {
             return [];
@@ -337,7 +365,7 @@ class ArrayContext implements ContextInterface
      * @param string $field A dot separated path
      * @return string A string with stripped numeric nesting
      */
-    protected function stripNesting($field)
+    protected function stripNesting(string $field): string
     {
         return preg_replace('/\.\d*\./', '.', $field);
     }

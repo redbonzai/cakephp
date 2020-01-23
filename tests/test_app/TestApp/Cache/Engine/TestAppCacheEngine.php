@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * Test Suite Test App Cache Engine class.
  *
@@ -24,35 +26,36 @@ use Cake\Cache\CacheEngine;
 
 class TestAppCacheEngine extends CacheEngine
 {
-
-    public function write($key, $value)
+    public function set($key, $value, $ttl = null): bool
     {
         if ($key === 'fail') {
             return false;
         }
+
+        return true;
     }
 
-    public function read($key)
+    public function get($key, $default = null)
     {
     }
 
-    public function increment($key, $offset = 1)
+    public function increment(string $key, int $offset = 1)
     {
     }
 
-    public function decrement($key, $offset = 1)
+    public function decrement(string $key, int $offset = 1)
     {
     }
 
-    public function delete($key)
+    public function delete($key): bool
     {
     }
 
-    public function clear($check)
+    public function clear(): bool
     {
     }
 
-    public function clearGroup($group)
+    public function clearGroup(string $group): bool
     {
     }
 }

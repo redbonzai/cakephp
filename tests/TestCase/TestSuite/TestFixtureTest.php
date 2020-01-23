@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,149 +17,34 @@
 namespace Cake\Test\TestCase\TestSuite;
 
 use Cake\Database\Schema\TableSchema;
+use Cake\Database\StatementInterface;
 use Cake\Datasource\ConnectionManager;
 use Cake\Log\Log;
-use Cake\TestSuite\Fixture\TestFixture;
 use Cake\TestSuite\TestCase;
 use Exception;
-
-/**
- * ArticlesFixture class
- */
-class ArticlesFixture extends TestFixture
-{
-
-    /**
-     * Table property
-     *
-     * @var string
-     */
-    public $table = 'articles';
-
-    /**
-     * Fields array
-     *
-     * @var array
-     */
-    public $fields = [
-        'id' => ['type' => 'integer'],
-        'name' => ['type' => 'string', 'length' => '255'],
-        'created' => ['type' => 'datetime'],
-        '_constraints' => [
-            'primary' => ['type' => 'primary', 'columns' => ['id']]
-        ]
-    ];
-
-    /**
-     * Records property
-     *
-     * @var array
-     */
-    public $records = [
-        ['name' => 'Gandalf', 'created' => '2009-04-28 19:20:00'],
-        ['name' => 'Captain Picard', 'created' => '2009-04-28 19:20:00'],
-        ['name' => 'Chewbacca', 'created' => '2009-04-28 19:20:00']
-    ];
-}
-
-/**
- * StringsTestsFixture class
- */
-class StringsTestsFixture extends TestFixture
-{
-
-    /**
-     * Table property
-     *
-     * @var string
-     */
-    public $table = 'strings';
-
-    /**
-     * Fields array
-     *
-     * @var array
-     */
-    public $fields = [
-        'id' => ['type' => 'integer'],
-        'name' => ['type' => 'string', 'length' => '255'],
-        'email' => ['type' => 'string', 'length' => '255'],
-        'age' => ['type' => 'integer', 'default' => 10]
-    ];
-
-    /**
-     * Records property
-     *
-     * @var array
-     */
-    public $records = [
-        ['name' => 'Mark Doe', 'email' => 'mark.doe@email.com'],
-        ['name' => 'John Doe', 'email' => 'john.doe@email.com', 'age' => 20],
-        ['email' => 'jane.doe@email.com', 'name' => 'Jane Doe', 'age' => 30]
-    ];
-}
-
-/**
- * ImportsFixture class
- */
-class ImportsFixture extends TestFixture
-{
-
-    /**
-     * Import property
-     *
-     * @var mixed
-     */
-    public $import = ['table' => 'posts', 'connection' => 'test'];
-
-    /**
-     * Records property
-     *
-     * @var array
-     */
-    public $records = [
-        ['title' => 'Hello!', 'body' => 'Hello world!']
-    ];
-}
-
-/**
- * This class allows testing the fixture data insertion when the properties
- * $fields and $import are not set
- */
-class LettersFixture extends TestFixture
-{
-
-    /**
-     * records property
-     *
-     * @var array
-     */
-    public $records = [
-        ['letter' => 'a'],
-        ['letter' => 'b'],
-        ['letter' => 'c']
-    ];
-}
+use TestApp\Fixture\ArticlesFixture;
+use TestApp\Fixture\ImportsFixture;
+use TestApp\Fixture\LettersFixture;
+use TestApp\Fixture\StringsTestsFixture;
 
 /**
  * Test case for TestFixture
  */
 class TestFixtureTest extends TestCase
 {
-
     /**
      * Fixtures for this test.
      *
      * @var array
      */
-    public $fixtures = ['core.Posts'];
+    protected $fixtures = ['core.Posts'];
 
     /**
      * Set up
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         Log::reset();
@@ -168,7 +55,7 @@ class TestFixtureTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         Log::reset();
@@ -182,24 +69,24 @@ class TestFixtureTest extends TestCase
     public function testInitStaticFixture()
     {
         $Fixture = new ArticlesFixture();
-        $this->assertEquals('articles', $Fixture->table);
+        $this->assertSame('articles', $Fixture->table);
 
         $Fixture = new ArticlesFixture();
         $Fixture->table = null;
         $Fixture->init();
-        $this->assertEquals('articles', $Fixture->table);
+        $this->assertSame('articles', $Fixture->table);
 
         $schema = $Fixture->getTableSchema();
         $this->assertInstanceOf('Cake\Database\Schema\TableSchema', $schema);
 
         $fields = $Fixture->fields;
         unset($fields['_constraints'], $fields['_indexes']);
-        $this->assertEquals(
+        $this->assertSame(
             array_keys($fields),
             $schema->columns(),
             'Fields do not match'
         );
-        $this->assertEquals(array_keys($Fixture->fields['_constraints']), $schema->constraints());
+        $this->assertSame(array_keys($Fixture->fields['_constraints']), $schema->constraints());
         $this->assertEmpty($schema->indexes());
     }
 
@@ -225,7 +112,7 @@ class TestFixtureTest extends TestCase
             'body',
             'published',
         ];
-        $this->assertEquals($expected, $fixture->getTableSchema()->columns());
+        $this->assertSame($expected, $fixture->getTableSchema()->columns());
     }
 
     /**
@@ -250,7 +137,7 @@ class TestFixtureTest extends TestCase
             'body',
             'published',
         ];
-        $this->assertEquals($expected, $fixture->getTableSchema()->columns());
+        $this->assertSame($expected, $fixture->getTableSchema()->columns());
     }
 
     /**
@@ -262,7 +149,7 @@ class TestFixtureTest extends TestCase
     public function testInitNoImportNoFieldsException()
     {
         $this->expectException(\Cake\Core\Exception\Exception::class);
-        $this->expectExceptionMessage('Cannot describe schema for table `letters` for fixture `Cake\Test\TestCase\TestSuite\LettersFixture` : the table does not exist.');
+        $this->expectExceptionMessage('Cannot describe schema for table `letters` for fixture `' . LettersFixture::class . '`: the table does not exist.');
         $fixture = new LettersFixture();
         $fixture->init();
     }
@@ -277,7 +164,7 @@ class TestFixtureTest extends TestCase
         $db = ConnectionManager::get('test');
         $table = new TableSchema('letters', [
             'id' => ['type' => 'integer'],
-            'letter' => ['type' => 'string', 'length' => 1]
+            'letter' => ['type' => 'string', 'length' => 1],
         ]);
         $table->addConstraint('primary', ['type' => 'primary', 'columns' => ['id']]);
         $sql = $table->createSql($db);
@@ -288,7 +175,7 @@ class TestFixtureTest extends TestCase
 
         $fixture = new LettersFixture();
         $fixture->init();
-        $this->assertEquals(['id', 'letter'], $fixture->getTableSchema()->columns());
+        $this->assertSame(['id', 'letter'], $fixture->getTableSchema()->columns());
 
         $db = $this->getMockBuilder('Cake\Database\Connection')
             ->setMethods(['prepare', 'execute'])
@@ -326,11 +213,10 @@ class TestFixtureTest extends TestCase
             ->will($this->returnValue(['sql', 'sql']));
         $fixture->setTableSchema($table);
 
-        $statement = $this->getMockBuilder('\PDOStatement')
-            ->setMethods(['execute', 'closeCursor'])
-            ->getMock();
+        $statement = $this->createMock(StatementInterface::class);
         $statement->expects($this->atLeastOnce())->method('closeCursor');
         $statement->expects($this->atLeastOnce())->method('execute');
+
         $db->expects($this->exactly(2))
             ->method('prepare')
             ->will($this->returnValue($statement));
@@ -393,7 +279,7 @@ class TestFixtureTest extends TestCase
         $expected = [
             ['name' => 'Gandalf', 'created' => '2009-04-28 19:20:00'],
             ['name' => 'Captain Picard', 'created' => '2009-04-28 19:20:00'],
-            ['name' => 'Chewbacca', 'created' => '2009-04-28 19:20:00']
+            ['name' => 'Chewbacca', 'created' => '2009-04-28 19:20:00'],
         ];
         $query->expects($this->at(2))
             ->method('values')
@@ -408,10 +294,9 @@ class TestFixtureTest extends TestCase
             ->with($expected[2])
             ->will($this->returnSelf());
 
-        $statement = $this->getMockBuilder('\PDOStatement')
-            ->setMethods(['closeCursor'])
-            ->getMock();
+        $statement = $this->createMock(StatementInterface::class);
         $statement->expects($this->once())->method('closeCursor');
+
         $query->expects($this->once())
             ->method('execute')
             ->will($this->returnValue($statement));
@@ -456,10 +341,9 @@ class TestFixtureTest extends TestCase
             ->with($expected[0])
             ->will($this->returnSelf());
 
-        $statement = $this->getMockBuilder('\PDOStatement')
-            ->setMethods(['closeCursor'])
-            ->getMock();
+        $statement = $this->createMock(StatementInterface::class);
         $statement->expects($this->once())->method('closeCursor');
+
         $query->expects($this->once())
             ->method('execute')
             ->will($this->returnValue($statement));
@@ -514,10 +398,9 @@ class TestFixtureTest extends TestCase
             ->with($expected[2])
             ->will($this->returnSelf());
 
-        $statement = $this->getMockBuilder('\PDOStatement')
-            ->setMethods(['closeCursor'])
-            ->getMock();
+        $statement = $this->createMock(StatementInterface::class);
         $statement->expects($this->once())->method('closeCursor');
+
         $query->expects($this->once())
             ->method('execute')
             ->will($this->returnValue($statement));
@@ -537,9 +420,7 @@ class TestFixtureTest extends TestCase
         $db = $this->getMockBuilder('Cake\Database\Connection')
             ->disableOriginalConstructor()
             ->getMock();
-        $statement = $this->getMockBuilder('\PDOStatement')
-            ->setMethods(['closeCursor'])
-            ->getMock();
+        $statement = $this->createMock(StatementInterface::class);
         $statement->expects($this->once())->method('closeCursor');
         $db->expects($this->once())->method('execute')
             ->with('sql')
@@ -569,10 +450,9 @@ class TestFixtureTest extends TestCase
         $db = $this->getMockBuilder('Cake\Database\Connection')
             ->disableOriginalConstructor()
             ->getMock();
-        $statement = $this->getMockBuilder('\PDOStatement')
-            ->setMethods(['closeCursor'])
-            ->getMock();
+        $statement = $this->createMock(StatementInterface::class);
         $statement->expects($this->once())->method('closeCursor');
+
         $db->expects($this->once())->method('execute')
             ->with('sql')
             ->will($this->returnValue($statement));

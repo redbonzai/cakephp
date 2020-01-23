@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -19,8 +21,7 @@ use Cake\ORM\Table;
  */
 class ArticlesTagsTable extends Table
 {
-
-    public function initialize(array $config)
+    public function initialize(array $config): void
     {
         $this->belongsTo('Articles');
         $this->belongsTo('Tags');

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -13,7 +15,7 @@
  */
 namespace Cake\TestSuite\Constraint\Response;
 
-use Cake\Http\Response;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * HeaderEquals
@@ -30,10 +32,10 @@ class HeaderEquals extends ResponseBase
     /**
      * Constructor.
      *
-     * @param Response $response Response
+     * @param \Psr\Http\Message\ResponseInterface $response A response instance.
      * @param string $headerName Header name
      */
-    public function __construct($response, $headerName)
+    public function __construct(ResponseInterface $response, string $headerName)
     {
         parent::__construct($response);
 
@@ -46,7 +48,7 @@ class HeaderEquals extends ResponseBase
      * @param mixed $other Expected content
      * @return bool
      */
-    public function matches($other)
+    public function matches($other): bool
     {
         return $this->response->getHeaderLine($this->headerName) === $other;
     }
@@ -56,8 +58,10 @@ class HeaderEquals extends ResponseBase
      *
      * @return string
      */
-    public function toString()
+    public function toString(): string
     {
-        return sprintf('equals content in header \'%s\'', $this->headerName);
+        $responseHeader = $this->response->getHeaderLine($this->headerName);
+
+        return sprintf('equals content in header \'%s\' (`%s`)', $this->headerName, $responseHeader);
     }
 }

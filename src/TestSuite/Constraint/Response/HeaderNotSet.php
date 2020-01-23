@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -26,7 +28,7 @@ class HeaderNotSet extends HeaderSet
      * @param mixed $other Expected content
      * @return bool
      */
-    public function matches($other)
+    public function matches($other): bool
     {
         return parent::matches($other) === false;
     }
@@ -36,7 +38,7 @@ class HeaderNotSet extends HeaderSet
      *
      * @return string
      */
-    public function toString()
+    public function toString(): string
     {
         return sprintf('did not have header `%s`', $this->headerName);
     }

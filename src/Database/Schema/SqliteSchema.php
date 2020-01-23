@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,14 +17,12 @@
 namespace Cake\Database\Schema;
 
 use Cake\Database\Exception;
-use Cake\Database\Schema\TableSchema;
 
 /**
  * Schema management/reflection features for Sqlite
  */
 class SqliteSchema extends BaseSchema
 {
-
     /**
      * Array containing the foreign keys constraints names
      * Necessary for composite foreign keys to be handled
@@ -42,13 +42,13 @@ class SqliteSchema extends BaseSchema
      * Convert a column definition to the abstract types.
      *
      * The returned type will be a type that
-     * Cake\Database\Type can handle.
+     * Cake\Database\TypeFactory can handle.
      *
      * @param string $column The column type + length
      * @throws \Cake\Database\Exception when unable to parse column type
      * @return array Array of column information.
      */
-    protected function _convertColumn($column)
+    protected function _convertColumn(string $column): array
     {
         preg_match('/(unsigned)?\s*([a-z]+)(?:\(([0-9,]+)\))?/i', $column, $matches);
         if (empty($matches)) {
@@ -61,28 +61,43 @@ class SqliteSchema extends BaseSchema
         }
 
         $col = strtolower($matches[2]);
-        $length = null;
+        $length = $precision = null;
         if (isset($matches[3])) {
-            $length = (int)$matches[3];
+            $length = $matches[3];
+            if (strpos($length, ',') !== false) {
+                [$length, $precision] = explode(',', $length);
+            }
+            $length = (int)$length;
+            $precision = (int)$precision;
         }
 
         if ($col === 'bigint') {
             return ['type' => TableSchema::TYPE_BIGINTEGER, 'length' => $length, 'unsigned' => $unsigned];
         }
-        if ($col == 'smallint') {
+        if ($col === 'smallint') {
             return ['type' => TableSchema::TYPE_SMALLINTEGER, 'length' => $length, 'unsigned' => $unsigned];
         }
-        if ($col == 'tinyint') {
+        if ($col === 'tinyint') {
             return ['type' => TableSchema::TYPE_TINYINTEGER, 'length' => $length, 'unsigned' => $unsigned];
         }
         if (strpos($col, 'int') !== false) {
             return ['type' => TableSchema::TYPE_INTEGER, 'length' => $length, 'unsigned' => $unsigned];
         }
         if (strpos($col, 'decimal') !== false) {
-            return ['type' => TableSchema::TYPE_DECIMAL, 'length' => null, 'unsigned' => $unsigned];
+            return [
+                'type' => TableSchema::TYPE_DECIMAL,
+                'length' => $length,
+                'precision' => $precision,
+                'unsigned' => $unsigned,
+            ];
         }
         if (in_array($col, ['float', 'real', 'double'])) {
-            return ['type' => TableSchema::TYPE_FLOAT, 'length' => null, 'unsigned' => $unsigned];
+            return [
+                'type' => TableSchema::TYPE_FLOAT,
+                'length' => $length,
+                'precision' => $precision,
+                'unsigned' => $unsigned,
+            ];
         }
 
         if (strpos($col, 'boolean') !== false) {
@@ -93,7 +108,7 @@ class SqliteSchema extends BaseSchema
             return ['type' => TableSchema::TYPE_UUID, 'length' => null];
         }
         if ($col === 'char') {
-            return ['type' => TableSchema::TYPE_STRING, 'fixed' => true, 'length' => $length];
+            return ['type' => TableSchema::TYPE_CHAR, 'length' => $length];
         }
         if (strpos($col, 'char') !== false) {
             return ['type' => TableSchema::TYPE_STRING, 'length' => $length];
@@ -105,7 +120,17 @@ class SqliteSchema extends BaseSchema
         if (in_array($col, ['blob', 'clob', 'binary', 'varbinary'])) {
             return ['type' => TableSchema::TYPE_BINARY, 'length' => $length];
         }
-        if (in_array($col, ['date', 'time', 'timestamp', 'datetime'])) {
+
+        $datetimeTypes = [
+            'date',
+            'time',
+            'timestamp',
+            'timestampfractional',
+            'timestamptimezone',
+            'datetime',
+            'datetimefractional',
+        ];
+        if (in_array($col, $datetimeTypes)) {
             return ['type' => $col, 'length' => null];
         }
 
@@ -113,21 +138,21 @@ class SqliteSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function listTablesSql($config)
+    public function listTablesSql(array $config): array
     {
         return [
             'SELECT name FROM sqlite_master WHERE type="table" ' .
             'AND name != "sqlite_sequence" ORDER BY name',
-            []
+            [],
         ];
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function describeColumnSql($tableName, $config)
+    public function describeColumnSql(string $tableName, array $config): array
     {
         $sql = sprintf(
             'PRAGMA table_info(%s)',
@@ -138,9 +163,9 @@ class SqliteSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function convertColumnDescription(TableSchema $schema, $row)
+    public function convertColumnDescription(TableSchema $schema, array $row): void
     {
         $field = $this->_convertColumn($row['type']);
         $field += [
@@ -157,6 +182,7 @@ class SqliteSchema extends BaseSchema
         // SQLite does not support autoincrement on composite keys.
         if ($row['pk'] && !empty($primary)) {
             $existingColumn = $primary['columns'][0];
+            /** @psalm-suppress PossiblyNullOperand */
             $schema->addColumn($existingColumn, ['autoIncrement' => null] + $schema->getColumn($existingColumn));
         }
 
@@ -164,7 +190,7 @@ class SqliteSchema extends BaseSchema
         if ($row['pk']) {
             $constraint = (array)$schema->getConstraint('primary') + [
                 'type' => TableSchema::CONSTRAINT_PRIMARY,
-                'columns' => []
+                'columns' => [],
             ];
             $constraint['columns'] = array_merge($constraint['columns'], [$row['name']]);
             $schema->addConstraint('primary', $constraint);
@@ -177,17 +203,17 @@ class SqliteSchema extends BaseSchema
      * Sqlite includes quotes and bared NULLs in default values.
      * We need to remove those.
      *
-     * @param string|null $default The default value.
-     * @return string|null
+     * @param string|int|null $default The default value.
+     * @return string|int|null
      */
     protected function _defaultValue($default)
     {
-        if ($default === 'NULL') {
+        if ($default === 'NULL' || $default === null) {
             return null;
         }
 
         // Remove quotes
-        if (preg_match("/^'(.*)'$/", $default, $matches)) {
+        if (is_string($default) && preg_match("/^'(.*)'$/", $default, $matches)) {
             return str_replace("''", "'", $matches[1]);
         }
 
@@ -195,9 +221,9 @@ class SqliteSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function describeIndexSql($tableName, $config)
+    public function describeIndexSql(string $tableName, array $config): array
     {
         $sql = sprintf(
             'PRAGMA index_list(%s)',
@@ -216,7 +242,7 @@ class SqliteSchema extends BaseSchema
      * the table. This is a limitation in Sqlite's metadata features.
      *
      */
-    public function convertIndexDescription(TableSchema $schema, $row)
+    public function convertIndexDescription(TableSchema $schema, array $row): void
     {
         $sql = sprintf(
             'PRAGMA index_info(%s)',
@@ -225,6 +251,7 @@ class SqliteSchema extends BaseSchema
         $statement = $this->_driver->prepare($sql);
         $statement->execute();
         $columns = [];
+        /** @psalm-suppress PossiblyFalseIterator */
         foreach ($statement->fetchAll('assoc') as $column) {
             $columns[] = $column['name'];
         }
@@ -232,20 +259,20 @@ class SqliteSchema extends BaseSchema
         if ($row['unique']) {
             $schema->addConstraint($row['name'], [
                 'type' => TableSchema::CONSTRAINT_UNIQUE,
-                'columns' => $columns
+                'columns' => $columns,
             ]);
         } else {
             $schema->addIndex($row['name'], [
                 'type' => TableSchema::INDEX_INDEX,
-                'columns' => $columns
+                'columns' => $columns,
             ]);
         }
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function describeForeignKeySql($tableName, $config)
+    public function describeForeignKeySql(string $tableName, array $config): array
     {
         $sql = sprintf('PRAGMA foreign_key_list(%s)', $this->_driver->quoteIdentifier($tableName));
 
@@ -253,14 +280,14 @@ class SqliteSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function convertForeignKeyDescription(TableSchema $schema, $row)
+    public function convertForeignKeyDescription(TableSchema $schema, array $row): void
     {
         $name = $row['from'] . '_fk';
 
-        $update = isset($row['on_update']) ? $row['on_update'] : '';
-        $delete = isset($row['on_delete']) ? $row['on_delete'] : '';
+        $update = $row['on_update'] ?? '';
+        $delete = $row['on_delete'] ?? '';
         $data = [
             'type' => TableSchema::CONSTRAINT_FOREIGN,
             'columns' => [$row['from']],
@@ -283,12 +310,14 @@ class SqliteSchema extends BaseSchema
      *
      * @throws \Cake\Database\Exception when the column type is unknown
      */
-    public function columnSql(TableSchema $schema, $name)
+    public function columnSql(TableSchema $schema, string $name): string
     {
+        /** @var array $data */
         $data = $schema->getColumn($name);
         $typeMap = [
             TableSchema::TYPE_BINARY_UUID => ' BINARY(16)',
             TableSchema::TYPE_UUID => ' CHAR(36)',
+            TableSchema::TYPE_CHAR => ' CHAR',
             TableSchema::TYPE_TINYINTEGER => ' TINYINT',
             TableSchema::TYPE_SMALLINTEGER => ' SMALLINT',
             TableSchema::TYPE_INTEGER => ' INTEGER',
@@ -299,8 +328,11 @@ class SqliteSchema extends BaseSchema
             TableSchema::TYPE_DATE => ' DATE',
             TableSchema::TYPE_TIME => ' TIME',
             TableSchema::TYPE_DATETIME => ' DATETIME',
+            TableSchema::TYPE_DATETIME_FRACTIONAL => ' DATETIMEFRACTIONAL',
             TableSchema::TYPE_TIMESTAMP => ' TIMESTAMP',
-            TableSchema::TYPE_JSON => ' TEXT'
+            TableSchema::TYPE_TIMESTAMP_FRACTIONAL => ' TIMESTAMPFRACTIONAL',
+            TableSchema::TYPE_TIMESTAMP_TIMEZONE => ' TIMESTAMPTIMEZONE',
+            TableSchema::TYPE_JSON => ' TEXT',
         ];
 
         $out = $this->_driver->quoteIdentifier($name);
@@ -310,13 +342,15 @@ class SqliteSchema extends BaseSchema
             TableSchema::TYPE_INTEGER,
             TableSchema::TYPE_BIGINTEGER,
             TableSchema::TYPE_FLOAT,
-            TableSchema::TYPE_DECIMAL
+            TableSchema::TYPE_DECIMAL,
         ];
 
-        if (in_array($data['type'], $hasUnsigned, true) &&
-            isset($data['unsigned']) && $data['unsigned'] === true
+        if (
+            in_array($data['type'], $hasUnsigned, true) &&
+            isset($data['unsigned']) &&
+            $data['unsigned'] === true
         ) {
-            if ($data['type'] !== TableSchema::TYPE_INTEGER || [$name] !== (array)$schema->primaryKey()) {
+            if ($data['type'] !== TableSchema::TYPE_INTEGER || (array)$schema->getPrimaryKey() !== [$name]) {
                 $out .= ' UNSIGNED';
             }
         }
@@ -329,19 +363,27 @@ class SqliteSchema extends BaseSchema
             $out .= ' TEXT';
         }
 
-        if ($data['type'] === TableSchema::TYPE_STRING ||
-            ($data['type'] === TableSchema::TYPE_TEXT && $data['length'] === TableSchema::LENGTH_TINY)
+        if ($data['type'] === TableSchema::TYPE_CHAR) {
+            $out .= '(' . $data['length'] . ')';
+        }
+
+        if (
+            $data['type'] === TableSchema::TYPE_STRING ||
+            (
+                $data['type'] === TableSchema::TYPE_TEXT &&
+                $data['length'] === TableSchema::LENGTH_TINY
+            )
         ) {
             $out .= ' VARCHAR';
 
             if (isset($data['length'])) {
-                $out .= '(' . (int)$data['length'] . ')';
+                $out .= '(' . $data['length'] . ')';
             }
         }
 
         if ($data['type'] === TableSchema::TYPE_BINARY) {
             if (isset($data['length'])) {
-                $out .= ' BLOB(' . (int)$data['length'] . ')';
+                $out .= ' BLOB(' . $data['length'] . ')';
             } else {
                 $out .= ' BLOB';
             }
@@ -352,15 +394,21 @@ class SqliteSchema extends BaseSchema
             TableSchema::TYPE_SMALLINTEGER,
             TableSchema::TYPE_INTEGER,
         ];
-        if (in_array($data['type'], $integerTypes, true) &&
-            isset($data['length']) && [$name] !== (array)$schema->primaryKey()
+        if (
+            in_array($data['type'], $integerTypes, true) &&
+            isset($data['length']) &&
+            (array)$schema->getPrimaryKey() !== [$name]
         ) {
-                $out .= '(' . (int)$data['length'] . ')';
+            $out .= '(' . (int)$data['length'] . ')';
         }
 
         $hasPrecision = [TableSchema::TYPE_FLOAT, TableSchema::TYPE_DECIMAL];
-        if (in_array($data['type'], $hasPrecision, true) &&
-            (isset($data['length']) || isset($data['precision']))
+        if (
+            in_array($data['type'], $hasPrecision, true) &&
+            (
+                isset($data['length']) ||
+                isset($data['precision'])
+            )
         ) {
             $out .= '(' . (int)$data['length'] . ',' . (int)$data['precision'] . ')';
         }
@@ -369,11 +417,18 @@ class SqliteSchema extends BaseSchema
             $out .= ' NOT NULL';
         }
 
-        if ($data['type'] === TableSchema::TYPE_INTEGER && [$name] === (array)$schema->primaryKey()) {
+        if ($data['type'] === TableSchema::TYPE_INTEGER && (array)$schema->getPrimaryKey() === [$name]) {
             $out .= ' PRIMARY KEY AUTOINCREMENT';
         }
 
-        if (isset($data['null']) && $data['null'] === true && $data['type'] === TableSchema::TYPE_TIMESTAMP) {
+        $timestampTypes = [
+            TableSchema::TYPE_DATETIME,
+            TableSchema::TYPE_DATETIME_FRACTIONAL,
+            TableSchema::TYPE_TIMESTAMP,
+            TableSchema::TYPE_TIMESTAMP_FRACTIONAL,
+            TableSchema::TYPE_TIMESTAMP_TIMEZONE,
+        ];
+        if (isset($data['null']) && $data['null'] === true && in_array($data['type'], $timestampTypes, true)) {
             $out .= ' DEFAULT NULL';
         }
         if (isset($data['default'])) {
@@ -390,10 +445,13 @@ class SqliteSchema extends BaseSchema
      * that integer primary keys be defined in the column definition.
      *
      */
-    public function constraintSql(TableSchema $schema, $name)
+    public function constraintSql(TableSchema $schema, string $name): string
     {
+        /** @var array $data */
         $data = $schema->getConstraint($name);
-        if ($data['type'] === TableSchema::CONSTRAINT_PRIMARY &&
+        /** @psalm-suppress PossiblyNullArrayAccess */
+        if (
+            $data['type'] === TableSchema::CONSTRAINT_PRIMARY &&
             count($data['columns']) === 1 &&
             $schema->getColumn($data['columns'][0])['type'] === TableSchema::TYPE_INTEGER
         ) {
@@ -438,7 +496,7 @@ class SqliteSchema extends BaseSchema
      * SQLite can not properly handle adding a constraint to an existing table.
      * This method is no-op
      */
-    public function addConstraintSql(TableSchema $schema)
+    public function addConstraintSql(TableSchema $schema): array
     {
         return [];
     }
@@ -449,16 +507,17 @@ class SqliteSchema extends BaseSchema
      * SQLite can not properly handle dropping a constraint to an existing table.
      * This method is no-op
      */
-    public function dropConstraintSql(TableSchema $schema)
+    public function dropConstraintSql(TableSchema $schema): array
     {
         return [];
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function indexSql(TableSchema $schema, $name)
+    public function indexSql(TableSchema $schema, string $name): string
     {
+        /** @var array $data */
         $data = $schema->getIndex($name);
         $columns = array_map(
             [$this->_driver, 'quoteIdentifier'],
@@ -474,9 +533,9 @@ class SqliteSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function createTableSql(TableSchema $schema, $columns, $constraints, $indexes)
+    public function createTableSql(TableSchema $schema, array $columns, array $constraints, array $indexes): array
     {
         $lines = array_merge($columns, $constraints);
         $content = implode(",\n", array_filter($lines));
@@ -491,9 +550,9 @@ class SqliteSchema extends BaseSchema
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    public function truncateTableSql(TableSchema $schema)
+    public function truncateTableSql(TableSchema $schema): array
     {
         $name = $schema->name();
         $sql = [];
@@ -512,7 +571,7 @@ class SqliteSchema extends BaseSchema
      *
      * @return bool
      */
-    public function hasSequences()
+    public function hasSequences(): bool
     {
         $result = $this->_driver->prepare(
             'SELECT 1 FROM sqlite_master WHERE name = "sqlite_sequence"'

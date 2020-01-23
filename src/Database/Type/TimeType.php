@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -21,22 +23,27 @@ namespace Cake\Database\Type;
  */
 class TimeType extends DateTimeType
 {
-
     /**
-     * Time format for DateTime object
-     *
-     * @var string|array
+     * @inheritDoc
      */
     protected $_format = 'H:i:s';
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
-    protected function _parseValue($value)
+    protected $_marshalFormats = [
+        'H:i:s',
+    ];
+
+    /**
+     * @inheritDoc
+     */
+    protected function _parseLocaleValue(string $value)
     {
-        /* @var \Cake\I18n\Time $class */
+        /** @var \Cake\I18n\I18nDateTimeInterface $class */
         $class = $this->_className;
 
-        return $class::parseTime($value, $this->_localeFormat);
+        /** @psalm-suppress PossiblyInvalidArgument */
+        return $class::parseTime($value, $this->_localeMarshalFormat);
     }
 }

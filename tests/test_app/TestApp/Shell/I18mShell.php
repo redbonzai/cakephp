@@ -1,7 +1,7 @@
 <?php
+declare(strict_types=1);
+
 /**
- * I18mShell file
- *
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  *
@@ -16,7 +16,7 @@
  */
 
 /**
- * SampleShell
+ * I18mShell
  */
 namespace TestApp\Shell;
 
@@ -24,7 +24,6 @@ use Cake\Console\Shell;
 
 class I18mShell extends Shell
 {
-
     /**
      * main method
      *

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -22,27 +24,14 @@ use InvalidArgumentException;
  */
 class TableRegressionTest extends TestCase
 {
-
     /**
      * Fixture to be used
      *
      * @var array
      */
-    public $fixtures = [
+    protected $fixtures = [
         'core.Authors',
     ];
-
-    /**
-     * Tear down
-     *
-     * @return void
-     */
-    public function tearDown()
-    {
-        parent::tearDown();
-
-        $this->getTableLocator()->clear();
-    }
 
     /**
      * Tests that an exception is thrown if the transaction is aborted

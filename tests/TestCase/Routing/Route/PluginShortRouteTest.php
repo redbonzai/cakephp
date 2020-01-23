@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,8 +17,8 @@
 namespace Cake\Test\TestCase\Routing\Route;
 
 use Cake\Core\Configure;
-use Cake\Routing\Router;
 use Cake\Routing\Route\PluginShortRoute;
+use Cake\Routing\Router;
 use Cake\TestSuite\TestCase;
 
 /**
@@ -24,13 +26,12 @@ use Cake\TestSuite\TestCase;
  */
 class PluginShortRouteTest extends TestCase
 {
-
     /**
      * setUp method
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         Configure::write('Routing', ['admin' => null, 'prefixes' => []]);
@@ -47,12 +48,12 @@ class PluginShortRouteTest extends TestCase
         $route = new PluginShortRoute('/:plugin', ['action' => 'index'], ['plugin' => 'foo|bar']);
 
         $result = $route->parse('/foo', 'GET');
-        $this->assertEquals('Foo', $result['plugin']);
-        $this->assertEquals('Foo', $result['controller']);
-        $this->assertEquals('index', $result['action']);
+        $this->assertSame('Foo', $result['plugin']);
+        $this->assertSame('Foo', $result['controller']);
+        $this->assertSame('index', $result['action']);
 
         $result = $route->parse('/wrong', 'GET');
-        $this->assertFalse($result, 'Wrong plugin name matched %s');
+        $this->assertNull($result, 'Wrong plugin name matched %s');
     }
 
     /**
@@ -65,9 +66,9 @@ class PluginShortRouteTest extends TestCase
         $route = new PluginShortRoute('/:plugin', ['action' => 'index'], ['plugin' => 'foo|bar']);
 
         $result = $route->match(['plugin' => 'foo', 'controller' => 'posts', 'action' => 'index']);
-        $this->assertFalse($result, 'plugin controller mismatch was converted. %s');
+        $this->assertNull($result, 'plugin controller mismatch was converted. %s');
 
         $result = $route->match(['plugin' => 'foo', 'controller' => 'foo', 'action' => 'index']);
-        $this->assertEquals('/foo', $result);
+        $this->assertSame('/foo', $result);
     }
 }

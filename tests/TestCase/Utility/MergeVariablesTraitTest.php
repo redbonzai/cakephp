@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,73 +17,14 @@
 namespace Cake\Test\TestCase\Utility;
 
 use Cake\TestSuite\TestCase;
-use Cake\Utility\MergeVariablesTrait;
-
-class Base
-{
-
-    use MergeVariablesTrait;
-
-    public $hasBoolean = false;
-
-    public $listProperty = ['One'];
-
-    public $assocProperty = ['Red'];
-
-    public function mergeVars($properties, $options = [])
-    {
-        return $this->_mergeVars($properties, $options);
-    }
-}
-
-class Child extends Base
-{
-
-    public $hasBoolean = ['test'];
-
-    public $listProperty = ['Two', 'Three'];
-
-    public $assocProperty = [
-        'Green' => ['lime'],
-        'Orange'
-    ];
-
-    public $nestedProperty = [
-        'Red' => [
-            'apple' => 'gala',
-        ],
-        'Green' => [
-            'citrus' => 'lime'
-        ],
-    ];
-}
-
-class Grandchild extends Child
-{
-
-    public $listProperty = ['Four', 'Five'];
-
-    public $assocProperty = [
-        'Green' => ['apple'],
-        'Yellow' => ['banana']
-    ];
-
-    public $nestedProperty = [
-        'Red' => [
-            'citrus' => 'blood orange',
-        ],
-        'Green' => [
-            'citrus' => 'key lime'
-        ],
-    ];
-}
+use TestApp\Utility\Child;
+use TestApp\Utility\Grandchild;
 
 /**
  * MergeVariablesTrait test case
  */
 class MergeVariablesTraitTest extends TestCase
 {
-
     /**
      * Test merging vars as a list.
      *
@@ -133,7 +76,7 @@ class MergeVariablesTraitTest extends TestCase
                 'citrus' => 'key lime',
             ],
         ];
-        $this->assertEquals($expected, $object->nestedProperty);
+        $this->assertSame($expected, $object->nestedProperty);
     }
 
     /**
@@ -154,7 +97,7 @@ class MergeVariablesTraitTest extends TestCase
         $this->assertEquals($expected, $object->assocProperty);
 
         $expected = ['One', 'Two', 'Three', 'Four', 'Five'];
-        $this->assertSame($expected, $object->listProperty);
+        $this->assertEquals($expected, $object->listProperty);
     }
 
     /**
@@ -167,6 +110,6 @@ class MergeVariablesTraitTest extends TestCase
     {
         $object = new Child();
         $object->mergeVars(['hasBoolean']);
-        $this->assertEquals(['test'], $object->hasBoolean);
+        $this->assertSame(['test'], $object->hasBoolean);
     }
 }

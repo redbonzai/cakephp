@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,31 +17,34 @@
 namespace Cake\Routing\Middleware;
 
 use Cake\Cache\Cache;
-use Cake\Core\HttpApplicationInterface;
 use Cake\Core\PluginApplicationInterface;
 use Cake\Http\MiddlewareQueue;
 use Cake\Http\Runner;
 use Cake\Routing\Exception\RedirectException;
+use Cake\Routing\RouteCollection;
 use Cake\Routing\Router;
+use Cake\Routing\RoutingApplicationInterface;
+use Laminas\Diactoros\Response\RedirectResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Zend\Diactoros\Response\RedirectResponse;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
 /**
  * Applies routing rules to the request and creates the controller
  * instance if possible.
  */
-class RoutingMiddleware
+class RoutingMiddleware implements MiddlewareInterface
 {
     /**
      * Key used to store the route collection in the cache engine
      */
-    const ROUTE_COLLECTION_CACHE_KEY = 'routeCollection';
+    public const ROUTE_COLLECTION_CACHE_KEY = 'routeCollection';
 
     /**
      * The application that will have its routing hook invoked.
      *
-     * @var \Cake\Core\HttpApplicationInterface|null
+     * @var \Cake\Routing\RoutingApplicationInterface
      */
     protected $app;
 
@@ -54,17 +59,11 @@ class RoutingMiddleware
     /**
      * Constructor
      *
-     * @param \Cake\Core\HttpApplicationInterface|null $app The application instance that routes are defined on.
+     * @param \Cake\Routing\RoutingApplicationInterface $app The application instance that routes are defined on.
      * @param string|null $cacheConfig The cache config name to use or null to disable routes cache
      */
-    public function __construct(HttpApplicationInterface $app = null, $cacheConfig = null)
+    public function __construct(RoutingApplicationInterface $app, ?string $cacheConfig = null)
     {
-        if ($app === null) {
-            deprecationWarning(
-                'RoutingMiddleware should be passed an application instance. ' .
-                'Failing to do so can cause plugin routes to not behave correctly.'
-            );
-        }
         $this->app = $app;
         $this->cacheConfig = $cacheConfig;
     }
@@ -78,12 +77,8 @@ class RoutingMiddleware
      *
      * @return void
      */
-    protected function loadRoutes()
+    protected function loadRoutes(): void
     {
-        if (!$this->app) {
-            return;
-        }
-
         $routeCollection = $this->buildRouteCollection();
         Router::setRouteCollection($routeCollection);
     }
@@ -93,7 +88,7 @@ class RoutingMiddleware
      *
      * @return \Cake\Routing\RouteCollection
      */
-    protected function buildRouteCollection()
+    protected function buildRouteCollection(): RouteCollection
     {
         if (Cache::enabled() && $this->cacheConfig !== null) {
             return Cache::remember(static::ROUTE_COLLECTION_CACHE_KEY, function () {
@@ -109,7 +104,7 @@ class RoutingMiddleware
      *
      * @return \Cake\Routing\RouteCollection
      */
-    protected function prepareRouteCollection()
+    protected function prepareRouteCollection(): RouteCollection
     {
         $builder = Router::createRouteBuilder('/');
         $this->app->routes($builder);
@@ -127,15 +122,14 @@ class RoutingMiddleware
      * invoked.
      *
      * @param \Psr\Http\Message\ServerRequestInterface $request The request.
-     * @param \Psr\Http\Message\ResponseInterface $response The response.
-     * @param callable $next The next middleware to call.
+     * @param \Psr\Http\Server\RequestHandlerInterface $handler The request handler.
      * @return \Psr\Http\Message\ResponseInterface A response.
      */
-    public function __invoke(ServerRequestInterface $request, ResponseInterface $response, $next)
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $this->loadRoutes();
         try {
-            Router::setRequestContext($request);
+            Router::setRequest($request);
             $params = (array)$request->getAttribute('params', []);
             $middleware = [];
             if (empty($params['controller'])) {
@@ -149,22 +143,22 @@ class RoutingMiddleware
                     unset($params['_middleware']);
                 }
                 $request = $request->withAttribute('params', $params);
+                Router::setRequest($request);
             }
         } catch (RedirectException $e) {
             return new RedirectResponse(
                 $e->getMessage(),
-                $e->getCode(),
-                $response->getHeaders()
+                (int)$e->getCode()
             );
         }
         $matching = Router::getRouteCollection()->getMiddleware($middleware);
         if (!$matching) {
-            return $next($request, $response);
+            return $handler->handle($request);
         }
-        $matching[] = $next;
+
         $middleware = new MiddlewareQueue($matching);
         $runner = new Runner();
 
-        return $runner->run($middleware, $request, $response);
+        return $runner->run($middleware, $request, $handler);
     }
 }

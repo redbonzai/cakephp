@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP :  Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,6 +17,7 @@
 namespace Cake\Test\TestCase\Console;
 
 use Cake\Console\ConsoleIo;
+use Cake\Console\Exception\StopException;
 use Cake\Filesystem\Folder;
 use Cake\Log\Log;
 use Cake\TestSuite\TestCase;
@@ -24,13 +27,32 @@ use Cake\TestSuite\TestCase;
  */
 class ConsoleIoTest extends TestCase
 {
+    /**
+     * @var \Cake\Console\ConsoleIo
+     */
+    protected $io;
+
+    /**
+     * @var \Cake\Console\ConsoleOutput|\PHPUnit\Framework\MockObject\MockObject
+     */
+    protected $out;
+
+    /**
+     * @var \Cake\Console\ConsoleOutput|\PHPUnit\Framework\MockObject\MockObject
+     */
+    protected $err;
+
+    /**
+     * @var \Cake\Console\ConsoleInput|\PHPUnit\Framework\MockObject\MockObject
+     */
+    protected $in;
 
     /**
      * setUp method
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         static::setAppNamespace();
@@ -52,7 +74,7 @@ class ConsoleIoTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         if (is_dir(TMP . 'shell_test')) {
@@ -89,7 +111,7 @@ class ConsoleIoTest extends TestCase
             ->will($this->returnValue('y'));
 
         $result = $this->io->askChoice('Just a test?', $choices);
-        $this->assertEquals('y', $result);
+        $this->assertSame('y', $result);
     }
 
     /**
@@ -105,7 +127,7 @@ class ConsoleIoTest extends TestCase
             ->will($this->returnValue('Y'));
 
         $result = $this->io->askChoice('Just a test?', $choices);
-        $this->assertEquals('Y', $result);
+        $this->assertSame('Y', $result);
     }
 
     /**
@@ -124,7 +146,7 @@ class ConsoleIoTest extends TestCase
             ->will($this->returnValue('y'));
 
         $result = $this->io->ask('Just a test?');
-        $this->assertEquals('y', $result);
+        $this->assertSame('y', $result);
     }
 
     /**
@@ -143,7 +165,7 @@ class ConsoleIoTest extends TestCase
             ->will($this->returnValue(''));
 
         $result = $this->io->ask('Just a test?', 'n');
-        $this->assertEquals('n', $result);
+        $this->assertSame('n', $result);
     }
 
     /**
@@ -273,6 +295,50 @@ class ConsoleIoTest extends TestCase
     }
 
     /**
+     * Tests abort() wrapper.
+     *
+     * @return void
+     */
+    public function testAbort()
+    {
+        $this->expectException(StopException::class);
+        $this->expectExceptionMessage('Some error');
+        $this->expectExceptionCode(1);
+
+        $this->err->expects($this->at(0))
+            ->method('write')
+            ->with('<error>Some error</error>', 1);
+
+        $this->expectException(StopException::class);
+        $this->expectExceptionCode(1);
+        $this->expectExceptionMessage('Some error');
+
+        $this->io->abort('Some error');
+    }
+
+    /**
+     * Tests abort() wrapper.
+     *
+     * @return void
+     */
+    public function testAbortCustomCode()
+    {
+        $this->expectException(StopException::class);
+        $this->expectExceptionMessage('Some error');
+        $this->expectExceptionCode(99);
+
+        $this->err->expects($this->at(0))
+            ->method('write')
+            ->with('<error>Some error</error>', 1);
+
+        $this->expectException(StopException::class);
+        $this->expectExceptionCode(99);
+        $this->expectExceptionMessage('Some error');
+
+        $this->io->abort('Some error', 99);
+    }
+
+    /**
      * testNl
      *
      * @return void
@@ -284,8 +350,6 @@ class ConsoleIoTest extends TestCase
             $newLine = "\r\n";
         }
         $this->assertEquals($this->io->nl(), $newLine);
-        $this->assertEquals($this->io->nl(true), $newLine);
-        $this->assertEquals('', $this->io->nl(false));
         $this->assertEquals($this->io->nl(2), $newLine . $newLine);
         $this->assertEquals($this->io->nl(1), $newLine);
     }
@@ -307,12 +371,7 @@ class ConsoleIoTest extends TestCase
         $this->out->expects($this->at(4))->method('write')->with($bar, 1);
         $this->out->expects($this->at(5))->method('write')->with('', true);
 
-        $this->out->expects($this->at(6))->method('write')->with('', 2);
-        $this->out->expects($this->at(7))->method('write')->with($bar, 1);
-        $this->out->expects($this->at(8))->method('write')->with('', 2);
-
         $this->io->hr();
-        $this->io->hr(true);
         $this->io->hr(2);
     }
 
@@ -451,8 +510,8 @@ class ConsoleIoTest extends TestCase
         $this->assertNotEmpty(Log::engine('stderr'));
 
         $this->io->setLoggers(false);
-        $this->assertFalse(Log::engine('stdout'));
-        $this->assertFalse(Log::engine('stderr'));
+        $this->assertNull(Log::engine('stdout'));
+        $this->assertNull(Log::engine('stderr'));
     }
 
     /**
@@ -486,6 +545,32 @@ class ConsoleIoTest extends TestCase
     }
 
     /**
+     * Ensure that setStyle() just proxies to stdout.
+     *
+     * @return void
+     */
+    public function testSetStyle()
+    {
+        $this->out->expects($this->once())
+            ->method('setStyle')
+            ->with('name', ['props']);
+        $this->io->setStyle('name', ['props']);
+    }
+
+    /**
+     * Ensure that getStyle() just proxies to stdout.
+     *
+     * @return void
+     */
+    public function testGetStyle()
+    {
+        $this->out->expects($this->once())
+            ->method('getStyle')
+            ->with('name');
+        $this->io->getStyle('name');
+    }
+
+    /**
      * Ensure that styles() just proxies to stdout.
      *
      * @return void
@@ -493,9 +578,8 @@ class ConsoleIoTest extends TestCase
     public function testStyles()
     {
         $this->out->expects($this->once())
-            ->method('styles')
-            ->with('name', 'props');
-        $this->io->styles('name', 'props');
+            ->method('styles');
+        $this->io->styles();
     }
 
     /**
@@ -594,6 +678,22 @@ class ConsoleIoTest extends TestCase
         $this->assertStringEqualsFile($file, $contents);
     }
 
+    public function testCreateFileEmptySuccess()
+    {
+        $this->err->expects($this->never())
+            ->method('write');
+        $path = TMP . 'shell_test';
+        mkdir($path);
+
+        $file = $path . DS . 'file_empty.php';
+        $contents = '';
+        $result = $this->io->createFile($file, $contents);
+
+        $this->assertTrue($result);
+        $this->assertFileExists($file);
+        $this->assertStringEqualsFile($file, $contents);
+    }
+
     public function testCreateFileDirectoryCreation()
     {
         $this->err->expects($this->never())
@@ -638,7 +738,6 @@ class ConsoleIoTest extends TestCase
     /**
      * Test that `q` raises an error.
      *
-     * @expectedException \Cake\Console\Exception\StopException
      * @return void
      */
     public function testCreateFileOverwriteQuit()
@@ -648,6 +747,8 @@ class ConsoleIoTest extends TestCase
 
         $file = $path . DS . 'file1.php';
         touch($file);
+
+        $this->expectException(StopException::class);
 
         $this->in->expects($this->once())
             ->method('read')

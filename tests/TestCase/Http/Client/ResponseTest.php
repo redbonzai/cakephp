@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -36,9 +38,9 @@ class ResponseTest extends TestCase
         ];
         $response = new Response($headers, 'winner!');
 
-        $this->assertEquals('1.0', $response->getProtocolVersion());
+        $this->assertSame('1.0', $response->getProtocolVersion());
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertEquals('OK', $response->getReasonPhrase());
+        $this->assertSame('OK', $response->getReasonPhrase());
         $this->assertEquals(
             'text/html;charset="UTF-8"',
             $response->getHeaderLine('content-type')
@@ -47,7 +49,7 @@ class ResponseTest extends TestCase
             'Tue, 25 Dec 2012 04:43:47 GMT',
             $response->getHeaderLine('Date')
         );
-        $this->assertEquals('winner!', '' . $response->getBody());
+        $this->assertSame('winner!', '' . $response->getBody());
     }
 
     /**
@@ -65,7 +67,7 @@ class ResponseTest extends TestCase
         $response = new Response($headers, 'ok');
 
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertEquals('1.0', $response->getProtocolVersion());
+        $this->assertSame('1.0', $response->getProtocolVersion());
         $this->assertEquals(
             'text/html;charset="UTF-8"',
             $response->getHeaderLine('content-type')
@@ -85,34 +87,8 @@ class ResponseTest extends TestCase
         ];
         $response = new Response($headers, 'ok');
 
-        $this->assertEquals('1.0', $response->getProtocolVersion());
+        $this->assertSame('1.0', $response->getProtocolVersion());
         $this->assertSame(200, $response->getStatusCode());
-    }
-
-    /**
-     * Test body()
-     *
-     * @return void
-     */
-    public function testBody()
-    {
-        $this->deprecated(function () {
-            $data = [
-                'property' => 'value'
-            ];
-            $encoded = json_encode($data);
-
-            $response = new Response([], $encoded);
-
-            $this->assertEquals($encoded, $response->getBody()->getContents());
-            $this->assertEquals($encoded, $response->body());
-
-            $result = $response->body('json_decode');
-            $this->assertEquals($data['property'], $result->property);
-            $stream = $response->getBody();
-            $stream->rewind();
-            $this->assertEquals($encoded, $stream->getContents());
-        });
     }
 
     /**
@@ -124,7 +100,7 @@ class ResponseTest extends TestCase
     {
         $response = new Response([], 'string');
 
-        $this->assertEquals('string', $response->getStringBody());
+        $this->assertSame('string', $response->getStringBody());
     }
 
     /**
@@ -135,7 +111,7 @@ class ResponseTest extends TestCase
     public function testBodyJson()
     {
         $data = [
-            'property' => 'value'
+            'property' => 'value',
         ];
         $encoded = json_encode($data);
         $response = new Response([], $encoded);
@@ -147,7 +123,7 @@ class ResponseTest extends TestCase
 
         $data = json_encode([]);
         $response = new Response([], $data);
-        $this->assertInternalType('array', $response->getJson());
+        $this->assertIsArray($response->getJson());
 
         $data = json_encode(null);
         $response = new Response([], $data);
@@ -170,7 +146,7 @@ class ResponseTest extends TestCase
     public function testBodyJsonPsr7()
     {
         $data = [
-            'property' => 'value'
+            'property' => 'value',
         ];
         $encoded = json_encode($data);
         $response = new Response([], '');
@@ -192,7 +168,7 @@ class ResponseTest extends TestCase
 </root>
 XML;
         $response = new Response([], $data);
-        $this->assertEquals('Test', (string)$response->getXml()->test);
+        $this->assertSame('Test', (string)$response->getXml()->test);
 
         $data = '';
         $response = new Response([], $data);
@@ -208,52 +184,123 @@ XML;
     {
         $headers = [
             'HTTP/1.1 200 OK',
-            'Content-Type: text/html'
+            'Content-Type: text/html',
         ];
         $response = new Response($headers, 'ok');
         $this->assertTrue($response->isOk());
 
         $headers = [
             'HTTP/1.1 201 Created',
-            'Content-Type: text/html'
+            'Content-Type: text/html',
         ];
         $response = new Response($headers, 'ok');
         $this->assertTrue($response->isOk());
 
         $headers = [
             'HTTP/1.1 202 Accepted',
-            'Content-Type: text/html'
+            'Content-Type: text/html',
         ];
         $response = new Response($headers, 'ok');
         $this->assertTrue($response->isOk());
 
         $headers = [
             'HTTP/1.1 203 Non-Authoritative Information',
-            'Content-Type: text/html'
+            'Content-Type: text/html',
         ];
         $response = new Response($headers, 'ok');
         $this->assertTrue($response->isOk());
 
         $headers = [
             'HTTP/1.1 204 No Content',
-            'Content-Type: text/html'
+            'Content-Type: text/html',
         ];
         $response = new Response($headers, 'ok');
         $this->assertTrue($response->isOk());
 
         $headers = [
             'HTTP/1.1 301 Moved Permanently',
-            'Content-Type: text/html'
+            'Content-Type: text/html',
         ];
         $response = new Response($headers, '');
-        $this->assertFalse($response->isOk());
+        $this->assertTrue($response->isOk());
 
         $headers = [
             'HTTP/1.0 404 Not Found',
-            'Content-Type: text/html'
+            'Content-Type: text/html',
         ];
         $response = new Response($headers, '');
         $this->assertFalse($response->isOk());
+    }
+
+    /**
+     * provider for isSuccess.
+     *
+     * @return array
+     */
+    public static function isSuccessProvider()
+    {
+        return [
+            [
+                true,
+                new Response([
+                    'HTTP/1.1 200 OK',
+                    'Content-Type: text/html',
+                ], 'ok'),
+            ],
+            [
+                true,
+                new Response([
+                    'HTTP/1.1 201 Created',
+                    'Content-Type: text/html',
+                ], 'ok'),
+            ],
+            [
+                true,
+                new Response([
+                    'HTTP/1.1 202 Accepted',
+                    'Content-Type: text/html',
+                ], 'ok'),
+            ],
+            [
+                true,
+                new Response([
+                    'HTTP/1.1 203 Non-Authoritative Information',
+                    'Content-Type: text/html',
+                ], 'ok'),
+            ],
+            [
+                true,
+                new Response([
+                    'HTTP/1.1 204 No Content',
+                    'Content-Type: text/html',
+                ], ''),
+            ],
+            [
+                false,
+                new Response([
+                    'HTTP/1.1 301 Moved Permanently',
+                    'Content-Type: text/html',
+                ], ''),
+            ],
+            [
+                false,
+                new Response([
+                    'HTTP/1.0 404 Not Found',
+                    'Content-Type: text/html',
+                ], ''),
+            ],
+        ];
+    }
+
+    /**
+     * Test isSuccess()
+     *
+     * @dataProvider isSuccessProvider
+     * @return void
+     */
+    public function testIsSuccess($expected, Response $response)
+    {
+        $this->assertEquals($expected, $response->isSuccess());
     }
 
     /**
@@ -265,7 +312,7 @@ XML;
     {
         $headers = [
             'HTTP/1.1 200 OK',
-            'Content-Type: text/html'
+            'Content-Type: text/html',
         ];
         $response = new Response($headers, 'ok');
         $this->assertFalse($response->isRedirect());
@@ -273,57 +320,17 @@ XML;
         $headers = [
             'HTTP/1.1 301 Moved Permanently',
             'Location: /',
-            'Content-Type: text/html'
+            'Content-Type: text/html',
         ];
         $response = new Response($headers, '');
         $this->assertTrue($response->isRedirect());
 
         $headers = [
             'HTTP/1.0 404 Not Found',
-            'Content-Type: text/html'
+            'Content-Type: text/html',
         ];
         $response = new Response($headers, '');
         $this->assertFalse($response->isRedirect());
-    }
-
-    /**
-     * Test parsing / getting cookies.
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testCookie()
-    {
-        $this->deprecated(function () {
-            $headers = [
-                'HTTP/1.0 200 Ok',
-                'Set-Cookie: test=value',
-                'Set-Cookie: session=123abc',
-                'Set-Cookie: expiring=soon; Expires=Wed, 09-Jun-2021 10:18:14 GMT; Path=/; HttpOnly; Secure;',
-            ];
-            $response = new Response($headers, '');
-            $this->assertEquals('value', $response->cookie('test'));
-            $this->assertEquals('123abc', $response->cookie('session'));
-            $this->assertEquals('soon', $response->cookie('expiring'));
-
-            $result = $response->cookie('expiring', true);
-            $this->assertTrue($result['httponly']);
-            $this->assertTrue($result['secure']);
-            $this->assertEquals(
-                'Wed, 09-Jun-2021 10:18:14 GMT',
-                $result['expires']
-            );
-            $this->assertEquals('/', $result['path']);
-
-            $result = $response->header('set-cookie');
-            $this->assertCount(3, $result, 'Should be an array.');
-
-            $this->assertTrue(isset($response->cookies));
-            $this->assertEquals(
-                'soon',
-                $response->cookies['expiring']['value']
-            );
-        });
     }
 
     /**
@@ -342,18 +349,18 @@ XML;
         $response = new Response($headers, '');
 
         $this->assertNull($response->getCookie('undef'));
-        $this->assertEquals('value', $response->getCookie('test'));
-        $this->assertEquals('soon', $response->getCookie('expiring'));
+        $this->assertSame('value', $response->getCookie('test'));
+        $this->assertSame('soon', $response->getCookie('expiring'));
 
         $result = $response->getCookieData('expiring');
-        $this->assertEquals('soon', $result['value']);
+        $this->assertSame('soon', $result['value']);
         $this->assertTrue($result['httponly']);
         $this->assertTrue($result['secure']);
         $this->assertEquals(
-            'Wed, 09-Jun-2021 10:18:14 GMT',
+            strtotime('Wed, 09-Jun-2021 10:18:14 GMT'),
             $result['expires']
         );
-        $this->assertEquals('/', $result['path']);
+        $this->assertSame('/', $result['path']);
 
         $result = $response->getCookies();
         $this->assertCount(3, $result);
@@ -394,35 +401,10 @@ XML;
     {
         $headers = [
             'HTTP/1.0 404 Not Found',
-            'Content-Type: text/html'
+            'Content-Type: text/html',
         ];
         $response = new Response($headers, '');
         $this->assertSame(404, $response->getStatusCode());
-
-        $this->deprecated(function () use ($response) {
-            $this->assertSame(404, $response->code);
-            $this->assertTrue(isset($response->code));
-        });
-    }
-
-    /**
-     * Test statusCode()
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testStatusCode()
-    {
-        $this->deprecated(function () {
-            $headers = [
-                'HTTP/1.0 404 Not Found',
-                'Content-Type: text/html'
-            ];
-            $response = new Response($headers, '');
-            $this->assertSame(404, $response->statusCode());
-            $this->assertSame(404, $response->code);
-            $this->assertTrue(isset($response->code));
-        });
     }
 
     /**
@@ -440,62 +422,24 @@ XML;
 
         $headers = [
             'HTTP/1.0 200 Ok',
-            'Content-Type: text/html'
+            'Content-Type: text/html',
         ];
         $response = new Response($headers, '');
         $this->assertNull($response->getEncoding());
 
         $headers = [
             'HTTP/1.0 200 Ok',
-            'Content-Type: text/html; charset="UTF-8"'
+            'Content-Type: text/html; charset="UTF-8"',
         ];
         $response = new Response($headers, '');
-        $this->assertEquals('UTF-8', $response->getEncoding());
+        $this->assertSame('UTF-8', $response->getEncoding());
 
         $headers = [
             'HTTP/1.0 200 Ok',
-            "Content-Type: text/html; charset='ISO-8859-1'"
+            "Content-Type: text/html; charset='ISO-8859-1'",
         ];
         $response = new Response($headers, '');
-        $this->assertEquals('ISO-8859-1', $response->getEncoding());
-    }
-
-    /**
-     * Test reading the encoding out.
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testEncoding()
-    {
-        $this->deprecated(function () {
-            $headers = [
-                'HTTP/1.0 200 Ok',
-            ];
-            $response = new Response($headers, '');
-            $this->assertNull($response->encoding());
-
-            $headers = [
-                'HTTP/1.0 200 Ok',
-                'Content-Type: text/html'
-            ];
-            $response = new Response($headers, '');
-            $this->assertNull($response->encoding());
-
-            $headers = [
-                'HTTP/1.0 200 Ok',
-                'Content-Type: text/html; charset="UTF-8"'
-            ];
-            $response = new Response($headers, '');
-            $this->assertEquals('UTF-8', $response->encoding());
-
-            $headers = [
-                'HTTP/1.0 200 Ok',
-                "Content-Type: text/html; charset='ISO-8859-1'"
-            ];
-            $response = new Response($headers, '');
-            $this->assertEquals('ISO-8859-1', $response->encoding());
-        });
+        $this->assertSame('ISO-8859-1', $response->getEncoding());
     }
 
     /**
@@ -509,10 +453,10 @@ XML;
             'HTTP/1.0 200 OK',
             'Content-Encoding: gzip',
             'Content-Length: 32',
-            'Content-Type: text/html; charset=UTF-8'
+            'Content-Type: text/html; charset=UTF-8',
         ];
         $body = base64_decode('H4sIAAAAAAAAA/NIzcnJVyjPL8pJUQQAlRmFGwwAAAA=');
         $response = new Response($headers, $body);
-        $this->assertEquals('Hello world!', $response->getBody()->getContents());
+        $this->assertSame('Hello world!', $response->getBody()->getContents());
     }
 }

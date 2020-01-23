@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -23,7 +25,6 @@ use PDO;
  */
 class SqliteTest extends TestCase
 {
-
     /**
      * Test connecting to Sqlite with default configuration
      *
@@ -49,7 +50,7 @@ class SqliteTest extends TestCase
         $expected['flags'] += [
             PDO::ATTR_PERSISTENT => false,
             PDO::ATTR_EMULATE_PREPARES => false,
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         ];
         $driver->expects($this->once())->method('_connect')
             ->with($dsn, $expected);
@@ -70,7 +71,7 @@ class SqliteTest extends TestCase
             'flags' => [1 => true, 2 => false],
             'encoding' => 'a-language',
             'init' => ['Execute this', 'this too'],
-            'mask' => 0666
+            'mask' => 0666,
         ];
         $driver = $this->getMockBuilder('Cake\Database\driver\Sqlite')
             ->setMethods(['_connect', 'getConnection'])
@@ -83,7 +84,7 @@ class SqliteTest extends TestCase
         $expected['flags'] += [
             PDO::ATTR_PERSISTENT => true,
             PDO::ATTR_EMULATE_PREPARES => false,
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         ];
 
         $connection = $this->getMockBuilder('StdClass')

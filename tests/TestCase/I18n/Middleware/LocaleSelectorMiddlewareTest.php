@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -17,28 +19,29 @@ namespace Cake\Test\TestCase\I18n\Middleware;
 use Cake\I18n\I18n;
 use Cake\I18n\Middleware\LocaleSelectorMiddleware;
 use Cake\TestSuite\TestCase;
+use Laminas\Diactoros\ServerRequestFactory;
 use Locale;
-use Zend\Diactoros\Response;
-use Zend\Diactoros\ServerRequestFactory;
+use TestApp\Http\TestRequestHandler;
 
 /**
  * Test for LocaleSelectorMiddleware
  */
 class LocaleSelectorMiddlewareTest extends TestCase
 {
+    /**
+     * @var string
+     */
+    protected $locale;
 
     /**
      * setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->locale = Locale::getDefault();
-        $this->next = function ($req, $res) {
-            return $res;
-        };
     }
 
     /**
@@ -46,7 +49,7 @@ class LocaleSelectorMiddlewareTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         Locale::setDefault($this->locale);
@@ -61,15 +64,13 @@ class LocaleSelectorMiddlewareTest extends TestCase
     public function testInvokeNoAcceptedLocales()
     {
         $request = ServerRequestFactory::fromGlobals();
-        $response = new Response();
         $middleware = new LocaleSelectorMiddleware([]);
-        $middleware($request, $response, $this->next);
+        $middleware->process($request, new TestRequestHandler());
         $this->assertSame($this->locale, I18n::getLocale());
 
         $request = ServerRequestFactory::fromGlobals(['HTTP_ACCEPT_LANGUAGE' => 'garbage']);
-        $response = new Response();
         $middleware = new LocaleSelectorMiddleware([]);
-        $middleware($request, $response, $this->next);
+        $middleware->process($request, new TestRequestHandler());
         $this->assertSame($this->locale, I18n::getLocale());
     }
 
@@ -81,9 +82,8 @@ class LocaleSelectorMiddlewareTest extends TestCase
     public function testInvokeLocaleNotAccepted()
     {
         $request = ServerRequestFactory::fromGlobals(['HTTP_ACCEPT_LANGUAGE' => 'en-GB,en;q=0.8,es;q=0.6,da;q=0.4']);
-        $response = new Response();
         $middleware = new LocaleSelectorMiddleware(['en_CA', 'en_US', 'es']);
-        $middleware($request, $response, $this->next);
+        $middleware->process($request, new TestRequestHandler());
         $this->assertSame($this->locale, I18n::getLocale(), 'en-GB is not accepted');
     }
 
@@ -95,9 +95,8 @@ class LocaleSelectorMiddlewareTest extends TestCase
     public function testInvokeLocaleAccepted()
     {
         $request = ServerRequestFactory::fromGlobals(['HTTP_ACCEPT_LANGUAGE' => 'es,es-ES;q=0.8,da;q=0.4']);
-        $response = new Response();
         $middleware = new LocaleSelectorMiddleware(['en_CA', 'es']);
-        $middleware($request, $response, $this->next);
+        $middleware->process($request, new TestRequestHandler());
         $this->assertSame('es', I18n::getLocale(), 'es is accepted');
     }
 
@@ -109,9 +108,8 @@ class LocaleSelectorMiddlewareTest extends TestCase
     public function testInvokeLocaleAcceptedFallback()
     {
         $request = ServerRequestFactory::fromGlobals(['HTTP_ACCEPT_LANGUAGE' => 'es-ES;q=0.8,da;q=0.4']);
-        $response = new Response();
         $middleware = new LocaleSelectorMiddleware(['en_CA', 'es']);
-        $middleware($request, $response, $this->next);
+        $middleware->process($request, new TestRequestHandler());
         $this->assertSame('es', I18n::getLocale(), 'es is accepted');
     }
 
@@ -122,15 +120,14 @@ class LocaleSelectorMiddlewareTest extends TestCase
      */
     public function testInvokeLocaleAcceptAll()
     {
-        $response = new Response();
         $middleware = new LocaleSelectorMiddleware(['*']);
 
         $request = ServerRequestFactory::fromGlobals(['HTTP_ACCEPT_LANGUAGE' => 'es,es-ES;q=0.8,da;q=0.4']);
-        $middleware($request, $response, $this->next);
+        $middleware->process($request, new TestRequestHandler());
         $this->assertSame('es', I18n::getLocale(), 'es is accepted');
 
         $request = ServerRequestFactory::fromGlobals(['HTTP_ACCEPT_LANGUAGE' => 'en;q=0.4,es;q=0.6,da;q=0.8']);
-        $middleware($request, $response, $this->next);
+        $middleware->process($request, new TestRequestHandler());
         $this->assertSame('da', I18n::getLocale(), 'da is accepted');
     }
 }

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -37,47 +39,7 @@ class QueryExpressionTest extends TestCase
         $this->assertSame('+', $expr->getConjunction());
 
         $result = $expr->sql($binder);
-        $this->assertEquals('(1 + 2)', $result);
-    }
-
-    /**
-     * Test tieWith() works.
-     *
-     * @group deprecated
-     * @return
-     */
-    public function testTieWith()
-    {
-        $this->deprecated(function () {
-            $expr = new QueryExpression(['1', '2']);
-            $binder = new ValueBinder();
-
-            $this->assertSame($expr, $expr->tieWith('+'));
-            $this->assertSame('+', $expr->tieWith());
-
-            $result = $expr->sql($binder);
-            $this->assertEquals('(1 + 2)', $result);
-        });
-    }
-
-    /**
-     * Test type() works.
-     *
-     * @group deprecated
-     * @return
-     */
-    public function testType()
-    {
-        $this->deprecated(function () {
-            $expr = new QueryExpression(['1', '2']);
-            $binder = new ValueBinder();
-
-            $this->assertSame($expr, $expr->type('+'));
-            $this->assertSame('+', $expr->type());
-
-            $result = $expr->sql($binder);
-            $this->assertEquals('(1 + 2)', $result);
-        });
+        $this->assertSame('(1 + 2)', $result);
     }
 
     /**
@@ -88,7 +50,7 @@ class QueryExpressionTest extends TestCase
     public function testAndOrCalls()
     {
         $expr = new QueryExpression();
-        $expected = '\Cake\Database\Expression\QueryExpression';
+        $expected = 'Cake\Database\Expression\QueryExpression';
         $this->assertInstanceOf($expected, $expr->and([]));
         $this->assertInstanceOf($expected, $expr->or([]));
     }
@@ -105,7 +67,7 @@ class QueryExpressionTest extends TestCase
         $expr->add(['Users.username' => 'sally'], ['Users.username' => 'string']);
 
         $result = $expr->sql($binder);
-        $this->assertEquals('Users.username = :c0', $result);
+        $this->assertSame('Users.username = :c0', $result);
     }
 
     /**
@@ -124,12 +86,12 @@ class QueryExpressionTest extends TestCase
             ],
             [
                 'Users.username' => 'string',
-                'Users.active' => 'boolean'
+                'Users.active' => 'boolean',
             ]
         );
 
         $result = $expr->sql($binder);
-        $this->assertEquals('(Users.username = :c0 AND Users.active = :c1)', $result);
+        $this->assertSame('(Users.username = :c0 AND Users.active = :c1)', $result);
     }
 
     /**
@@ -142,7 +104,7 @@ class QueryExpressionTest extends TestCase
         $expr = new QueryExpression();
         $binder = new ValueBinder();
         $result = $expr->sql($binder);
-        $this->assertEquals('', $result);
+        $this->assertSame('', $result);
     }
 
     /**
@@ -199,7 +161,7 @@ class QueryExpressionTest extends TestCase
     {
         return [
             ['eq'], ['notEq'], ['gt'], ['lt'], ['gte'], ['lte'], ['like'],
-            ['notLike'], ['in'], ['notIn']
+            ['notLike'], ['in'], ['notIn'],
         ];
     }
 
@@ -220,7 +182,7 @@ class QueryExpressionTest extends TestCase
         $bindings = $binder->bindings();
         $type = current($bindings)['type'];
 
-        $this->assertEquals('date', $type);
+        $this->assertSame('date', $type);
     }
 
     /**
@@ -234,8 +196,8 @@ class QueryExpressionTest extends TestCase
     public function testEmptyOr()
     {
         $expr = new QueryExpression();
-        $expr = $expr->or_([]);
-        $expr = $expr->or_([]);
+        $expr = $expr->or([]);
+        $expr = $expr->or([]);
         $this->assertCount(0, $expr);
 
         $expr = new QueryExpression(['OR' => []]);

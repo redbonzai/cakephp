@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -37,7 +39,7 @@ class FormContextTest extends TestCase
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->request = new ServerRequest();
@@ -51,7 +53,7 @@ class FormContextTest extends TestCase
     public function testGetRequiredMessage()
     {
         $validator = new Validator();
-        $validator->requirePresence('title', true, 'Don\'t forget a title!');
+        $validator->notEmptyString('title', 'Don\'t forget a title!');
 
         $form = new Form();
         $form->setValidator(Form::DEFAULT_VALIDATOR, $validator);
@@ -72,7 +74,7 @@ class FormContextTest extends TestCase
     public function testPrimaryKey()
     {
         $context = new FormContext($this->request, ['entity' => new Form()]);
-        $this->assertEquals([], $context->primaryKey());
+        $this->assertEquals([], $context->getPrimaryKey());
     }
 
     /**
@@ -106,11 +108,11 @@ class FormContextTest extends TestCase
             'Articles' => [
                 'title' => 'New title',
                 'body' => 'My copy',
-            ]
+            ],
         ]);
         $context = new FormContext($this->request, ['entity' => new Form()]);
-        $this->assertEquals('New title', $context->val('Articles.title'));
-        $this->assertEquals('My copy', $context->val('Articles.body'));
+        $this->assertSame('New title', $context->val('Articles.title'));
+        $this->assertSame('My copy', $context->val('Articles.body'));
         $this->assertNull($context->val('Articles.nope'));
     }
 
@@ -124,7 +126,7 @@ class FormContextTest extends TestCase
 
         $context = new FormContext($this->request, ['entity' => $form]);
 
-        $this->assertEquals('set title', $context->val('title'));
+        $this->assertSame('set title', $context->val('title'));
         $this->assertNull($context->val('Articles.body'));
 
         $this->request = $this->request->withParsedBody([
@@ -132,7 +134,7 @@ class FormContextTest extends TestCase
         ]);
         $context = new FormContext($this->request, ['entity' => $form]);
 
-        $this->assertEquals('New title', $context->val('title'));
+        $this->assertSame('New title', $context->val('title'));
     }
 
     /**
@@ -161,13 +163,13 @@ class FormContextTest extends TestCase
         $this->assertNull($result);
 
         $result = $context->val('title', ['default' => 'default default']);
-        $this->assertEquals('default default', $result);
+        $this->assertSame('default default', $result);
 
         $result = $context->val('name');
-        $this->assertEquals('schema default', $result);
+        $this->assertSame('schema default', $result);
 
         $result = $context->val('name', ['default' => 'custom default']);
-        $this->assertEquals('custom default', $result);
+        $this->assertSame('custom default', $result);
 
         $result = $context->val('name', ['schemaDefault' => false]);
         $this->assertNull($result);
@@ -186,12 +188,12 @@ class FormContextTest extends TestCase
             ->add('email', 'format', ['rule' => 'email']);
 
         $context = new FormContext($this->request, [
-            'entity' => $form
+            'entity' => $form,
         ]);
         $this->assertTrue($context->isRequired('name'));
         $this->assertTrue($context->isRequired('email'));
-        $this->assertFalse($context->isRequired('body'));
-        $this->assertFalse($context->isRequired('Prefix.body'));
+        $this->assertNull($context->isRequired('body'));
+        $this->assertNull($context->isRequired('Prefix.body'));
     }
 
     /**
@@ -207,11 +209,11 @@ class FormContextTest extends TestCase
             ->addField('user_id', 'integer');
 
         $context = new FormContext($this->request, [
-            'entity' => $form
+            'entity' => $form,
         ]);
         $this->assertNull($context->type('undefined'));
-        $this->assertEquals('integer', $context->type('user_id'));
-        $this->assertEquals('string', $context->type('email'));
+        $this->assertSame('integer', $context->type('user_id'));
+        $this->assertSame('string', $context->type('email'));
         $this->assertNull($context->type('Prefix.email'));
     }
 
@@ -224,7 +226,7 @@ class FormContextTest extends TestCase
     {
         $form = new Form();
         $context = new FormContext($this->request, [
-            'entity' => $form
+            'entity' => $form,
         ]);
         $expected = [];
         $result = $context->fieldNames();
@@ -234,7 +236,7 @@ class FormContextTest extends TestCase
             ->addField('email', 'string')
             ->addField('password', 'string');
         $context = new FormContext($this->request, [
-            'entity' => $form
+            'entity' => $form,
         ]);
 
         $expected = ['email', 'password'];
@@ -261,7 +263,7 @@ class FormContextTest extends TestCase
                 'precision' => 2,
             ]);
         $context = new FormContext($this->request, [
-            'entity' => $form
+            'entity' => $form,
         ]);
         $this->assertEquals([], $context->attributes('id'));
         $this->assertEquals(['length' => 10, 'precision' => null], $context->attributes('email'));

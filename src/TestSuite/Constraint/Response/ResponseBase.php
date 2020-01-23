@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -15,6 +17,7 @@ namespace Cake\TestSuite\Constraint\Response;
 
 use PHPUnit\Framework\AssertionFailedError;
 use PHPUnit\Framework\Constraint\Constraint;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * Base constraint for response constraints
@@ -23,21 +26,18 @@ use PHPUnit\Framework\Constraint\Constraint;
  */
 abstract class ResponseBase extends Constraint
 {
-
     /**
-     * @var \Cake\Http\Response
+     * @var \Psr\Http\Message\ResponseInterface
      */
     protected $response;
 
     /**
      * Constructor
      *
-     * @param \Cake\Http\Response $response Response
+     * @param \Psr\Http\Message\ResponseInterface|null $response Response
      */
-    public function __construct($response)
+    public function __construct(?ResponseInterface $response)
     {
-        parent::__construct();
-
         if (!$response) {
             throw new AssertionFailedError('No response set, cannot assert content.');
         }
@@ -50,7 +50,7 @@ abstract class ResponseBase extends Constraint
      *
      * @return string The response body.
      */
-    protected function _getBodyAsString()
+    protected function _getBodyAsString(): string
     {
         return (string)$this->response->getBody();
     }

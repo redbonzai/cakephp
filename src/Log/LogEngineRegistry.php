@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -21,24 +23,22 @@ use RuntimeException;
 
 /**
  * Registry of loaded log engines
+ *
+ * @extends \Cake\Core\ObjectRegistry<\Psr\Log\LoggerInterface>
  */
 class LogEngineRegistry extends ObjectRegistry
 {
-
     /**
      * Resolve a logger classname.
      *
      * Part of the template method for Cake\Core\ObjectRegistry::load()
      *
      * @param string $class Partial classname to resolve.
-     * @return string|false Either the correct classname or false.
+     * @return string|null Either the correct class name or null.
+     * @psalm-return class-string|null
      */
-    protected function _resolveClassName($class)
+    protected function _resolveClassName(string $class): ?string
     {
-        if (is_object($class)) {
-            return $class;
-        }
-
         return App::className($class, 'Log/Engine', 'Log');
     }
 
@@ -48,11 +48,11 @@ class LogEngineRegistry extends ObjectRegistry
      * Part of the template method for Cake\Core\ObjectRegistry::load()
      *
      * @param string $class The classname that is missing.
-     * @param string $plugin The plugin the logger is missing in.
+     * @param string|null $plugin The plugin the logger is missing in.
      * @return void
      * @throws \RuntimeException
      */
-    protected function _throwMissingClassError($class, $plugin)
+    protected function _throwMissingClassError(string $class, ?string $plugin): void
     {
         throw new RuntimeException(sprintf('Could not load class %s', $class));
     }
@@ -68,7 +68,7 @@ class LogEngineRegistry extends ObjectRegistry
      * @return \Psr\Log\LoggerInterface The constructed logger class.
      * @throws \RuntimeException when an object doesn't implement the correct interface.
      */
-    protected function _create($class, $alias, $settings)
+    protected function _create($class, string $alias, array $settings): LoggerInterface
     {
         if (is_callable($class)) {
             $class = $class($alias);
@@ -79,6 +79,7 @@ class LogEngineRegistry extends ObjectRegistry
         }
 
         if (!isset($instance)) {
+            /** @psalm-suppress UndefinedClass */
             $instance = new $class($settings);
         }
 
@@ -86,19 +87,23 @@ class LogEngineRegistry extends ObjectRegistry
             return $instance;
         }
 
-        throw new RuntimeException(
-            'Loggers must implement Psr\Log\LoggerInterface.'
-        );
+        throw new RuntimeException(sprintf(
+            'Loggers must implement %s. Found `%s` instance instead.',
+            LoggerInterface::class,
+            getTypeName($instance)
+        ));
     }
 
     /**
      * Remove a single logger from the registry.
      *
      * @param string $name The logger name.
-     * @return void
+     * @return $this
      */
-    public function unload($name)
+    public function unload(string $name)
     {
         unset($this->_loaded[$name]);
+
+        return $this;
     }
 }

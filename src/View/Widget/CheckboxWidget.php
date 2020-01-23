@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -18,9 +20,24 @@ use Cake\View\Form\ContextInterface;
 
 /**
  * Input widget for creating checkbox widgets.
+ *
+ * This class is usually used internally by `Cake\View\Helper\FormHelper`,
+ * it but can be used to generate standalone checkboxes.
  */
 class CheckboxWidget extends BasicWidget
 {
+    /**
+     * Data defaults.
+     *
+     * @var array
+     */
+    protected $defaults = [
+        'name' => '',
+        'value' => 1,
+        'val' => null,
+        'disabled' => false,
+        'templateVars' => [],
+    ];
 
     /**
      * Render a checkbox element.
@@ -39,15 +56,10 @@ class CheckboxWidget extends BasicWidget
      * @param \Cake\View\Form\ContextInterface $context The current form context.
      * @return string Generated HTML string.
      */
-    public function render(array $data, ContextInterface $context)
+    public function render(array $data, ContextInterface $context): string
     {
-        $data += [
-            'name' => '',
-            'value' => 1,
-            'val' => null,
-            'disabled' => false,
-            'templateVars' => []
-        ];
+        $data += $this->mergeDefaults($data, $context);
+
         if ($this->_isChecked($data)) {
             $data['checked'] = true;
         }
@@ -62,7 +74,7 @@ class CheckboxWidget extends BasicWidget
             'name' => $data['name'],
             'value' => $data['value'],
             'templateVars' => $data['templateVars'],
-            'attrs' => $attrs
+            'attrs' => $attrs,
         ]);
     }
 
@@ -72,7 +84,7 @@ class CheckboxWidget extends BasicWidget
      * @param array $data Data to look at and determine checked state.
      * @return bool
      */
-    protected function _isChecked($data)
+    protected function _isChecked(array $data): bool
     {
         if (array_key_exists('checked', $data)) {
             return (bool)$data['checked'];

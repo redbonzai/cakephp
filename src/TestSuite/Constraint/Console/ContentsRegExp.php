@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -20,14 +22,13 @@ namespace Cake\TestSuite\Constraint\Console;
  */
 class ContentsRegExp extends ContentsBase
 {
-
     /**
      * Checks if contents contain expected
      *
      * @param mixed $other Expected
      * @return bool
      */
-    public function matches($other)
+    public function matches($other): bool
     {
         return preg_match($other, $this->contents) > 0;
     }
@@ -37,7 +38,7 @@ class ContentsRegExp extends ContentsBase
      *
      * @return string
      */
-    public function toString()
+    public function toString(): string
     {
         return sprintf('PCRE pattern found in %s', $this->output);
     }
@@ -46,8 +47,8 @@ class ContentsRegExp extends ContentsBase
      * @param mixed $other Expected
      * @return string
      */
-    public function failureDescription($other)
+    public function failureDescription($other): string
     {
-        return $other . ' ' . $this->toString();
+        return '`' . $other . '` ' . $this->toString();
     }
 }

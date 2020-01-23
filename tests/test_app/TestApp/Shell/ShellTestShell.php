@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * ShellTestShell file
  *
@@ -32,6 +34,13 @@ class ShellTestShell extends Shell
     public $name = 'ShellTestShell';
 
     /**
+     * modelClass
+     *
+     * @var string
+     */
+    protected $modelClass = 'TestPlugin.TestPluginComments';
+
+    /**
      * stopped property
      *
      * @var int
@@ -51,7 +60,7 @@ class ShellTestShell extends Shell
      * @param int $status
      * @return void
      */
-    protected function _stop($status = Shell::CODE_SUCCESS)
+    protected function _stop(int $status = Shell::CODE_SUCCESS): void
     {
         $this->stopped = $status;
     }
@@ -60,7 +69,7 @@ class ShellTestShell extends Shell
     {
     }
 
-    //@codingStandardsIgnoreStart
+    // phpcs:disable
     public function doSomething()
     {
     }
@@ -73,5 +82,5 @@ class ShellTestShell extends Shell
     {
         $this->log($this->testMessage);
     }
-    //@codingStandardsIgnoreEnd
+    // phpcs:enable
 }

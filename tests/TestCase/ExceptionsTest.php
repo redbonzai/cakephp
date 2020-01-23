@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * ExceptionsTest file
  *
@@ -17,28 +19,30 @@
 namespace Cake\Test\TestCase;
 
 use Cake\Error\FatalErrorException;
-use Cake\Error\PHP7ErrorException;
 use Cake\ORM\Entity;
 use Cake\ORM\Exception\PersistenceFailedException;
 use Cake\TestSuite\TestCase;
-use Error;
+use Cake\View\Exception\MissingCellTemplateException;
+use Cake\View\Exception\MissingElementException;
+use Cake\View\Exception\MissingLayoutException;
+use Cake\View\Exception\MissingTemplateException;
 use Exception;
 
 class ExceptionsTest extends TestCase
 {
-
     /**
      * Tests simple exceptions work.
      *
      * @dataProvider exceptionProvider
-     * @param $class The exception class name
-     * @param $defaultCode The default exception code
+     * @param string $class The exception class name
+     * @param int $defaultCode The default exception code
      * @return void
      */
     public function testSimpleException($class, $defaultCode)
     {
         $previous = new Exception();
 
+        /** @var \Exception $exception */
         $exception = new $class('message', 100, $previous);
         $this->assertSame('message', $exception->getMessage());
         $this->assertSame(100, $exception->getCode());
@@ -75,26 +79,6 @@ class ExceptionsTest extends TestCase
     }
 
     /**
-     * Tests PHP7ErrorException works.
-     *
-     * @return void
-     */
-    public function testPHP7ErrorException()
-    {
-        $this->skipIf(version_compare(PHP_VERSION, '7.0.0', '<'));
-
-        $previous = new Exception();
-        $error = new Error('message', 100, $previous);
-        $line = __LINE__ - 1;
-
-        $exception = new PHP7ErrorException($error);
-        $this->assertSame(100, $exception->getCode());
-        $this->assertSame(__FILE__, $exception->getFile());
-        $this->assertSame($line, $exception->getLine());
-        $this->assertSame($previous, $exception->getPrevious());
-    }
-
-    /**
      * Tests PersistenceFailedException works.
      *
      * @return void
@@ -110,10 +94,51 @@ class ExceptionsTest extends TestCase
         $this->assertSame($previous, $exception->getPrevious());
         $this->assertSame($entity, $exception->getEntity());
 
-        $exception = new PersistenceFailedException(new Entity, 'message', null, $previous);
+        $exception = new PersistenceFailedException(new Entity(), 'message', null, $previous);
         $this->assertSame('message', $exception->getMessage());
         $this->assertSame(500, $exception->getCode());
         $this->assertSame($previous, $exception->getPrevious());
+    }
+
+    /**
+     * Test the template exceptions
+     *
+     * @return void
+     */
+    public function testMissingTemplateExceptions()
+    {
+        $previous = new Exception();
+
+        $error = new MissingTemplateException('view.ctp', ['path/a', 'path/b'], 100, $previous);
+        $this->assertStringContainsString("Template file 'view.ctp' could not be found", $error->getMessage());
+        $this->assertStringContainsString('- path/a', $error->getMessage());
+        $this->assertSame($previous, $error->getPrevious());
+        $this->assertSame(100, $error->getCode());
+        $attributes = $error->getAttributes();
+        $this->assertArrayHasKey('file', $attributes);
+        $this->assertArrayHasKey('paths', $attributes);
+
+        $error = new MissingLayoutException('default.ctp', ['path/a', 'path/b'], 100, $previous);
+        $this->assertStringContainsString("Layout file 'default.ctp' could not be found", $error->getMessage());
+        $this->assertStringContainsString('- path/a', $error->getMessage());
+        $this->assertSame($previous, $error->getPrevious());
+        $this->assertSame(100, $error->getCode());
+
+        $error = new MissingElementException('view.ctp', ['path/a', 'path/b'], 100, $previous);
+        $this->assertStringContainsString("Element file 'view.ctp' could not be found", $error->getMessage());
+        $this->assertStringContainsString('- path/a', $error->getMessage());
+        $this->assertSame($previous, $error->getPrevious());
+        $this->assertSame(100, $error->getCode());
+
+        $error = new MissingCellTemplateException('Articles', 'view.ctp', ['path/a', 'path/b'], 100, $previous);
+        $this->assertStringContainsString("Cell template file 'view.ctp' could not be found", $error->getMessage());
+        $this->assertStringContainsString('- path/a', $error->getMessage());
+        $this->assertSame($previous, $error->getPrevious());
+        $this->assertSame(100, $error->getCode());
+        $attributes = $error->getAttributes();
+        $this->assertArrayHasKey('name', $attributes);
+        $this->assertArrayHasKey('file', $attributes);
+        $this->assertArrayHasKey('paths', $attributes);
     }
 
     /**
@@ -124,12 +149,12 @@ class ExceptionsTest extends TestCase
     public function exceptionProvider()
     {
         return [
-            ['Cake\Console\Exception\ConsoleException', 500],
-            ['Cake\Console\Exception\MissingHelperException', 500],
-            ['Cake\Console\Exception\MissingShellException', 500],
-            ['Cake\Console\Exception\MissingShellMethodException', 500],
-            ['Cake\Console\Exception\MissingTaskException', 500],
-            ['Cake\Console\Exception\StopException', 500],
+            ['Cake\Console\Exception\ConsoleException', 1],
+            ['Cake\Console\Exception\MissingHelperException', 1],
+            ['Cake\Console\Exception\MissingShellException', 1],
+            ['Cake\Console\Exception\MissingShellMethodException', 1],
+            ['Cake\Console\Exception\MissingTaskException', 1],
+            ['Cake\Console\Exception\StopException', 1],
             ['Cake\Controller\Exception\AuthSecurityException', 400],
             ['Cake\Controller\Exception\MissingActionException', 404],
             ['Cake\Controller\Exception\MissingComponentException', 500],
@@ -157,6 +182,7 @@ class ExceptionsTest extends TestCase
             ['Cake\Http\Exception\InternalErrorException', 500],
             ['Cake\Http\Exception\InvalidCsrfTokenException', 403],
             ['Cake\Http\Exception\MethodNotAllowedException', 405],
+            ['Cake\Http\Exception\MissingControllerException', 404],
             ['Cake\Http\Exception\NotAcceptableException', 406],
             ['Cake\Http\Exception\NotFoundException', 404],
             ['Cake\Http\Exception\NotImplementedException', 501],
@@ -169,17 +195,12 @@ class ExceptionsTest extends TestCase
             ['Cake\ORM\Exception\MissingTableClassException', 500],
             ['Cake\ORM\Exception\RolledbackTransactionException', 500],
             ['Cake\Routing\Exception\DuplicateNamedRouteException', 500],
-            ['Cake\Routing\Exception\MissingControllerException', 500],
             ['Cake\Routing\Exception\MissingDispatcherFilterException', 500],
             ['Cake\Routing\Exception\MissingRouteException', 500],
             ['Cake\Routing\Exception\RedirectException', 302],
             ['Cake\Utility\Exception\XmlException', 0],
             ['Cake\View\Exception\MissingCellException', 500],
-            ['Cake\View\Exception\MissingCellViewException', 500],
-            ['Cake\View\Exception\MissingElementException', 500],
             ['Cake\View\Exception\MissingHelperException', 500],
-            ['Cake\View\Exception\MissingLayoutException', 500],
-            ['Cake\View\Exception\MissingTemplateException', 500],
             ['Cake\View\Exception\MissingViewException', 500],
         ];
     }

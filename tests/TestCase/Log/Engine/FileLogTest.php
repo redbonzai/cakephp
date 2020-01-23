@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * FileLogTest file
  *
@@ -18,48 +20,12 @@ namespace Cake\Test\TestCase\Log\Engine;
 
 use Cake\Log\Engine\FileLog;
 use Cake\TestSuite\TestCase;
-use JsonSerializable;
-
-/**
- * used for testing when an object is passed to a logger
- */
-class StringObject
-{
-
-    /**
-     * String representation of the object
-     *
-     * @return string
-     */
-    public function __toString()
-    {
-        return 'Hey!';
-    }
-}
-
-/**
- * used for testing when an serializable is passed to a logger
- */
-class JsonObject implements JsonSerializable
-{
-
-    /**
-     * String representation of the object
-     *
-     * @return array
-     */
-    public function jsonSerialize()
-    {
-        return ['hello' => 'world'];
-    }
-}
 
 /**
  * FileLogTest class
  */
 class FileLogTest extends TestCase
 {
-
     /**
      * testLogFileWriting method
      *
@@ -87,23 +53,6 @@ class FileLogTest extends TestCase
 
         $result = file_get_contents(LOGS . 'random.log');
         $this->assertRegExp('/^2[0-9]{3}-[0-9]+-[0-9]+ [0-9]+:[0-9]+:[0-9]+ Random: Test warning/', $result);
-
-        $object = new StringObject;
-        $log->log('debug', $object);
-        $this->assertFileExists(LOGS . 'debug.log');
-        $result = file_get_contents(LOGS . 'debug.log');
-        $this->assertContains('Debug: Hey!', $result);
-
-        $object = new JsonObject;
-        $log->log('debug', $object);
-        $this->assertFileExists(LOGS . 'debug.log');
-        $result = file_get_contents(LOGS . 'debug.log');
-        $this->assertContains('Debug: ' . json_encode(['hello' => 'world']), $result);
-
-        $log->log('debug', [1, 2]);
-        $this->assertFileExists(LOGS . 'debug.log');
-        $result = file_get_contents(LOGS . 'debug.log');
-        $this->assertContains('Debug: ' . print_r([1, 2], true), $result);
     }
 
     /**
@@ -135,7 +84,7 @@ class FileLogTest extends TestCase
         $log = new FileLog([
             'path' => $path,
             'size' => 35,
-            'rotate' => 2
+            'rotate' => 2,
         ]);
         $log->log('warning', 'Test warning one');
         $this->assertFileExists($path . 'error.log');
@@ -193,7 +142,7 @@ class FileLogTest extends TestCase
         $log = new FileLog([
             'path' => $path,
             'size' => 35,
-            'rotate' => 0
+            'rotate' => 0,
         ]);
         file_put_contents($path . 'debug.log.0000000000', "The oldest log file with over 35 bytes.\n");
         $log->log('debug', 'Test debug');

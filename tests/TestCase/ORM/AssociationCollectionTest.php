@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,12 +16,13 @@
  */
 namespace Cake\Test\TestCase\ORM;
 
-use Cake\ORM\AssociationCollection;
 use Cake\ORM\Association\BelongsTo;
 use Cake\ORM\Association\BelongsToMany;
+use Cake\ORM\AssociationCollection;
 use Cake\ORM\Entity;
 use Cake\ORM\Locator\LocatorInterface;
 use Cake\TestSuite\TestCase;
+use InvalidArgumentException;
 
 /**
  * AssociationCollection test case.
@@ -29,14 +32,14 @@ class AssociationCollectionTest extends TestCase
     /**
      * @var AssociationCollection
      */
-    public $associations;
+    protected $associations;
 
     /**
      * setup
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->associations = new AssociationCollection();
@@ -107,7 +110,7 @@ class AssociationCollectionTest extends TestCase
     {
         $locator = $this->createMock(LocatorInterface::class);
         $this->associations->load(BelongsTo::class, 'Users', [
-            'tableLocator' => $locator
+            'tableLocator' => $locator,
         ]);
         $this->assertTrue($this->associations->has('Users'));
         $this->assertInstanceOf(BelongsTo::class, $this->associations->get('Users'));
@@ -118,11 +121,12 @@ class AssociationCollectionTest extends TestCase
      * Test load invalid class.
      *
      * @return void
-     * @expectedException InvalidArgumentException
-     * @expectedExceptionMessage The association must extend `Cake\ORM\Association` class, `stdClass` given.
      */
     public function testLoadInvalid()
     {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('The association must extend `Cake\ORM\Association` class, `stdClass` given.');
+
         $this->associations->load('stdClass', 'Users');
     }
 
@@ -156,9 +160,9 @@ class AssociationCollectionTest extends TestCase
             ->getMock();
         $table->setSchema([]);
         $belongsTo = new BelongsTo('Users', [
-            'sourceTable' => $table
+            'sourceTable' => $table,
         ]);
-        $this->assertEquals('user', $belongsTo->getProperty());
+        $this->assertSame('user', $belongsTo->getProperty());
         $this->associations->add('Users', $belongsTo);
         $this->assertNull($this->associations->get('user'));
 
@@ -205,7 +209,7 @@ class AssociationCollectionTest extends TestCase
         return [
             ['BelongsTo', 'BelongsToMany'],
             ['belongsTo', 'belongsToMany'],
-            ['belongsto', 'belongstomany']
+            ['belongsto', 'belongstomany'],
         ];
     }
 
@@ -291,7 +295,7 @@ class AssociationCollectionTest extends TestCase
         $mockTwo = $this->getMockBuilder('Cake\ORM\Association\HasMany')
             ->setMethods(['saveAssociated'])
             ->setConstructorArgs(['Child', [
-                'sourceTable' => $table
+                'sourceTable' => $table,
             ]])
             ->getMock();
 
@@ -341,7 +345,7 @@ class AssociationCollectionTest extends TestCase
         $mockTwo = $this->getMockBuilder('Cake\ORM\Association\BelongsTo')
             ->setMethods(['saveAssociated'])
             ->setConstructorArgs(['Categories', [
-                'sourceTable' => $table
+                'sourceTable' => $table,
             ]])
             ->getMock();
 
@@ -391,7 +395,7 @@ class AssociationCollectionTest extends TestCase
         $mockTwo = $this->getMockBuilder('Cake\ORM\Association\HasOne')
             ->setMethods(['saveAssociated'])
             ->setConstructorArgs(['Profiles', [
-                'sourceTable' => $table
+                'sourceTable' => $table,
             ]])
             ->getMock();
 

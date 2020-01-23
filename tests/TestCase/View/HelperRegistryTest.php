@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,45 +16,40 @@
  */
 namespace Cake\Test\TestCase\View;
 
-use Cake\Core\Plugin;
 use Cake\TestSuite\TestCase;
-use Cake\View\Helper;
+use Cake\View\Helper\FormHelper;
+use Cake\View\Helper\HtmlHelper;
 use Cake\View\HelperRegistry;
 use Cake\View\View;
-
-/**
- * Extended HtmlHelper
- */
-class HtmlAliasHelper extends Helper
-{
-
-    public function afterRender($viewFile)
-    {
-    }
-}
+use TestApp\View\Helper\HtmlAliasHelper;
+use TestPlugin\View\Helper\OtherHelperHelper;
 
 /**
  * HelperRegistryTest
  */
 class HelperRegistryTest extends TestCase
 {
-
     /**
      * @var \Cake\View\HelperRegistry
      */
-    public $Helpers;
+    protected $Helpers;
 
     /**
      * @var \Cake\Event\EventManager
      */
-    public $Events;
+    protected $Events;
+
+    /**
+     * @var \Cake\View\View
+     */
+    protected $View;
 
     /**
      * setUp
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->View = new View();
@@ -65,7 +62,7 @@ class HelperRegistryTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         $this->clearPlugins();
         unset($this->Helpers, $this->View);
@@ -80,8 +77,8 @@ class HelperRegistryTest extends TestCase
     public function testLoad()
     {
         $result = $this->Helpers->load('Html');
-        $this->assertInstanceOf('Cake\View\Helper\HtmlHelper', $result);
-        $this->assertInstanceOf('Cake\View\Helper\HtmlHelper', $this->Helpers->Html);
+        $this->assertInstanceOf(HtmlHelper::class, $result);
+        $this->assertInstanceOf(HtmlHelper::class, $this->Helpers->Html);
 
         $result = $this->Helpers->loaded();
         $this->assertEquals(['Html'], $result, 'loaded() results are wrong.');
@@ -95,15 +92,15 @@ class HelperRegistryTest extends TestCase
     public function testLazyLoad()
     {
         $result = $this->Helpers->Html;
-        $this->assertInstanceOf('Cake\View\Helper\HtmlHelper', $result);
+        $this->assertInstanceOf(HtmlHelper::class, $result);
 
         $result = $this->Helpers->Form;
-        $this->assertInstanceOf('Cake\View\Helper\FormHelper', $result);
+        $this->assertInstanceOf(FormHelper::class, $result);
 
         $this->View->setPlugin('TestPlugin');
         $this->loadPlugins(['TestPlugin']);
         $result = $this->Helpers->OtherHelper;
-        $this->assertInstanceOf('TestPlugin\View\Helper\OtherHelperHelper', $result);
+        $this->assertInstanceOf(OtherHelperHelper::class, $result);
     }
 
     /**
@@ -124,7 +121,7 @@ class HelperRegistryTest extends TestCase
      */
     public function testLoadSubscribeEvents()
     {
-        $this->Helpers->load('Html', ['className' => __NAMESPACE__ . '\HtmlAliasHelper']);
+        $this->Helpers->load('Html', ['className' => HtmlAliasHelper::class]);
         $result = $this->Events->listeners('View.afterRender');
         $this->assertCount(1, $result);
     }
@@ -136,15 +133,15 @@ class HelperRegistryTest extends TestCase
      */
     public function testLoadWithAlias()
     {
-        $result = $this->Helpers->load('Html', ['className' => __NAMESPACE__ . '\HtmlAliasHelper']);
-        $this->assertInstanceOf(__NAMESPACE__ . '\HtmlAliasHelper', $result);
-        $this->assertInstanceOf(__NAMESPACE__ . '\HtmlAliasHelper', $this->Helpers->Html);
+        $result = $this->Helpers->load('Html', ['className' => HtmlAliasHelper::class]);
+        $this->assertInstanceOf(HtmlAliasHelper::class, $result);
+        $this->assertInstanceOf(HtmlAliasHelper::class, $this->Helpers->Html);
 
         $result = $this->Helpers->loaded();
         $this->assertEquals(['Html'], $result, 'loaded() results are wrong.');
 
         $result = $this->Helpers->load('Html');
-        $this->assertInstanceOf(__NAMESPACE__ . '\HtmlAliasHelper', $result);
+        $this->assertInstanceOf(HtmlAliasHelper::class, $result);
     }
 
     /**
@@ -156,8 +153,8 @@ class HelperRegistryTest extends TestCase
     {
         $this->loadPlugins(['TestPlugin']);
         $result = $this->Helpers->load('SomeOther', ['className' => 'TestPlugin.OtherHelper']);
-        $this->assertInstanceOf('TestPlugin\View\Helper\OtherHelperHelper', $result);
-        $this->assertInstanceOf('TestPlugin\View\Helper\OtherHelperHelper', $this->Helpers->SomeOther);
+        $this->assertInstanceOf(OtherHelperHelper::class, $result);
+        $this->assertInstanceOf(OtherHelperHelper::class, $this->Helpers->SomeOther);
 
         $result = $this->Helpers->loaded();
         $this->assertEquals(['SomeOther'], $result, 'loaded() results are wrong.');
@@ -171,8 +168,8 @@ class HelperRegistryTest extends TestCase
     public function testLoadWithEnabledFalse()
     {
         $result = $this->Helpers->load('Html', ['enabled' => false]);
-        $this->assertInstanceOf('Cake\View\Helper\HtmlHelper', $result);
-        $this->assertInstanceOf('Cake\View\Helper\HtmlHelper', $this->Helpers->Html);
+        $this->assertInstanceOf(HtmlHelper::class, $result);
+        $this->assertInstanceOf(HtmlHelper::class, $this->Helpers->Html);
 
         $this->assertEmpty($this->Events->listeners('View.beforeRender'));
     }
@@ -198,8 +195,8 @@ class HelperRegistryTest extends TestCase
         $this->loadPlugins(['TestPlugin']);
 
         $result = $this->Helpers->load('TestPlugin.OtherHelper');
-        $this->assertInstanceOf('TestPlugin\View\Helper\OtherHelperHelper', $result, 'Helper class is wrong.');
-        $this->assertInstanceOf('TestPlugin\View\Helper\OtherHelperHelper', $this->Helpers->OtherHelper, 'Class is wrong');
+        $this->assertInstanceOf(OtherHelperHelper::class, $result, 'Helper class is wrong.');
+        $this->assertInstanceOf(OtherHelperHelper::class, $this->Helpers->OtherHelper, 'Class is wrong');
     }
 
     /**
@@ -214,9 +211,9 @@ class HelperRegistryTest extends TestCase
         $result = $this->Helpers->load('thing.helper', [
             'className' => 'TestPlugin.OtherHelper',
         ]);
-        $this->assertInstanceOf('TestPlugin\View\Helper\OtherHelperHelper', $result, 'Helper class is wrong.');
+        $this->assertInstanceOf(OtherHelperHelper::class, $result, 'Helper class is wrong.');
         $this->assertInstanceOf(
-            'TestPlugin\View\Helper\OtherHelperHelper',
+            OtherHelperHelper::class,
             $this->Helpers->get('thing.helper'),
             'Class is wrong'
         );
@@ -334,7 +331,7 @@ class HelperRegistryTest extends TestCase
     public function testLoadMultipleTimesDifferentConfigured()
     {
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('The "Html" alias has already been loaded with the following');
+        $this->expectExceptionMessage('The "Html" alias has already been loaded');
         $this->Helpers->load('Html');
         $this->Helpers->load('Html', ['same' => 'stuff']);
     }
@@ -347,7 +344,7 @@ class HelperRegistryTest extends TestCase
     public function testLoadMultipleTimesDifferentConfigValues()
     {
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('The "Html" alias has already been loaded with the following');
+        $this->expectExceptionMessage('The "Html" alias has already been loaded');
         $this->Helpers->load('Html', ['key' => 'value']);
         $this->Helpers->load('Html', ['key' => 'new value']);
     }
@@ -362,12 +359,12 @@ class HelperRegistryTest extends TestCase
         $config = [
             'SomeHelper' => [
                 'value' => 1,
-                'value2' => 2
+                'value2' => 2,
             ],
             'Plugin.SomeOtherHelper' => [
                 'value' => 1,
-                'value2' => 2
-            ]
+                'value2' => 2,
+            ],
         ];
         $result = $this->Helpers->normalizeArray($config);
         $expected = [
@@ -375,15 +372,15 @@ class HelperRegistryTest extends TestCase
                 'class' => 'SomeHelper',
                 'config' => [
                     'value' => 1,
-                    'value2' => 2
-                ]
+                    'value2' => 2,
+                ],
             ],
             'SomeOtherHelper' => [
                 'class' => 'Plugin.SomeOtherHelper',
                 'config' => [
                     'value' => 1,
-                    'value2' => 2
-                ]
+                    'value2' => 2,
+                ],
             ],
         ];
         $this->assertEquals($expected, $result);
@@ -400,12 +397,12 @@ class HelperRegistryTest extends TestCase
         $config = [
             'SomeHelper' => [
                 'value' => 1,
-                'value2' => 2
+                'value2' => 2,
             ],
             'Plugin.SomeOtherHelper' => [
                 'value' => 1,
-                'value2' => 2
-            ]
+                'value2' => 2,
+            ],
         ];
 
         $result1 = $this->Helpers->normalizeArray($config);
@@ -415,15 +412,15 @@ class HelperRegistryTest extends TestCase
                 'class' => 'SomeHelper',
                 'config' => [
                     'value' => 1,
-                    'value2' => 2
-                ]
+                    'value2' => 2,
+                ],
             ],
             'SomeOtherHelper' => [
                 'class' => 'Plugin.SomeOtherHelper',
                 'config' => [
                     'value' => 1,
-                    'value2' => 2
-                ]
+                    'value2' => 2,
+                ],
             ],
         ];
         $this->assertEquals($expected, $result2);

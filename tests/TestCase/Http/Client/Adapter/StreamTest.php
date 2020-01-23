@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -15,104 +17,37 @@ namespace Cake\Test\TestCase\Http\Client\Adapter;
 
 use Cake\Http\Client\Adapter\Stream;
 use Cake\Http\Client\Request;
+use Cake\Http\Client\Response;
 use Cake\TestSuite\TestCase;
-
-/**
- * CakeStreamWrapper class
- */
-class CakeStreamWrapper implements \ArrayAccess
-{
-
-    private $_stream;
-
-    private $_query = [];
-
-    private $_data = [
-        'headers' => [
-            'HTTP/1.1 200 OK',
-        ],
-    ];
-
-    public function stream_open($path, $mode, $options, &$openedPath)
-    {
-        if ($path == 'http://throw_exception/') {
-            throw new \Exception;
-        }
-
-        $query = parse_url($path, PHP_URL_QUERY);
-        if ($query) {
-            parse_str($query, $this->_query);
-        }
-
-        $this->_stream = fopen('php://memory', 'rb+');
-        fwrite($this->_stream, str_repeat('x', 20000));
-        rewind($this->_stream);
-
-        return true;
-    }
-
-    public function stream_close()
-    {
-        return fclose($this->_stream);
-    }
-
-    public function stream_read($count)
-    {
-        if (isset($this->_query['sleep'])) {
-            sleep(1);
-        }
-
-        return fread($this->_stream, $count);
-    }
-
-    public function stream_eof()
-    {
-        return feof($this->_stream);
-    }
-
-    public function stream_set_option($option, $arg1, $arg2)
-    {
-        return false;
-    }
-
-    public function offsetExists($offset)
-    {
-        return isset($this->_data[$offset]);
-    }
-
-    public function offsetGet($offset)
-    {
-        return $this->_data[$offset];
-    }
-
-    public function offsetSet($offset, $value)
-    {
-        $this->_data[$offset] = $value;
-    }
-
-    public function offsetUnset($offset)
-    {
-        unset($this->_data[$offset]);
-    }
-}
+use TestApp\Http\Client\Adapter\CakeStreamWrapper;
 
 /**
  * HTTP stream adapter test.
  */
 class StreamTest extends TestCase
 {
+    /**
+     * @var \Cake\Http\Client\Adapter\Stream|\PHPUnit\Framework\MockObject\MockObject
+     */
+    protected $stream;
 
-    public function setUp()
+    /**
+     * @return void
+     */
+    public function setUp(): void
     {
         parent::setUp();
-        $this->stream = $this->getMockBuilder('Cake\Http\Client\Adapter\Stream')
+        $this->stream = $this->getMockBuilder(Stream::class)
             ->setMethods(['_send'])
             ->getMock();
         stream_wrapper_unregister('http');
-        stream_wrapper_register('http', __NAMESPACE__ . '\CakeStreamWrapper');
+        stream_wrapper_register('http', CakeStreamWrapper::class);
     }
 
-    public function tearDown()
+    /**
+     * @return void
+     */
+    public function tearDown(): void
     {
         parent::tearDown();
         stream_wrapper_restore('http');
@@ -128,7 +63,7 @@ class StreamTest extends TestCase
         $stream = new Stream();
         $request = new Request('http://localhost', 'GET', [
             'User-Agent' => 'CakePHP TestSuite',
-            'Cookie' => 'testing=value'
+            'Cookie' => 'testing=value',
         ]);
 
         try {
@@ -136,7 +71,7 @@ class StreamTest extends TestCase
         } catch (\Cake\Core\Exception\Exception $e) {
             $this->markTestSkipped('Could not connect to localhost, skipping');
         }
-        $this->assertInstanceOf('Cake\Http\Client\Response', $responses[0]);
+        $this->assertInstanceOf(Response::class, $responses[0]);
     }
 
     /**
@@ -149,8 +84,9 @@ class StreamTest extends TestCase
         $stream = new Stream();
         $request = new Request('http://dummy/');
 
+        /** @var \Cake\Http\Client\Response[] $responses */
         $responses = $stream->send($request, []);
-        $this->assertInstanceOf('Cake\Http\Client\Response', $responses[0]);
+        $this->assertInstanceOf(Response::class, $responses[0]);
 
         $this->assertEquals(20000, strlen($responses[0]->getStringBody()));
     }
@@ -194,7 +130,7 @@ class StreamTest extends TestCase
             [
                 'User-Agent' => 'CakePHP TestSuite',
                 'Content-Type' => 'application/json',
-                'Cookie' => 'a=b; c=do%20it'
+                'Cookie' => 'a=b; c=do%20it',
             ]
         );
 
@@ -230,7 +166,7 @@ class StreamTest extends TestCase
         );
 
         $options = [
-            'redirect' => 20
+            'redirect' => 20,
         ];
         $this->stream->send($request, $options);
         $result = $this->stream->contextOptions();
@@ -254,7 +190,7 @@ class StreamTest extends TestCase
             'http://localhost',
             'GET',
             [
-                'Content-Type' => 'application/json'
+                'Content-Type' => 'application/json',
             ],
             ['a' => 'my value']
         );
@@ -267,8 +203,8 @@ class StreamTest extends TestCase
             'User-Agent: CakePHP',
         ];
         $this->assertStringStartsWith(implode("\r\n", $expected), $result['header']);
-        $this->assertContains('a=my+value', $result['content']);
-        $this->assertContains('my+value', $result['content']);
+        $this->assertStringContainsString('a=my+value', $result['content']);
+        $this->assertStringContainsString('my+value', $result['content']);
     }
 
     /**
@@ -287,11 +223,11 @@ class StreamTest extends TestCase
 
         $this->stream->send($request, []);
         $result = $this->stream->contextOptions();
-        $this->assertContains("Content-Type: multipart/form-data", $result['header']);
-        $this->assertContains("Connection: close\r\n", $result['header']);
-        $this->assertContains("User-Agent: CakePHP", $result['header']);
-        $this->assertContains('name="upload"', $result['content']);
-        $this->assertContains('filename="VERSION.txt"', $result['content']);
+        $this->assertStringContainsString("Content-Type: multipart/form-data", $result['header']);
+        $this->assertStringContainsString("Connection: close\r\n", $result['header']);
+        $this->assertStringContainsString("User-Agent: CakePHP", $result['header']);
+        $this->assertStringContainsString('name="upload"', $result['content']);
+        $this->assertStringContainsString('filename="VERSION.txt"', $result['content']);
     }
 
     /**
@@ -309,8 +245,8 @@ class StreamTest extends TestCase
             'ssl_verify_depth' => 9000,
             'ssl_allow_self_signed' => false,
             'proxy' => [
-                'proxy' => '127.0.0.1:8080'
-            ]
+                'proxy' => '127.0.0.1:8080',
+            ],
         ];
 
         $this->stream->send($request, $options);
@@ -344,8 +280,8 @@ class StreamTest extends TestCase
             'ssl_verify_depth' => 9000,
             'ssl_allow_self_signed' => false,
             'proxy' => [
-                'proxy' => '127.0.0.1:8080'
-            ]
+                'proxy' => '127.0.0.1:8080',
+            ],
         ];
 
         $this->stream->send($request, $options);
@@ -402,28 +338,29 @@ class StreamTest extends TestCase
         ];
         $content = 'This is the third page';
 
+        /** @var \Cake\Http\Client\Response[] $responses */
         $responses = $this->stream->createResponses($headers, $content);
         $this->assertCount(3, $responses);
-        $this->assertEquals('close', $responses[0]->getHeaderLine('Connection'));
-        $this->assertEquals('', (string)$responses[0]->getBody());
-        $this->assertEquals('', (string)$responses[1]->getBody());
+        $this->assertSame('close', $responses[0]->getHeaderLine('Connection'));
+        $this->assertSame('', (string)$responses[0]->getBody());
+        $this->assertSame('', (string)$responses[1]->getBody());
         $this->assertEquals($content, (string)$responses[2]->getBody());
 
         $this->assertEquals(302, $responses[0]->getStatusCode());
         $this->assertEquals(302, $responses[1]->getStatusCode());
         $this->assertEquals(200, $responses[2]->getStatusCode());
 
-        $this->assertEquals('value', $responses[0]->getCookie('first'));
+        $this->assertSame('value', $responses[0]->getCookie('first'));
         $this->assertNull($responses[0]->getCookie('second'));
         $this->assertNull($responses[0]->getCookie('third'));
 
         $this->assertNull($responses[1]->getCookie('first'));
-        $this->assertEquals('val', $responses[1]->getCookie('second'));
+        $this->assertSame('val', $responses[1]->getCookie('second'));
         $this->assertNull($responses[1]->getCookie('third'));
 
         $this->assertNull($responses[2]->getCookie('first'));
         $this->assertNull($responses[2]->getCookie('second'));
-        $this->assertEquals('works', $responses[2]->getCookie('third'));
+        $this->assertSame('works', $responses[2]->getCookie('third'));
     }
 
     /**
@@ -451,14 +388,16 @@ class StreamTest extends TestCase
      */
     public function testMissDeadline()
     {
-        $this->expectException(\Cake\Http\Exception\HttpException::class);
-        $this->expectExceptionMessage('Connection timed out http://dummy/?sleep');
         $request = new Request('http://dummy/?sleep');
         $options = [
             'timeout' => 2,
         ];
 
         $stream = new Stream();
+
+        $this->expectException(\Cake\Http\Client\Exception\NetworkException::class);
+        $this->expectExceptionMessage('Connection timed out http://dummy/?sleep');
+
         $stream->send($request, $options);
     }
 }

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -13,6 +15,7 @@
  */
 namespace Cake\Test\TestCase\Core;
 
+use Cake\Core\BasePlugin;
 use Cake\Core\Configure;
 use Cake\Core\Exception\MissingPluginException;
 use Cake\Core\PluginCollection;
@@ -88,6 +91,13 @@ class PluginCollectionTest extends TestCase
         $this->assertSame($plugin, $plugins->get('TestPlugin'));
     }
 
+    public function testGetAutoload()
+    {
+        $plugins = new PluginCollection();
+        $plugin = $plugins->get('ParentPlugin');
+        $this->assertInstanceOf(\ParentPlugin\Plugin::class, $plugin);
+    }
+
     public function testGetInvalid()
     {
         $this->expectException(MissingPluginException::class);
@@ -96,11 +106,30 @@ class PluginCollectionTest extends TestCase
         $plugins->get('Invalid');
     }
 
+    public function testCreate()
+    {
+        $plugins = new PluginCollection();
+
+        $plugin = $plugins->create('ParentPlugin');
+        $this->assertInstanceOf(\ParentPlugin\Plugin::class, $plugin);
+
+        $plugin = $plugins->create('ParentPlugin', ['name' => 'Granpa']);
+        $this->assertInstanceOf(\ParentPlugin\Plugin::class, $plugin);
+        $this->assertSame('Granpa', $plugin->getName());
+
+        $plugin = $plugins->create(\ParentPlugin\Plugin::class);
+        $this->assertInstanceOf(\ParentPlugin\Plugin::class, $plugin);
+
+        $plugin = $plugins->create('TestTheme');
+        $this->assertInstanceOf(BasePlugin::class, $plugin);
+        $this->assertSame('TestTheme', $plugin->getName());
+    }
+
     public function testIterator()
     {
         $data = [
             new TestPlugin(),
-            new TestPluginThree()
+            new TestPluginThree(),
         ];
         $plugins = new PluginCollection($data);
         $out = [];
@@ -184,6 +213,7 @@ class PluginCollectionTest extends TestCase
         $this->skipIf(file_exists($configPath), 'cakephp-plugins.php exists, skipping overwrite');
         $file = <<<PHP
 <?php
+declare(strict_types=1);
 return [
     'plugins' => [
         'TestPlugin' => '/config/path'
@@ -197,7 +227,7 @@ PHP;
         $path = $plugins->findPath('TestPlugin');
         unlink($configPath);
 
-        $this->assertEquals('/config/path', $path);
+        $this->assertSame('/config/path', $path);
     }
 
     public function testFindPathConfigureData()
@@ -206,7 +236,7 @@ PHP;
         $plugins = new PluginCollection();
         $path = $plugins->findPath('TestPlugin');
 
-        $this->assertEquals('/some/path', $path);
+        $this->assertSame('/some/path', $path);
     }
 
     public function testFindPathMissingPlugin()

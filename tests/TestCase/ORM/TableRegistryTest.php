@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -22,7 +24,6 @@ use Cake\TestSuite\TestCase;
  */
 class TableRegistryTest extends TestCase
 {
-
     /**
      * Original TableLocator.
      *
@@ -36,7 +37,7 @@ class TableRegistryTest extends TestCase
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->_originalLocator = TableRegistry::getTableLocator();
@@ -47,7 +48,7 @@ class TableRegistryTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         TableRegistry::setTableLocator($this->_originalLocator);
@@ -56,7 +57,7 @@ class TableRegistryTest extends TestCase
     /**
      * Sets and returns mock LocatorInterface instance.
      *
-     * @return \Cake\ORM\Locator\LocatorInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @return \Cake\ORM\Locator\LocatorInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function _setMockLocator()
     {
@@ -64,24 +65,6 @@ class TableRegistryTest extends TestCase
         TableRegistry::setTableLocator($locator);
 
         return $locator;
-    }
-
-    /**
-     * Test locator() method.
-     *
-     * @group deprecated
-     * @return void
-     */
-    public function testLocator()
-    {
-        $this->deprecated(function () {
-            $this->assertInstanceOf('Cake\ORM\Locator\LocatorInterface', TableRegistry::locator());
-
-            $locator = $this->getMockBuilder('Cake\ORM\Locator\LocatorInterface')->getMock();
-            TableRegistry::locator($locator);
-
-            $this->assertSame($locator, TableRegistry::locator());
-        });
     }
 
     /**
@@ -118,33 +101,16 @@ class TableRegistryTest extends TestCase
     }
 
     /**
-     * Test config() method.
-     *
-     * @return void
-     */
-    public function testConfig()
-    {
-        $this->deprecated(function () {
-            $locator = $this->_setMockLocator();
-            $locator->expects($this->once())->method('config')->with('Test', []);
-
-            TableRegistry::config('Test', []);
-        });
-    }
-
-    /**
      * Test the get() method.
      *
      * @return void
      */
     public function testGet()
     {
-        $this->deprecated(function () {
-            $locator = $this->_setMockLocator();
-            $locator->expects($this->once())->method('get')->with('Test', []);
+        $locator = $this->_setMockLocator();
+        $locator->expects($this->once())->method('get')->with('Test', []);
 
-            TableRegistry::get('Test', []);
-        });
+        TableRegistry::get('Test', []);
     }
 
     /**
@@ -154,14 +120,12 @@ class TableRegistryTest extends TestCase
      */
     public function testSet()
     {
-        $this->deprecated(function () {
-            $table = $this->getMockBuilder('Cake\ORM\Table')->getMock();
+        $table = $this->getMockBuilder('Cake\ORM\Table')->getMock();
 
-            $locator = $this->_setMockLocator();
-            $locator->expects($this->once())->method('set')->with('Test', $table);
+        $locator = $this->_setMockLocator();
+        $locator->expects($this->once())->method('set')->with('Test', $table);
 
-            TableRegistry::set('Test', $table);
-        });
+        TableRegistry::set('Test', $table);
     }
 
     /**
@@ -171,12 +135,10 @@ class TableRegistryTest extends TestCase
      */
     public function testRemove()
     {
-        $this->deprecated(function () {
-            $locator = $this->_setMockLocator();
-            $locator->expects($this->once())->method('remove')->with('Test');
+        $locator = $this->_setMockLocator();
+        $locator->expects($this->once())->method('remove')->with('Test');
 
-            TableRegistry::remove('Test');
-        });
+        TableRegistry::remove('Test');
     }
 
     /**
@@ -186,11 +148,9 @@ class TableRegistryTest extends TestCase
      */
     public function testClear()
     {
-        $this->deprecated(function () {
-            $locator = $this->_setMockLocator();
-            $locator->expects($this->once())->method('clear');
+        $locator = $this->_setMockLocator();
+        $locator->expects($this->once())->method('clear');
 
-            TableRegistry::clear();
-        });
+        TableRegistry::clear();
     }
 }

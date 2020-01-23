@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -12,7 +14,7 @@
  * @since         3.0.0
  * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
-namespace Cake\Test\TestCase\I18n;
+namespace Cake\Test\TestCase\I18n\Formatter;
 
 use Cake\I18n\Formatter\SprintfFormatter;
 use Cake\TestSuite\TestCase;
@@ -22,7 +24,6 @@ use Cake\TestSuite\TestCase;
  */
 class SprintfFormatterTest extends TestCase
 {
-
     /**
      * Tests that variables are interpolated correctly
      *
@@ -31,7 +32,7 @@ class SprintfFormatterTest extends TestCase
     public function testFormatSimple()
     {
         $formatter = new SprintfFormatter();
-        $this->assertEquals('Hello José', $formatter->format('en_US', 'Hello %s', ['José']));
-        $this->assertEquals('1 Orange', $formatter->format('en_US', '%d %s', [1, 'Orange']));
+        $this->assertSame('Hello José', $formatter->format('en_US', 'Hello %s', ['José']));
+        $this->assertSame('1 Orange', $formatter->format('en_US', '%d %s', [1, 'Orange']));
     }
 }

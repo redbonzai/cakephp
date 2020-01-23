@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -16,6 +18,7 @@ namespace Cake\Database\Expression;
 
 use Cake\Database\ExpressionInterface;
 use Cake\Database\ValueBinder;
+use Closure;
 
 /**
  * Represents a single identifier name in the database.
@@ -27,7 +30,6 @@ use Cake\Database\ValueBinder;
  */
 class IdentifierExpression implements ExpressionInterface
 {
-
     /**
      * Holds the identifier string
      *
@@ -40,7 +42,7 @@ class IdentifierExpression implements ExpressionInterface
      *
      * @param string $identifier The identifier this expression represents
      */
-    public function __construct($identifier)
+    public function __construct(string $identifier)
     {
         $this->_identifier = $identifier;
     }
@@ -51,7 +53,7 @@ class IdentifierExpression implements ExpressionInterface
      * @param string $identifier The identifier
      * @return void
      */
-    public function setIdentifier($identifier)
+    public function setIdentifier(string $identifier): void
     {
         $this->_identifier = $identifier;
     }
@@ -61,7 +63,7 @@ class IdentifierExpression implements ExpressionInterface
      *
      * @return string
      */
-    public function getIdentifier()
+    public function getIdentifier(): string
     {
         return $this->_identifier;
     }
@@ -72,7 +74,7 @@ class IdentifierExpression implements ExpressionInterface
      * @param \Cake\Database\ValueBinder $generator Placeholder generator object
      * @return string
      */
-    public function sql(ValueBinder $generator)
+    public function sql(ValueBinder $generator): string
     {
         return $this->_identifier;
     }
@@ -81,10 +83,11 @@ class IdentifierExpression implements ExpressionInterface
      * This method is a no-op, this is a leaf type of expression,
      * hence there is nothing to traverse
      *
-     * @param callable $callable The callable to traverse with.
-     * @return void
+     * @param \Closure $callable The callable to traverse with.
+     * @return $this
      */
-    public function traverse(callable $callable)
+    public function traverse(Closure $callable)
     {
+        return $this;
     }
 }

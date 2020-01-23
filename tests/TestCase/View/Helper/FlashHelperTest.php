@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * CakePHP(tm) : Rapid Development Framework (https://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
@@ -14,7 +16,6 @@
  */
 namespace Cake\Test\TestCase\View\Helper;
 
-use Cake\Core\Plugin;
 use Cake\Http\ServerRequest;
 use Cake\Http\Session;
 use Cake\TestSuite\TestCase;
@@ -28,13 +29,17 @@ use Cake\View\View;
  */
 class FlashHelperTest extends TestCase
 {
+    /**
+     * @var \Cake\View\View
+     */
+    protected $View;
 
     /**
      * setUp method
      *
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $session = new Session();
@@ -47,9 +52,9 @@ class FlashHelperTest extends TestCase
                     [
                         'key' => 'flash',
                         'message' => 'This is a calling',
-                        'element' => 'Flash/default',
-                        'params' => []
-                    ]
+                        'element' => 'flash/default',
+                        'params' => [],
+                    ],
                 ],
                 'notification' => [
                     [
@@ -58,24 +63,24 @@ class FlashHelperTest extends TestCase
                         'element' => 'flash_helper',
                         'params' => [
                             'title' => 'Notice!',
-                            'name' => 'Alert!'
-                        ]
-                    ]
+                            'name' => 'Alert!',
+                        ],
+                    ],
                 ],
                 'classy' => [
                     [
                         'key' => 'classy',
                         'message' => 'Recorded',
                         'element' => 'flash_classy',
-                        'params' => []
-                    ]
+                        'params' => [],
+                    ],
                 ],
                 'stack' => [
                     [
                         'key' => 'flash',
                         'message' => 'This is a calling',
-                        'element' => 'Flash/default',
-                        'params' => []
+                        'element' => 'flash/default',
+                        'params' => [],
                     ],
                     [
                         'key' => 'notification',
@@ -83,17 +88,17 @@ class FlashHelperTest extends TestCase
                         'element' => 'flash_helper',
                         'params' => [
                             'title' => 'Notice!',
-                            'name' => 'Alert!'
-                        ]
+                            'name' => 'Alert!',
+                        ],
                     ],
                     [
                         'key' => 'classy',
                         'message' => 'Recorded',
                         'element' => 'flash_classy',
-                        'params' => []
-                    ]
-                ]
-            ]
+                        'params' => [],
+                    ],
+                ],
+            ],
         ]);
     }
 
@@ -102,7 +107,7 @@ class FlashHelperTest extends TestCase
      *
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         unset($this->View, $this->Flash);
@@ -118,7 +123,7 @@ class FlashHelperTest extends TestCase
     {
         $result = $this->Flash->render();
         $expected = '<div class="message">This is a calling</div>';
-        $this->assertContains($expected, $result);
+        $this->assertStringContainsString($expected, $result);
 
         $expected = '<div id="classy-message">Recorded</div>';
         $result = $this->Flash->render('classy');
@@ -130,7 +135,7 @@ class FlashHelperTest extends TestCase
             '<h1', 'Alert!', '/h1',
             '<h3', 'Notice!', '/h3',
             '<p', 'This is a test of the emergency broadcasting system', '/p',
-            '/div'
+            '/div',
         ];
         $this->assertHtml($expected, $result);
         $this->assertNull($this->Flash->render('non-existent'));
@@ -156,7 +161,7 @@ class FlashHelperTest extends TestCase
     {
         $result = $this->Flash->render('notification', [
             'element' => 'flash_helper',
-            'params' => ['title' => 'Notice!', 'name' => 'Alert!']
+            'params' => ['title' => 'Notice!', 'name' => 'Alert!'],
         ]);
 
         $expected = [
@@ -164,7 +169,7 @@ class FlashHelperTest extends TestCase
             '<h1', 'Alert!', '/h1',
             '<h3', 'Notice!', '/h3',
             '<p', 'This is a test of the emergency broadcasting system', '/p',
-            '/div'
+            '/div',
         ];
         $this->assertHtml($expected, $result);
     }
@@ -178,7 +183,7 @@ class FlashHelperTest extends TestCase
     {
         $this->loadPlugins(['TestPlugin']);
 
-        $result = $this->Flash->render('flash', ['element' => 'TestPlugin.Flash/plugin_element']);
+        $result = $this->Flash->render('flash', ['element' => 'TestPlugin.flash/plugin_element']);
         $expected = 'this is the plugin element';
         $this->assertEquals($expected, $result);
     }
@@ -195,7 +200,7 @@ class FlashHelperTest extends TestCase
         $this->View->setTheme('TestTheme');
         $result = $this->Flash->render('flash');
         $expected = 'flash element from TestTheme';
-        $this->assertContains($expected, $result);
+        $this->assertStringContainsString($expected, $result);
     }
 
     /**
@@ -214,7 +219,7 @@ class FlashHelperTest extends TestCase
             '<h3', 'Notice!', '/h3',
             '<p', 'This is a test of the emergency broadcasting system', '/p',
             '/div',
-            ['div' => ['id' => 'classy-message']], 'Recorded', '/div'
+            ['div' => ['id' => 'classy-message']], 'Recorded', '/div',
         ];
         $this->assertHtml($expected, $result);
         $this->assertNull($this->View->getRequest()->getSession()->read('Flash.stack'));
@@ -231,6 +236,6 @@ class FlashHelperTest extends TestCase
         $this->View->setRequest($this->View->getRequest()->withParam('prefix', 'Admin'));
         $result = $this->Flash->render('flash');
         $expected = 'flash element from Admin prefix folder';
-        $this->assertContains($expected, $result);
+        $this->assertStringContainsString($expected, $result);
     }
 }
